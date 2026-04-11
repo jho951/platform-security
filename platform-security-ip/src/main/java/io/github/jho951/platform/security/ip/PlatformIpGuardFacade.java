@@ -15,6 +15,6 @@ public final class PlatformIpGuardFacade {
     }
 
     public SecurityVerdict evaluate(SecurityRequest request) {
-        return policy.evaluate(request, null);
+		return policy.evaluate(request, null);
     }
 }

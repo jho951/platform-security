@@ -4,6 +4,7 @@ import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityPolicy;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.api.SecurityVerdict;
+import io.github.jho951.platform.security.policy.SecurityAttributes;
 
 public final class RequireAuthenticatedPolicy implements SecurityPolicy {
     @Override
@@ -13,6 +14,14 @@ public final class RequireAuthenticatedPolicy implements SecurityPolicy {
 
     @Override
     public SecurityVerdict evaluate(SecurityRequest request, SecurityContext context) {
+        String boundary = request.attributes().get(SecurityAttributes.BOUNDARY);
+        if ("PUBLIC".equalsIgnoreCase(boundary)) {
+            return SecurityVerdict.allow(name(), "public boundary");
+        }
+        String authMode = request.attributes().get(SecurityAttributes.AUTH_MODE);
+        if ("NONE".equalsIgnoreCase(authMode)) {
+            return SecurityVerdict.allow(name(), "authentication disabled");
+        }
         if (context.authenticated()) return SecurityVerdict.allow(name(), "authenticated");
         return SecurityVerdict.deny(name(), "authentication required");
     }

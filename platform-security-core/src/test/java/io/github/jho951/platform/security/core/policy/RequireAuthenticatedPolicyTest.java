@@ -21,4 +21,21 @@ class RequireAuthenticatedPolicyTest {
                 new SecurityContext(false, null, Set.of(), Map.of())
         ).decision());
     }
+
+    @Test
+    void allowsPublicBoundaryWithoutAuthentication() {
+        RequireAuthenticatedPolicy policy = new RequireAuthenticatedPolicy();
+
+        assertEquals(SecurityDecision.ALLOW, policy.evaluate(
+                new SecurityRequest(
+                        "user-1",
+                        "127.0.0.1",
+                        "/health",
+                        "read",
+                        Map.of("security.boundary", "PUBLIC"),
+                        Instant.parse("2026-01-01T00:00:00Z")
+                ),
+                new SecurityContext(false, null, Set.of(), Map.of())
+        ).decision());
+    }
 }

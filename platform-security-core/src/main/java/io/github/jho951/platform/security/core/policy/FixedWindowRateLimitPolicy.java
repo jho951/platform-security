@@ -5,6 +5,7 @@ import io.github.jho951.platform.security.api.SecurityPolicy;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.api.SecurityVerdict;
 import io.github.jho951.platform.security.core.limiter.InMemoryRateLimiter;
+import io.github.jho951.platform.security.policy.SecurityAttributes;
 import io.github.jho951.ratelimiter.core.RateLimitDecision;
 import io.github.jho951.ratelimiter.core.RateLimitKey;
 import io.github.jho951.ratelimiter.core.RateLimitKeyType;
@@ -43,7 +44,8 @@ public final class FixedWindowRateLimitPolicy implements SecurityPolicy {
 
         String value = request.subject() != null ? request.subject() : request.clientIp();
         RateLimitKeyType keyType = request.subject() != null ? RateLimitKeyType.USER_ID : RateLimitKeyType.IP;
-        RateLimitKey key = RateLimitKey.of(keyType, value);
+        String boundary = request.attributes().getOrDefault(SecurityAttributes.BOUNDARY, "UNKNOWN");
+        RateLimitKey key = RateLimitKey.of(keyType, boundary + ":" + value);
         long windowSeconds = Math.max(1L, window.toSeconds());
         double refillPerSecond = (double) limit / (double) windowSeconds;
         RateLimitPlan plan = RateLimitPlan.perSecond(limit, refillPerSecond);

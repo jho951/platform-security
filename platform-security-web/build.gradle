@@ -1,6 +1,18 @@
 dependencies {
+    api project(':platform-security-api')
     api project(':platform-security-policy')
+    compileOnly "jakarta.servlet:jakarta.servlet-api:${rootProject.findProperty('jakartaServletVersion') ?: '6.1.0'}"
+    compileOnly "org.springframework:spring-web:6.2.11"
+    compileOnly "io.projectreactor:reactor-core:3.7.11"
 
+    testImplementation project(':platform-security-core')
+    testImplementation project(':platform-security-ip')
+    testImplementation project(':platform-security-rate-limit')
+    testImplementation "org.springframework:spring-context:6.2.11"
+    testImplementation "org.springframework:spring-web:6.2.11"
+    testImplementation "org.springframework:spring-test:6.2.11"
+    testImplementation "io.projectreactor:reactor-core:3.7.11"
+    testImplementation "jakarta.servlet:jakarta.servlet-api:${rootProject.findProperty('jakartaServletVersion') ?: '6.1.0'}"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitVersion}"
 }

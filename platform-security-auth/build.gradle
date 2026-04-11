@@ -1,4 +1,12 @@
 dependencies {
+    api project(':platform-security-api')
     api project(':platform-security-policy')
-    api project(':platform-security-auth-adapter')
+
+    api "io.github.jho951:auth-core:${rootProject.authVersion}"
+    api "io.github.jho951:auth-jwt:${rootProject.authVersion}"
+    api "io.github.jho951:auth-session:${rootProject.authVersion}"
+    api "io.github.jho951:auth-hybrid:${rootProject.authVersion}"
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitVersion}"
 }

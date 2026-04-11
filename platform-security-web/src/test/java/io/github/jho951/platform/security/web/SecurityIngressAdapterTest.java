@@ -16,7 +16,7 @@ class SecurityIngressAdapterTest {
     @Test
     void normalizesPathBeforeEvaluation() {
         RecordingSecurityPolicyService policyService = new RecordingSecurityPolicyService();
-        SecurityIngressAdapter adapter = new SecurityIngressAdapter(policyService, new SecurityBoundaryResolver());
+        SecurityIngressAdapter adapter = new SecurityIngressAdapter(policyService, new PathPatternSecurityBoundaryResolver());
 
         SecurityRequest request = new SecurityRequest(
                 "user-1",
@@ -37,7 +37,7 @@ class SecurityIngressAdapterTest {
     void convertsDeniedVerdictToFailureResponse() {
         SecurityIngressAdapter adapter = new SecurityIngressAdapter(
                 (request, context) -> SecurityVerdict.deny("auth", "authentication required"),
-                new SecurityBoundaryResolver()
+                new PathPatternSecurityBoundaryResolver()
         );
 
         SecurityFailureResponse response = adapter.evaluateFailureResponse(
@@ -59,7 +59,7 @@ class SecurityIngressAdapterTest {
     @Test
     void evaluatesUsingContextResolver() {
         RecordingSecurityPolicyService policyService = new RecordingSecurityPolicyService();
-        SecurityIngressAdapter adapter = new SecurityIngressAdapter(policyService, new SecurityBoundaryResolver());
+        SecurityIngressAdapter adapter = new SecurityIngressAdapter(policyService, new PathPatternSecurityBoundaryResolver());
 
         SecurityVerdict verdict = adapter.evaluate(
                 new SecurityRequest(

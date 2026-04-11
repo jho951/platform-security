@@ -4,6 +4,7 @@ import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityDecision;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.api.SecurityVerdict;
+import io.github.jho951.platform.security.core.limiter.InMemoryRateLimiter;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -19,7 +20,7 @@ class FixedWindowRateLimitPolicyTest {
     @Test
     void deniesWhenLimitExceeded() {
         MutableClock clock = new MutableClock(Instant.parse("2026-01-01T00:00:00Z"));
-        FixedWindowRateLimitPolicy policy = new FixedWindowRateLimitPolicy(1, Duration.ofMinutes(1), clock);
+        FixedWindowRateLimitPolicy policy = new FixedWindowRateLimitPolicy(1, Duration.ofMinutes(1), new InMemoryRateLimiter(clock));
 
         SecurityRequest request = new SecurityRequest("user-1", "127.0.0.1", "/api", "read", Map.of(), clock.instant());
         SecurityContext context = new SecurityContext(true, "user-1", Set.of("USER"), Map.of());

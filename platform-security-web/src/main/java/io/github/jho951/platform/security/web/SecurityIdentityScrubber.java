@@ -18,7 +18,8 @@ public final class SecurityIdentityScrubber {
                 continue;
             }
             String normalized = key.trim().toLowerCase(Locale.ROOT);
-            if (normalized.startsWith("x-security-") || normalized.startsWith("x-auth-")) {
+            if (normalized.startsWith("x-security-")
+                    || (normalized.startsWith("x-auth-") && !"x-auth-session-id".equals(normalized))) {
                 continue;
             }
             sanitized.put(key, Objects.toString(entry.getValue(), ""));

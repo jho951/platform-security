@@ -6,6 +6,7 @@ import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityPolicy;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.api.SecurityVerdict;
+import io.github.jho951.platform.security.policy.SecurityAttributes;
 
 import java.util.List;
 import java.util.Objects;
@@ -32,16 +33,16 @@ public final class IpAllowListPolicy implements SecurityPolicy {
     @Override
     public SecurityVerdict evaluate(SecurityRequest request, SecurityContext context) {
         Objects.requireNonNull(request, "request");
+        if ("PUBLIC".equalsIgnoreCase(request.attributes().get(SecurityAttributes.BOUNDARY))) {
+            return SecurityVerdict.allow(name(), "public boundary");
+        }
         if (engine != null) {
             Decision decision = engine.decide(request.clientIp());
-            if (decision.allowed()) {
-                return SecurityVerdict.allow(name(), decision.reason());
-            }
+            if (decision.allowed()) return SecurityVerdict.allow(name(), decision.reason());
             return SecurityVerdict.deny(name(), decision.reason());
         }
-        if (allowedIps.isEmpty() || allowedIps.contains(request.clientIp())) {
-            return SecurityVerdict.allow(name(), "ip allowed");
-        }
+        if (allowedIps.isEmpty()) return SecurityVerdict.allow(name(), "ip allowed");
+        if (allowedIps.contains(request.clientIp())) return SecurityVerdict.allow(name(), "ip allowed");
         return SecurityVerdict.deny(name(), "ip not allowed: " + request.clientIp());
     }
 }

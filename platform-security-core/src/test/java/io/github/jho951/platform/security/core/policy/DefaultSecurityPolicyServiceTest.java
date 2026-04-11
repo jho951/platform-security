@@ -3,6 +3,7 @@ package io.github.jho951.platform.security.core.policy;
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityDecision;
 import io.github.jho951.platform.security.api.SecurityPolicy;
+import io.github.jho951.platform.security.api.SecurityPolicyService;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.api.SecurityVerdict;
 import io.github.jho951.platform.security.core.DefaultSecurityPolicyService;
@@ -19,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class DefaultSecurityPolicyServiceTest {
     @Test
     void deniesWhenAuthenticationFails() {
-        SecurityPolicy service = new DefaultSecurityPolicyService(List.of(new RequireAuthenticatedPolicy()));
+        SecurityPolicyService service = new DefaultSecurityPolicyService(List.of(new RequireAuthenticatedPolicy()));
         SecurityVerdict verdict = service.evaluate(
                 new SecurityRequest("user-1", "127.0.0.1", "/api", "read", Map.of(), Instant.parse("2026-01-01T00:00:00Z")),
                 new SecurityContext(false, null, Set.of(), Map.of())

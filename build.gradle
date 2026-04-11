@@ -17,14 +17,20 @@ allprojects {
 }
 
 subprojects {
-    apply plugin: 'java-library'
+    if (name != 'platform-security-bom') {
+        apply plugin: 'java-library'
 
-    java {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(17)
+        java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(17)
+            }
+            withSourcesJar()
+            withJavadocJar()
         }
-        withSourcesJar()
-        withJavadocJar()
+    }
+
+    if (name != 'platform-security-bom' && name != 'platform-security-sample-consumer') {
+        apply plugin: 'maven-publish'
     }
 
     tasks.withType(JavaCompile).configureEach {
@@ -34,6 +40,34 @@ subprojects {
     tasks.withType(Test).configureEach {
         useJUnitPlatform()
     }
+
+    if (name != 'platform-security-bom' && name != 'platform-security-sample-consumer') {
+        publishing {
+            publications {
+                mavenJava(MavenPublication) {
+                    from components.java
+                    artifactId = project.name
+                    pom {
+                        name = project.name
+                        description = "platform-security module ${project.name}"
+                        url = "https://github.com/jho951/platform-security"
+                    }
+                }
+            }
+            repositories {
+                if (project.hasProperty('githubPackagesUrl')) {
+                    maven {
+                        name = 'GitHubPackages'
+                        url = uri(project.property('githubPackagesUrl'))
+                        credentials {
+                            username = project.findProperty('githubPackagesUsername') ?: System.getenv('GITHUB_ACTOR')
+                            password = project.findProperty('githubPackagesToken') ?: System.getenv('GITHUB_TOKEN')
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 project(':platform-security-core') {
@@ -41,54 +75,5 @@ project(':platform-security-core') {
         api project(':platform-security-api')
         testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
         testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
-    }
-}
-
-project(':platform-security-spring') {
-    dependencies {
-        api project(':platform-security-api')
-        api project(':platform-security-core')
-        api project(':platform-security-web')
-        api project(':platform-security-auth-adapter')
-
-        implementation "io.github.jho951:ip-guard-core:${ipGuardVersion}"
-        implementation "io.github.jho951:ip-guard-spi:${ipGuardVersion}"
-        implementation "io.github.jho951:rate-limiter-core:${rateLimiterVersion}"
-        implementation "io.github.jho951:rate-limiter-spi:${rateLimiterVersion}"
-
-        compileOnly "jakarta.servlet:jakarta.servlet-api:${findProperty('jakartaServletVersion') ?: '6.1.0'}"
-        compileOnly "org.springframework:spring-context:${springFrameworkVersion}"
-        compileOnly "org.springframework.boot:spring-boot-autoconfigure:${springBootVersion}"
-        compileOnly "org.springframework.boot:spring-boot-configuration-processor:${springBootVersion}"
-        annotationProcessor "org.springframework.boot:spring-boot-configuration-processor:${springBootVersion}"
-    }
-}
-
-project(':platform-security-spring-boot-starter') {
-    dependencies {
-        api project(':platform-security-spring')
-        api "org.springframework:spring-context:${springFrameworkVersion}"
-        api "org.springframework.boot:spring-boot-autoconfigure:${springBootVersion}"
-    }
-}
-
-project(':platform-security-common-test') {
-    dependencies {
-        api project(':platform-security-api')
-        api project(':platform-security-core')
-    }
-}
-
-project(':platform-security-auth-adapter') {
-    dependencies {
-        api project(':platform-security-api')
-        api project(':platform-security-web')
-
-        api "io.github.jho951:auth-core:${authVersion}"
-        api "io.github.jho951:auth-jwt:${authVersion}"
-        api "io.github.jho951:auth-session:${authVersion}"
-        api "io.github.jho951:auth-hybrid:${authVersion}"
-
-        compileOnly "jakarta.servlet:jakarta.servlet-api:${findProperty('jakartaServletVersion') ?: '6.1.0'}"
     }
 }
