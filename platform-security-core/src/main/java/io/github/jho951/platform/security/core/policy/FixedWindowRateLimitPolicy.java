@@ -1,0 +1,56 @@
+package io.github.jho951.platform.security.core.policy;
+
+import io.github.jho951.platform.security.api.SecurityContext;
+import io.github.jho951.platform.security.api.SecurityPolicy;
+import io.github.jho951.platform.security.api.SecurityRequest;
+import io.github.jho951.platform.security.api.SecurityVerdict;
+import io.github.jho951.platform.security.core.limiter.InMemoryRateLimiter;
+import io.github.jho951.ratelimiter.core.RateLimitDecision;
+import io.github.jho951.ratelimiter.core.RateLimitKey;
+import io.github.jho951.ratelimiter.core.RateLimitKeyType;
+import io.github.jho951.ratelimiter.core.RateLimitPlan;
+import io.github.jho951.ratelimiter.spi.RateLimiter;
+
+import java.time.Clock;
+import java.time.Duration;
+import java.util.Objects;
+
+public final class FixedWindowRateLimitPolicy implements SecurityPolicy {
+    private final int limit;
+    private final Duration window;
+    private final RateLimiter rateLimiter;
+
+    public FixedWindowRateLimitPolicy(int limit, Duration window) {
+        this(limit, window, new InMemoryRateLimiter(Clock.systemUTC()));
+    }
+
+    public FixedWindowRateLimitPolicy(int limit, Duration window, RateLimiter rateLimiter) {
+        this.limit = limit;
+        this.window = Objects.requireNonNull(window, "window");
+        this.rateLimiter = Objects.requireNonNull(rateLimiter, "rateLimiter");
+    }
+
+    @Override
+    public String name() {
+        return "rate-limiter";
+    }
+
+    @Override
+    public SecurityVerdict evaluate(SecurityRequest request, SecurityContext context) {
+        if (limit <= 0) {
+            return SecurityVerdict.allow(name(), "rate limit disabled");
+        }
+
+        String value = request.subject() != null ? request.subject() : request.clientIp();
+        RateLimitKeyType keyType = request.subject() != null ? RateLimitKeyType.USER_ID : RateLimitKeyType.IP;
+        RateLimitKey key = RateLimitKey.of(keyType, value);
+        long windowSeconds = Math.max(1L, window.toSeconds());
+        double refillPerSecond = (double) limit / (double) windowSeconds;
+        RateLimitPlan plan = RateLimitPlan.perSecond(limit, refillPerSecond);
+        RateLimitDecision decision = rateLimiter.tryAcquire(key, 1L, plan);
+        if (!decision.isAllowed()) {
+            return SecurityVerdict.deny(name(), "rate limit exceeded for " + key.asString());
+        }
+        return SecurityVerdict.allow(name(), "within rate limit");
+    }
+}

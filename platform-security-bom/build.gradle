@@ -1,0 +1,32 @@
+plugins {
+    id 'java-platform'
+}
+
+group = 'io.github.jho951.platform'
+version = findProperty('releaseVersion') ?: '0.1.0-SNAPSHOT'
+
+javaPlatform {
+    allowDependencies()
+}
+
+dependencies {
+    constraints {
+        api project(':platform-security-policy')
+        api project(':platform-security-auth')
+        api project(':platform-security-ip')
+        api project(':platform-security-rate-limit')
+        api project(':platform-security-web')
+        api project(':platform-security-autoconfigure')
+        api project(':platform-security-starter')
+        api project(':platform-security-test-support')
+
+        api "io.github.jho951:auth-core:${findProperty('authVersion') ?: '3.0.0'}"
+        api "io.github.jho951:auth-jwt:${findProperty('authVersion') ?: '3.0.0'}"
+        api "io.github.jho951:auth-session:${findProperty('authVersion') ?: '3.0.0'}"
+        api "io.github.jho951:auth-hybrid:${findProperty('authVersion') ?: '3.0.0'}"
+        api "io.github.jho951:ip-guard-core:${findProperty('ipGuardVersion') ?: '3.0.0'}"
+        api "io.github.jho951:ip-guard-spi:${findProperty('ipGuardVersion') ?: '3.0.0'}"
+        api "io.github.jho951:rate-limiter-core:${findProperty('rateLimiterVersion') ?: '2.0.0'}"
+        api "io.github.jho951:rate-limiter-spi:${findProperty('rateLimiterVersion') ?: '2.0.0'}"
+    }
+}

@@ -1,0 +1,4 @@
+dependencies {
+    api project(':platform-security-api')
+    api project(':platform-security-core')
+}

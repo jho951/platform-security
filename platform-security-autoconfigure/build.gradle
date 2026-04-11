@@ -1,0 +1,10 @@
+dependencies {
+    api project(':platform-security-spring')
+    api project(':platform-security-policy')
+    api project(':platform-security-auth')
+    api project(':platform-security-ip')
+    api project(':platform-security-rate-limit')
+    api project(':platform-security-web')
+    api "org.springframework:spring-context:${rootProject.springFrameworkVersion}"
+    api "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
+}

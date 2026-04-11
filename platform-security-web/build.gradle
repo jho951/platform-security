@@ -1,0 +1,6 @@
+dependencies {
+    api project(':platform-security-policy')
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitVersion}"
+}

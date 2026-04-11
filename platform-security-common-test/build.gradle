@@ -1,0 +1,7 @@
+dependencies {
+    api project(':platform-security-policy')
+    api project(':platform-security-core')
+    api project(':platform-security-auth')
+    api project(':platform-security-ip')
+    api project(':platform-security-rate-limit')
+}

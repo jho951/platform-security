@@ -1,0 +1,4 @@
+dependencies {
+    api project(':platform-security-policy')
+    api project(':platform-security-auth-adapter')
+}

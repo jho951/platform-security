@@ -1,0 +1,10 @@
+dependencies {
+    api project(':platform-security-api')
+    api "io.github.jho951:ip-guard-core:${rootProject.ipGuardVersion}"
+    api "io.github.jho951:ip-guard-spi:${rootProject.ipGuardVersion}"
+    api "io.github.jho951:rate-limiter-core:${rootProject.rateLimiterVersion}"
+    api "io.github.jho951:rate-limiter-spi:${rootProject.rateLimiterVersion}"
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitVersion}"
+}

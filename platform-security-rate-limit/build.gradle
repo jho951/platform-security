@@ -1,0 +1,6 @@
+dependencies {
+    api project(':platform-security-policy')
+    api project(':platform-security-core')
+    api "io.github.jho951:rate-limiter-core:${rootProject.rateLimiterVersion}"
+    api "io.github.jho951:rate-limiter-spi:${rootProject.rateLimiterVersion}"
+}

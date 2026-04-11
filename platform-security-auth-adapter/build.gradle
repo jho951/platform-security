@@ -1,0 +1,12 @@
+dependencies {
+    api project(':platform-security-policy')
+    api project(':platform-security-web')
+    api "io.github.jho951:auth-core:${rootProject.authVersion}"
+    api "io.github.jho951:auth-jwt:${rootProject.authVersion}"
+    api "io.github.jho951:auth-session:${rootProject.authVersion}"
+    api "io.github.jho951:auth-hybrid:${rootProject.authVersion}"
+    compileOnly "jakarta.servlet:jakarta.servlet-api:${rootProject.findProperty('jakartaServletVersion') ?: '6.1.0'}"
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitVersion}"
+}
