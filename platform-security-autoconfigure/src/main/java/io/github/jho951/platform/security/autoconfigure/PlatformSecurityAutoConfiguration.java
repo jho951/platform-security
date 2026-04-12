@@ -10,11 +10,10 @@ import io.github.jho951.platform.security.auth.DefaultHybridAuthenticationCapabi
 import io.github.jho951.platform.security.auth.DefaultInternalServiceAuthenticationCapability;
 import io.github.jho951.platform.security.auth.DefaultJwtAuthenticationCapability;
 import io.github.jho951.platform.security.auth.DefaultSessionAuthenticationCapability;
-import io.github.jho951.platform.security.auth.PlatformAuthenticationFacade;
+import io.github.jho951.platform.security.auth.PlatformSecurityContextResolvers;
 import io.github.jho951.platform.security.core.DefaultSecurityPolicyService;
 import io.github.jho951.platform.security.policy.ClientIpResolver;
 import io.github.jho951.platform.security.ip.DefaultBoundaryIpPolicyProvider;
-import io.github.jho951.platform.security.policy.AuthMode;
 import io.github.jho951.platform.security.policy.AuthenticationModeResolver;
 import io.github.jho951.platform.security.policy.BoundaryIpPolicyProvider;
 import io.github.jho951.platform.security.policy.BoundaryRateLimitPolicyProvider;
@@ -47,6 +46,7 @@ import com.auth.support.jwt.JwtTokenService;
 import jakarta.servlet.Filter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -56,6 +56,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.web.server.WebFilter;
 
 import java.time.Clock;
+import java.util.LinkedHashMap;
+import java.util.Set;
 
 @AutoConfiguration
 @ConditionalOnProperty(prefix = "platform.security", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -232,12 +234,38 @@ public class PlatformSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(SecurityContextResolver.class)
-    public SecurityContextResolver securityContextResolver(AuthenticationCapabilityResolver authenticationCapabilityResolver) {
-        return new PlatformAuthenticationFacade(authenticationCapabilityResolver);
+    @ConditionalOnProperty(prefix = "platform.security.auth", name = "enabled", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = "platform.security.auth.dev-fallback", name = "enabled", havingValue = "true")
+    public SecurityContextResolver devFallbackSecurityContextResolver() {
+        return PlatformSecurityContextResolvers.devFallback();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(SecurityContextResolver.class)
+    @ConditionalOnProperty(prefix = "platform.security.auth", name = "enabled", havingValue = "false")
+    public SecurityContextResolver anonymousSecurityContextResolver() {
+        return request -> new SecurityContext(false, null, Set.of(), new LinkedHashMap<>(request.attributes()));
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "platform.security.auth", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public org.springframework.beans.factory.SmartInitializingSingleton securityContextResolverGuard(
+            ObjectProvider<SecurityContextResolver> resolverProvider
+    ) {
+        return () -> {
+            if (resolverProvider.getIfAvailable() == null) {
+                throw new IllegalStateException(
+                        "No SecurityContextResolver configured. " +
+                                "Provide a production SecurityContextResolver bean, " +
+                                "or explicitly enable platform.security.auth.dev-fallback.enabled=true for local/test."
+                );
+            }
+        };
     }
 
     @Bean
     @ConditionalOnMissingBean(PlatformSecurityServletFilter.class)
+    @ConditionalOnBean(SecurityContextResolver.class)
     @ConditionalOnClass(name = "jakarta.servlet.Filter")
     public Filter securityServletFilter(
             SecurityIngressAdapter securityIngressAdapter,
@@ -250,6 +278,7 @@ public class PlatformSecurityAutoConfiguration {
     @Bean
     @ConditionalOnClass(WebFilter.class)
     @ConditionalOnMissingBean(PlatformSecurityWebFilter.class)
+    @ConditionalOnBean(SecurityContextResolver.class)
     public WebFilter securityWebFilter(
             SecurityIngressAdapter securityIngressAdapter,
             SecurityContextResolver securityContextResolver,

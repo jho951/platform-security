@@ -96,6 +96,7 @@ public class PlatformSecurityProperties {
         private boolean allowSessionForBrowser = true;
         private boolean allowBearerForApi = true;
         private boolean internalTokenEnabled = true;
+        private DevFallbackProperties devFallback = new DevFallbackProperties();
         private String jwtSecret = "platform-security-dev-secret-platform-security-dev-secret";
         private Duration accessTokenTtl = Duration.ofMinutes(30);
         private Duration refreshTokenTtl = Duration.ofDays(14);
@@ -140,6 +141,14 @@ public class PlatformSecurityProperties {
             this.internalTokenEnabled = internalTokenEnabled;
         }
 
+        public DevFallbackProperties getDevFallback() {
+            return devFallback;
+        }
+
+        public void setDevFallback(DevFallbackProperties devFallback) {
+            this.devFallback = devFallback == null ? new DevFallbackProperties() : devFallback;
+        }
+
         public String getJwtSecret() {
             return jwtSecret;
         }
@@ -162,6 +171,18 @@ public class PlatformSecurityProperties {
 
         public void setRefreshTokenTtl(Duration refreshTokenTtl) {
             this.refreshTokenTtl = refreshTokenTtl == null ? Duration.ofDays(14) : refreshTokenTtl;
+        }
+    }
+
+    public static class DevFallbackProperties {
+        private boolean enabled = false;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
     }
 

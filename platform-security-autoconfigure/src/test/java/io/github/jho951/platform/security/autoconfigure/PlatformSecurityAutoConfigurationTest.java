@@ -20,6 +20,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PlatformSecurityAutoConfigurationTest {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
@@ -29,10 +30,11 @@ class PlatformSecurityAutoConfigurationTest {
             ));
 
     @Test
-    void registersBeansAndBindsProperties() {
+    void registersBeansAndBindsPropertiesWithDevFallbackEnabled() {
         contextRunner
                 .withPropertyValues(
                         "platform.security.enabled=true",
+                        "platform.security.auth.dev-fallback.enabled=true",
                         "platform.security.ip-guard.trust-proxy=false",
                         "platform.security.auth.allow-session-for-browser=false",
                         "platform.security.auth.allow-bearer-for-api=false"
@@ -52,6 +54,16 @@ class PlatformSecurityAutoConfigurationTest {
                             "10.0.0.10",
                             context.getBean(ClientIpResolver.class).resolve("10.0.0.10", Map.of("X-Forwarded-For", "1.2.3.4"))
                     );
+                });
+    }
+
+    @Test
+    void failsFastWhenSecurityContextResolverIsMissing() {
+        contextRunner
+                .withPropertyValues("platform.security.enabled=true")
+                .run(context -> {
+                    assertNotNull(context.getStartupFailure());
+                    assertTrue(context.getStartupFailure().getMessage().contains("No SecurityContextResolver configured"));
                 });
     }
 
@@ -82,6 +94,7 @@ class PlatformSecurityAutoConfigurationTest {
     void customizerAppliesToBoundProperties() {
         contextRunner
                 .withBean(PlatformSecurityCustomizer.class, () -> properties -> properties.getIpGuard().setTrustProxy(false))
+                .withPropertyValues("platform.security.auth.dev-fallback.enabled=true")
                 .withPropertyValues("platform.security.ip-guard.trust-proxy=true")
                 .run(context -> {
                     PlatformSecurityProperties properties = context.getBean(PlatformSecurityProperties.class);
