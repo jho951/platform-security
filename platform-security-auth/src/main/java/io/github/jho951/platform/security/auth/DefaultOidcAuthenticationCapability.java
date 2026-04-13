@@ -29,6 +29,10 @@ public final class DefaultOidcAuthenticationCapability implements Authentication
             return Optional.empty();
         }
         String nonce = DefaultJwtAuthenticationCapability.trimToNull(attributes.get(PlatformAuthenticationFacade.OIDC_NONCE_ATTRIBUTE));
-        return oidcAuthenticationProvider.authenticate(new OidcAuthenticationRequest(idToken, nonce));
+        try {
+            return oidcAuthenticationProvider.authenticate(new OidcAuthenticationRequest(idToken, nonce));
+        } catch (RuntimeException ex) {
+            return Optional.empty();
+        }
     }
 }

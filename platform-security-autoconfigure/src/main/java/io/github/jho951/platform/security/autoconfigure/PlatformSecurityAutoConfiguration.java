@@ -12,6 +12,7 @@ import io.github.jho951.platform.security.auth.DefaultHybridAuthenticationCapabi
 import io.github.jho951.platform.security.auth.DefaultInternalServiceAuthenticationCapability;
 import io.github.jho951.platform.security.auth.DefaultJwtAuthenticationCapability;
 import io.github.jho951.platform.security.auth.DefaultOAuth2PrincipalBridge;
+import io.github.jho951.platform.security.auth.DefaultOidcPrincipalMapper;
 import io.github.jho951.platform.security.auth.DefaultOidcAuthenticationCapability;
 import io.github.jho951.platform.security.auth.DefaultServiceAccountAuthenticationCapability;
 import io.github.jho951.platform.security.auth.DefaultSessionIssuanceCapability;
@@ -299,6 +300,12 @@ public class PlatformSecurityAutoConfiguration {
     @ConditionalOnBean(HmacAuthenticationProvider.class)
     public AuthenticationCapability hmacAuthenticationCapability(HmacAuthenticationProvider hmacAuthenticationProvider) {
         return new DefaultHmacAuthenticationCapability(hmacAuthenticationProvider);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(OidcPrincipalMapper.class)
+    public OidcPrincipalMapper oidcPrincipalMapper(PlatformSecurityProperties properties) {
+        return new DefaultOidcPrincipalMapper(properties.getAuth().getOidc());
     }
 
     @Bean

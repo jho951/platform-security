@@ -2,6 +2,7 @@ package io.github.jho951.platform.security.auth;
 
 import com.auth.api.model.OAuth2UserIdentity;
 import com.auth.api.model.Principal;
+import com.auth.oidc.OidcIdentity;
 import com.auth.session.SessionStore;
 import com.auth.spi.TokenService;
 import io.github.jho951.platform.security.api.SecurityRequest;
@@ -67,6 +68,31 @@ class PlatformSecurityContextResolversTest {
         assertEquals("access-user-1", bundle.accessToken());
         assertEquals("refresh-user-1", bundle.refreshToken());
         assertTrue(bundle.sessionId() != null && sessionStore.find(bundle.sessionId()).isPresent());
+    }
+
+    @Test
+    void defaultOidcPrincipalMapperUsesConfiguredClaims() {
+        io.github.jho951.platform.security.policy.PlatformSecurityProperties.OidcProperties properties =
+                new io.github.jho951.platform.security.policy.PlatformSecurityProperties.OidcProperties();
+        properties.setPrincipalClaim("email");
+        properties.setAuthoritiesClaim("groups");
+        properties.setAuthorityPrefix("ROLE_");
+
+        DefaultOidcPrincipalMapper mapper = new DefaultOidcPrincipalMapper(properties);
+
+        Principal principal = mapper.map(new OidcIdentity(
+                "subject-1",
+                "https://issuer.example.com",
+                "platform-client",
+                Map.of(
+                        "email", "user@example.com",
+                        "groups", java.util.List.of("USER", "ADMIN")
+                )
+        ));
+
+        assertEquals("user@example.com", principal.getUserId());
+        assertEquals(java.util.List.of("ROLE_USER", "ROLE_ADMIN"), principal.getAuthorities());
+        assertEquals("https://issuer.example.com", principal.getAttributes().get("issuer"));
     }
 
     private TokenService tokenService() {

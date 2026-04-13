@@ -101,6 +101,7 @@ public class PlatformSecurityProperties {
         private boolean serviceAccountEnabled = true;
         private boolean internalTokenEnabled = true;
         private DevFallbackProperties devFallback = new DevFallbackProperties();
+        private OidcProperties oidc = new OidcProperties();
         private String jwtSecret = "platform-security-dev-secret-platform-security-dev-secret";
         private Duration accessTokenTtl = Duration.ofMinutes(30);
         private Duration refreshTokenTtl = Duration.ofDays(14);
@@ -185,6 +186,14 @@ public class PlatformSecurityProperties {
             this.devFallback = devFallback == null ? new DevFallbackProperties() : devFallback;
         }
 
+        public OidcProperties getOidc() {
+            return oidc;
+        }
+
+        public void setOidc(OidcProperties oidc) {
+            this.oidc = oidc == null ? new OidcProperties() : oidc;
+        }
+
         public String getJwtSecret() {
             return jwtSecret;
         }
@@ -219,6 +228,45 @@ public class PlatformSecurityProperties {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+    }
+
+    public static class OidcProperties {
+        private String principalClaim = "sub";
+        private String authoritiesClaim = "roles";
+        private String authorityPrefix = "";
+        private List<String> defaultAuthorities = new ArrayList<>();
+
+        public String getPrincipalClaim() {
+            return principalClaim;
+        }
+
+        public void setPrincipalClaim(String principalClaim) {
+            this.principalClaim = principalClaim == null || principalClaim.isBlank() ? "sub" : principalClaim.trim();
+        }
+
+        public String getAuthoritiesClaim() {
+            return authoritiesClaim;
+        }
+
+        public void setAuthoritiesClaim(String authoritiesClaim) {
+            this.authoritiesClaim = authoritiesClaim == null || authoritiesClaim.isBlank() ? "roles" : authoritiesClaim.trim();
+        }
+
+        public String getAuthorityPrefix() {
+            return authorityPrefix;
+        }
+
+        public void setAuthorityPrefix(String authorityPrefix) {
+            this.authorityPrefix = authorityPrefix == null ? "" : authorityPrefix;
+        }
+
+        public List<String> getDefaultAuthorities() {
+            return defaultAuthorities;
+        }
+
+        public void setDefaultAuthorities(List<String> defaultAuthorities) {
+            this.defaultAuthorities = defaultAuthorities == null ? new ArrayList<>() : defaultAuthorities;
         }
     }
 
