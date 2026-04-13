@@ -13,11 +13,23 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * HMAC 서명 요청을 처리하는 platform capability다.
+ *
+ * <p>이 capability는 platform attributes를 {@link HmacAuthenticationRequest}로
+ * 변환한다. secret 조회, timestamp 정책, replay 방지, canonicalization,
+ * signature 검증은 설정된 auth 1계층 provider와 그 collaborator의 책임이다.</p>
+ */
 public final class DefaultHmacAuthenticationCapability implements AuthenticationCapability {
     private static final String SIGNED_HEADER_PREFIX = "auth.hmac.header.";
 
     private final HmacAuthenticationProvider hmacAuthenticationProvider;
 
+    /**
+     * HMAC 요청 검증을 수행할 1계층 provider와 capability를 연결한다.
+     *
+     * @param hmacAuthenticationProvider 서명 검증을 담당하는 provider
+     */
     public DefaultHmacAuthenticationCapability(HmacAuthenticationProvider hmacAuthenticationProvider) {
         this.hmacAuthenticationProvider = Objects.requireNonNull(hmacAuthenticationProvider, "hmacAuthenticationProvider");
     }

@@ -24,38 +24,83 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * platform {@link SecurityRequest}를 auth 1계층 credential 검증으로 연결하는 facade다.
+ *
+ * <p>이 클래스는 request attributes에 담긴 credential key를 읽고, 결정된
+ * {@link AuthMode}에 맞는 {@link AuthenticationCapability}를 호출한다. 로그인 flow,
+ * OAuth2 provider 연동, 사용자 생성, 권한 정책은 소비 서비스 책임으로 남긴다.</p>
+ */
 public final class PlatformAuthenticationFacade implements SecurityContextResolver {
+    /** 이미 인증된 context를 attributes로 직접 전달할 때 사용하는 flag key다. */
     public static final String AUTHENTICATED_ATTRIBUTE = "auth.authenticated";
+    /** 이미 확인된 principal id를 attributes로 직접 전달할 때 사용하는 key다. */
     public static final String PRINCIPAL_ATTRIBUTE = "auth.principal";
+    /** 이미 확인된 role 목록을 attributes로 직접 전달할 때 사용하는 key다. */
     public static final String ROLES_ATTRIBUTE = "auth.roles";
+    /** bearer access token을 전달할 때 사용하는 key다. */
     public static final String ACCESS_TOKEN_ATTRIBUTE = "auth.accessToken";
+    /** session id를 전달할 때 사용하는 key다. */
     public static final String SESSION_ID_ATTRIBUTE = "auth.sessionId";
+    /** internal service token을 전달할 때 사용하는 key다. */
     public static final String INTERNAL_TOKEN_ATTRIBUTE = DefaultInternalServiceAuthenticationCapability.INTERNAL_TOKEN_ATTRIBUTE;
+    /** API key id를 전달할 때 사용하는 key다. */
     public static final String API_KEY_ID_ATTRIBUTE = "auth.apiKeyId";
+    /** API key secret을 전달할 때 사용하는 key다. */
     public static final String API_KEY_SECRET_ATTRIBUTE = "auth.apiKeySecret";
+    /** HMAC key id를 전달할 때 사용하는 key다. */
     public static final String HMAC_KEY_ID_ATTRIBUTE = "auth.hmac.keyId";
+    /** HMAC signature를 전달할 때 사용하는 key다. */
     public static final String HMAC_SIGNATURE_ATTRIBUTE = "auth.hmac.signature";
+    /** HMAC timestamp를 전달할 때 사용하는 key다. */
     public static final String HMAC_TIMESTAMP_ATTRIBUTE = "auth.hmac.timestamp";
+    /** HMAC 서명 대상 body를 전달할 때 사용하는 key다. */
     public static final String HMAC_BODY_ATTRIBUTE = "auth.hmac.body";
+    /** OIDC id_token을 전달할 때 사용하는 key다. */
     public static final String OIDC_ID_TOKEN_ATTRIBUTE = "auth.oidc.idToken";
+    /** OIDC nonce를 전달할 때 사용하는 key다. */
     public static final String OIDC_NONCE_ATTRIBUTE = "auth.oidc.nonce";
+    /** service account id를 전달할 때 사용하는 key다. */
     public static final String SERVICE_ACCOUNT_ID_ATTRIBUTE = "auth.serviceAccountId";
+    /** service account secret을 전달할 때 사용하는 key다. */
     public static final String SERVICE_ACCOUNT_SECRET_ATTRIBUTE = "auth.serviceAccountSecret";
 
     private final AuthenticationCapabilityResolver capabilityResolver;
 
+    /**
+     * local/dev fallback 설정으로 facade를 만든다.
+     *
+     * <p>운영 서비스는 명시적으로 provider나 resolver를 주입해야 한다.</p>
+     */
     public PlatformAuthenticationFacade() {
         this("platform-security-dev-secret-platform-security-dev-secret", 1800L, 1209600L);
     }
 
+    /**
+     * JWT 기반 local fallback resolver를 포함한 facade를 만든다.
+     *
+     * @param jwtSecret local fallback JWT secret
+     * @param accessTokenTtlSeconds access token TTL 초 단위
+     * @param refreshTokenTtlSeconds refresh token TTL 초 단위
+     */
     public PlatformAuthenticationFacade(String jwtSecret, long accessTokenTtlSeconds, long refreshTokenTtlSeconds) {
         this(createDefaultResolver(jwtSecret, accessTokenTtlSeconds, refreshTokenTtlSeconds));
     }
 
+    /**
+     * 서비스가 구성한 capability resolver로 facade를 만든다.
+     *
+     * @param capabilityResolver auth mode를 capability로 연결하는 resolver
+     */
     public PlatformAuthenticationFacade(AuthenticationCapabilityResolver capabilityResolver) {
         this.capabilityResolver = Objects.requireNonNull(capabilityResolver, "capabilityResolver");
     }
 
+    /**
+     * hybrid provider 하나로 JWT/session/hybrid/internal capability를 구성한다.
+     *
+     * @param hybridAuthenticationProvider token/session 검증 provider
+     */
     public PlatformAuthenticationFacade(HybridAuthenticationProvider hybridAuthenticationProvider) {
         this(new DefaultAuthenticationCapabilityResolver(
                 new DefaultJwtAuthenticationCapability(hybridAuthenticationProvider),

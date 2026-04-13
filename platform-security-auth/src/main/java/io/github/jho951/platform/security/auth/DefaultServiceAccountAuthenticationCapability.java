@@ -9,9 +9,21 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * service account credential을 처리하는 platform capability다.
+ *
+ * <p>platform 계층은 request attributes에서 service id와 secret을 추출한다.
+ * 검증, credential lifecycle, service ownership 정책은 설정된
+ * {@link ServiceAccountAuthenticationProvider}에 위임한다.</p>
+ */
 public final class DefaultServiceAccountAuthenticationCapability implements AuthenticationCapability {
     private final ServiceAccountAuthenticationProvider serviceAccountAuthenticationProvider;
 
+    /**
+     * service account 검증을 수행할 1계층 provider와 capability를 연결한다.
+     *
+     * @param serviceAccountAuthenticationProvider service account credential 검증 provider
+     */
     public DefaultServiceAccountAuthenticationCapability(ServiceAccountAuthenticationProvider serviceAccountAuthenticationProvider) {
         this.serviceAccountAuthenticationProvider = Objects.requireNonNull(serviceAccountAuthenticationProvider, "serviceAccountAuthenticationProvider");
     }

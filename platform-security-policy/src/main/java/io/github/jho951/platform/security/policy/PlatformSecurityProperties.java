@@ -231,6 +231,13 @@ public class PlatformSecurityProperties {
         }
     }
 
+    /**
+     * token 검증이 끝난 OIDC identity를 principal로 바꿀 때 쓰는 claim mapping 설정이다.
+     *
+     * <p>이 설정은 token 검증을 설정하지 않는다. issuer, audience, JWK, provider
+     * metadata, nonce 검증은 1계층 구현 또는 소비 서비스가 제공하는
+     * {@code OidcTokenVerifier}의 책임이다.</p>
+     */
     public static class OidcProperties {
         private String principalClaim = "sub";
         private String authoritiesClaim = "roles";

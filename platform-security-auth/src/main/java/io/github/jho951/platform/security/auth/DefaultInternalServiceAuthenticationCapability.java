@@ -9,16 +9,34 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * 내부 서비스 간 호출에 사용하는 internal token capability다.
+ *
+ * <p>token 검증은 1계층 hybrid provider가 맡고, 서비스별 issuer/audience/service id
+ * 검증은 {@link InternalTokenClaimsValidator} hook으로 분리한다.</p>
+ */
 public final class DefaultInternalServiceAuthenticationCapability implements AuthenticationCapability {
+    /** request attributes에서 internal token을 읽을 때 사용하는 key다. */
     public static final String INTERNAL_TOKEN_ATTRIBUTE = "auth.internalToken";
 
     private final HybridAuthenticationProvider hybridAuthenticationProvider;
     private final InternalTokenClaimsValidator claimsValidator;
 
+    /**
+     * claim 추가 검증 없이 internal token capability를 만든다.
+     *
+     * @param hybridAuthenticationProvider token/session 검증 provider
+     */
     public DefaultInternalServiceAuthenticationCapability(HybridAuthenticationProvider hybridAuthenticationProvider) {
         this(hybridAuthenticationProvider, InternalTokenClaimsValidator.allowAll());
     }
 
+    /**
+     * service-specific claim validator를 포함한 internal token capability를 만든다.
+     *
+     * @param hybridAuthenticationProvider token/session 검증 provider
+     * @param claimsValidator internal token claim 추가 검증 hook
+     */
     public DefaultInternalServiceAuthenticationCapability(
             HybridAuthenticationProvider hybridAuthenticationProvider,
             InternalTokenClaimsValidator claimsValidator

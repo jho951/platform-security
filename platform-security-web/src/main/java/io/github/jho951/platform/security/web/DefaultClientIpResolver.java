@@ -16,9 +16,7 @@ public final class DefaultClientIpResolver implements ClientIpResolver {
     @Override
     public String resolve(String remoteAddress, Map<String, String> headers) {
         String fallback = normalize(remoteAddress);
-        if (!properties.isTrustProxy()) {
-            return fallback;
-        }
+        if (!properties.isTrustProxy()) return fallback;
         if (headers != null) {
             String forwardedFor = header(headers, "X-Forwarded-For");
             if (forwardedFor != null && !forwardedFor.isBlank()) {
@@ -31,21 +29,15 @@ public final class DefaultClientIpResolver implements ClientIpResolver {
 
     private String header(Map<String, String> headers, String name) {
         for (Map.Entry<String, String> entry : headers.entrySet()) {
-            if (entry.getKey() != null && entry.getKey().trim().equalsIgnoreCase(name)) {
-                return entry.getValue();
-            }
+            if (entry.getKey() != null && entry.getKey().trim().equalsIgnoreCase(name)) return entry.getValue();
         }
         return null;
     }
 
     private String normalize(String value) {
-        if (value == null) {
-            return "127.0.0.1";
-        }
+        if (value == null) return "127.0.0.1";
         String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            return "127.0.0.1";
-        }
+        if (trimmed.isEmpty()) return "127.0.0.1";
         return trimmed.toLowerCase(Locale.ROOT).contains("::ffff:")
                 ? trimmed.substring(trimmed.lastIndexOf(':') + 1)
                 : trimmed;

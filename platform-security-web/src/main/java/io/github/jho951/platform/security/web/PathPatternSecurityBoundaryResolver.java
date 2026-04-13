@@ -51,30 +51,23 @@ public final class PathPatternSecurityBoundaryResolver implements io.github.jho9
     public String resolvePath(String requestPath) {
         Objects.requireNonNull(requestPath, "requestPath");
         String normalized = requestPath.trim();
-        if (normalized.isEmpty()) {
-            throw new IllegalArgumentException("requestPath must not be blank");
-        }
+        if (normalized.isEmpty()) throw new IllegalArgumentException("requestPath must not be blank");
         return normalized.startsWith("/") ? normalized : "/" + normalized;
     }
 
     private boolean matches(String path, List<String> patterns, String... defaults) {
         for (String pattern : patterns) {
-            if (pattern != null && matchesPattern(path, pattern)) {
-                return true;
-            }
+            if (pattern != null && matchesPattern(path, pattern)) return true;
         }
         for (String pattern : defaults) {
-            if (matchesPattern(path, pattern)) {
-                return true;
-            }
+            if (matchesPattern(path, pattern)) return true;
         }
         return false;
     }
 
     private boolean matchesPattern(String path, String pattern) {
-        if (pattern == null || pattern.isBlank()) {
-            return false;
-        }
+        if (pattern == null) return false;
+		if (pattern.isBlank()) return false;
         String normalized = pattern.trim();
         if (normalized.endsWith("/**")) {
             String prefix = normalized.substring(0, normalized.length() - 3);

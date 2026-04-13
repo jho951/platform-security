@@ -9,9 +9,19 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * bearer access token을 처리하는 JWT capability다.
+ *
+ * <p>JWT parse와 서명 검증은 1계층 {@link HybridAuthenticationProvider}로 위임한다.</p>
+ */
 public final class DefaultJwtAuthenticationCapability implements AuthenticationCapability {
     private final HybridAuthenticationProvider hybridAuthenticationProvider;
 
+    /**
+     * JWT 검증 provider와 capability를 연결한다.
+     *
+     * @param hybridAuthenticationProvider access token 검증 provider
+     */
     public DefaultJwtAuthenticationCapability(HybridAuthenticationProvider hybridAuthenticationProvider) {
         this.hybridAuthenticationProvider = Objects.requireNonNull(hybridAuthenticationProvider, "hybridAuthenticationProvider");
     }

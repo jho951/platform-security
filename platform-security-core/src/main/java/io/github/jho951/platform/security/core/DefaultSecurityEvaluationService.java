@@ -38,6 +38,123 @@ public class DefaultSecurityEvaluationService implements SecurityEvaluationServi
     private final BoundaryRateLimitPolicyProvider boundaryRateLimitPolicyProvider;
     private final PlatformPrincipalFactory principalFactory;
 
+	private SecurityEvaluationResult evaluateSelectionMode(SecurityRequest request, SecurityContext context) {
+		SecurityBoundary boundary = resolveBoundary(request);
+		ClientType clientType = clientTypeResolver.resolve(request, context, boundary);
+		AuthMode authMode = authenticationModeResolver.resolve(request, context, boundary, clientType);
+		ResolvedSecurityProfile profile = new ResolvedSecurityProfile(
+			boundary.type().name(),
+			boundary.patterns(),
+			clientType.name(),
+			authMode.name()
+		);
+		String principal = principalFactory.createPrincipal(context);
+
+		Map<String, String> attributes = new LinkedHashMap<>(request.attributes());
+		attributes.put(SecurityAttributes.BOUNDARY, profile.boundaryType());
+		attributes.put(SecurityAttributes.BOUNDARY_PATTERNS, String.join(",", profile.boundaryPatterns()));
+		attributes.put(SecurityAttributes.CLIENT_TYPE, profile.clientType());
+		attributes.put(SecurityAttributes.AUTH_MODE, profile.authMode());
+		if (principal != null) attributes.put(SecurityAttributes.PRINCIPAL, principal);
+
+		SecurityRequest resolvedRequest = new SecurityRequest(
+			principal != null ? principal : request.subject(),
+			request.clientIp(),
+			request.path(),
+			request.action(),
+			attributes,
+			request.occurredAt()
+		);
+
+		List<SecurityPolicy> chain = new ArrayList<>();
+		chain.add(new io.github.jho951.platform.security.core.policy.RequireAuthenticatedPolicy());
+		chain.add(boundaryIpPolicyProvider.resolve(boundary, profile));
+		chain.add(boundaryRateLimitPolicyProvider.resolve(boundary, profile));
+		chain.addAll(policies);
+
+		SecurityVerdict verdict = SecurityVerdict.allow("selection", "all selected policies passed");
+		for (SecurityPolicy policy : chain) {
+			verdict = policy.evaluate(resolvedRequest, context);
+			if (!verdict.allowed()) break;
+		}
+
+		return new SecurityEvaluationResult(new SecurityEvaluationContext(resolvedRequest, context, profile), verdict);
+	}
+
+	private SecurityVerdict evaluatePolicyList(SecurityRequest request, SecurityContext context) {
+		for (SecurityPolicy policy : policies) {
+			SecurityVerdict verdict = policy.evaluate(request, context);
+			if (!verdict.allowed()) return verdict;
+		}
+		return SecurityVerdict.allow("default", "all policies passed");
+	}
+
+	private SecurityBoundary resolveBoundary(SecurityRequest request) {
+		String boundaryName = request.attributes().get(SecurityAttributes.BOUNDARY);
+		if (boundaryName != null && !boundaryName.isBlank()) {
+			try {
+				return new SecurityBoundary(SecurityBoundaryType.valueOf(boundaryName.trim().toUpperCase(Locale.ROOT)), List.of());
+			} catch (IllegalArgumentException ignored) {}
+		}
+		return boundaryResolver.resolve(request);
+	}
+
+	private ResolvedSecurityProfile resolveFallbackProfile(SecurityRequest request, SecurityContext context) {
+		SecurityBoundary boundary = resolveFallbackBoundary(request);
+		ClientType clientType = resolveFallbackClientType(request, context, boundary);
+		AuthMode authMode = resolveFallbackAuthMode(request, context, boundary);
+		return new ResolvedSecurityProfile(
+			boundary.type().name(),
+			boundary.patterns(),
+			clientType.name(),
+			authMode.name()
+		);
+	}
+
+	private SecurityBoundary resolveFallbackBoundary(SecurityRequest request) {
+		String boundaryName = request.attributes().get(SecurityAttributes.BOUNDARY);
+		if (boundaryName != null && !boundaryName.isBlank()) {
+			try {
+				return new SecurityBoundary(SecurityBoundaryType.valueOf(boundaryName.trim().toUpperCase(Locale.ROOT)), List.of());
+			} catch (IllegalArgumentException ignored) {}
+		}
+		return new SecurityBoundary(SecurityBoundaryType.PROTECTED, List.of());
+	}
+
+	private ClientType resolveFallbackClientType(SecurityRequest request, SecurityContext context, SecurityBoundary boundary) {
+		String boundaryType = boundary.type().name();
+		if (SecurityBoundaryType.INTERNAL.name().equals(boundaryType)) return ClientType.INTERNAL_SERVICE;
+		if (SecurityBoundaryType.ADMIN.name().equals(boundaryType)) return ClientType.ADMIN_CONSOLE;
+		if (request.attributes().containsKey("auth.sessionId")) return ClientType.BROWSER;
+		if (request.attributes().containsKey("auth.accessToken") || context.authenticated()) return ClientType.EXTERNAL_API;
+		return ClientType.EXTERNAL_API;
+	}
+
+	private AuthMode resolveFallbackAuthMode(SecurityRequest request, SecurityContext context, SecurityBoundary boundary) {
+		if (SecurityBoundaryType.PUBLIC.name().equals(boundary.type().name())) return AuthMode.NONE;
+		String sessionId = trimToNull(request.attributes().get("auth.sessionId"));
+		String accessToken = trimToNull(request.attributes().get("auth.accessToken"));
+		if (SecurityBoundaryType.INTERNAL.name().equals(boundary.type().name())) return AuthMode.HYBRID;
+		if (sessionId != null && accessToken != null) return AuthMode.HYBRID;
+		if (sessionId != null) return AuthMode.SESSION;
+		if (accessToken != null) return AuthMode.JWT;
+		return context.authenticated() ? AuthMode.HYBRID : AuthMode.NONE;
+	}
+
+	private String trimToNull(String value) {
+		if (value == null) return null;
+		String trimmed = value.trim();
+		return trimmed.isEmpty() ? null : trimmed;
+	}
+
+	private boolean isSelectionMode() {
+		return boundaryResolver != null
+			&& clientTypeResolver != null
+			&& authenticationModeResolver != null
+			&& boundaryIpPolicyProvider != null
+			&& boundaryRateLimitPolicyProvider != null;
+	}
+
     public DefaultSecurityEvaluationService(List<SecurityPolicy> policies) {
         this.policies = policies == null ? List.of() : List.copyOf(policies);
         this.boundaryResolver = null;
@@ -75,161 +192,12 @@ public class DefaultSecurityEvaluationService implements SecurityEvaluationServi
         Objects.requireNonNull(request, "request");
         Objects.requireNonNull(context, "context");
 
-        if (isSelectionMode()) {
-            return evaluateSelectionMode(request, context);
-        }
+        if (isSelectionMode()) return evaluateSelectionMode(request, context);
 
         SecurityVerdict verdict = evaluatePolicyList(request, context);
         return new SecurityEvaluationResult(
                 new SecurityEvaluationContext(request, context, resolveFallbackProfile(request, context)),
                 verdict
         );
-    }
-
-    private SecurityEvaluationResult evaluateSelectionMode(SecurityRequest request, SecurityContext context) {
-        SecurityBoundary boundary = resolveBoundary(request);
-        ClientType clientType = clientTypeResolver.resolve(request, context, boundary);
-        AuthMode authMode = authenticationModeResolver.resolve(request, context, boundary, clientType);
-        ResolvedSecurityProfile profile = new ResolvedSecurityProfile(
-                boundary.type().name(),
-                boundary.patterns(),
-                clientType.name(),
-                authMode.name()
-        );
-        String principal = principalFactory.createPrincipal(context);
-
-        Map<String, String> attributes = new LinkedHashMap<>(request.attributes());
-        attributes.put(SecurityAttributes.BOUNDARY, profile.boundaryType());
-        attributes.put(SecurityAttributes.BOUNDARY_PATTERNS, String.join(",", profile.boundaryPatterns()));
-        attributes.put(SecurityAttributes.CLIENT_TYPE, profile.clientType());
-        attributes.put(SecurityAttributes.AUTH_MODE, profile.authMode());
-        if (principal != null) {
-            attributes.put(SecurityAttributes.PRINCIPAL, principal);
-        }
-
-        SecurityRequest resolvedRequest = new SecurityRequest(
-                principal != null ? principal : request.subject(),
-                request.clientIp(),
-                request.path(),
-                request.action(),
-                attributes,
-                request.occurredAt()
-        );
-
-        List<SecurityPolicy> chain = new ArrayList<>();
-        chain.add(new io.github.jho951.platform.security.core.policy.RequireAuthenticatedPolicy());
-        chain.add(boundaryIpPolicyProvider.resolve(boundary, profile));
-        chain.add(boundaryRateLimitPolicyProvider.resolve(boundary, profile));
-        chain.addAll(policies);
-
-        SecurityVerdict verdict = SecurityVerdict.allow("selection", "all selected policies passed");
-        for (SecurityPolicy policy : chain) {
-            verdict = policy.evaluate(resolvedRequest, context);
-            if (!verdict.allowed()) {
-                break;
-            }
-        }
-
-        return new SecurityEvaluationResult(new SecurityEvaluationContext(resolvedRequest, context, profile), verdict);
-    }
-
-    private SecurityVerdict evaluatePolicyList(SecurityRequest request, SecurityContext context) {
-        for (SecurityPolicy policy : policies) {
-            SecurityVerdict verdict = policy.evaluate(request, context);
-            if (!verdict.allowed()) {
-                return verdict;
-            }
-        }
-        return SecurityVerdict.allow("default", "all policies passed");
-    }
-
-    private SecurityBoundary resolveBoundary(SecurityRequest request) {
-        String boundaryName = request.attributes().get(SecurityAttributes.BOUNDARY);
-        if (boundaryName != null && !boundaryName.isBlank()) {
-            try {
-                return new SecurityBoundary(SecurityBoundaryType.valueOf(boundaryName.trim().toUpperCase(Locale.ROOT)), List.of());
-            } catch (IllegalArgumentException ignored) {
-                // fall through to resolver
-            }
-        }
-        return boundaryResolver.resolve(request);
-    }
-
-    private ResolvedSecurityProfile resolveFallbackProfile(SecurityRequest request, SecurityContext context) {
-        SecurityBoundary boundary = resolveFallbackBoundary(request);
-        ClientType clientType = resolveFallbackClientType(request, context, boundary);
-        AuthMode authMode = resolveFallbackAuthMode(request, context, boundary);
-        return new ResolvedSecurityProfile(
-                boundary.type().name(),
-                boundary.patterns(),
-                clientType.name(),
-                authMode.name()
-        );
-    }
-
-    private SecurityBoundary resolveFallbackBoundary(SecurityRequest request) {
-        String boundaryName = request.attributes().get(SecurityAttributes.BOUNDARY);
-        if (boundaryName != null && !boundaryName.isBlank()) {
-            try {
-                return new SecurityBoundary(SecurityBoundaryType.valueOf(boundaryName.trim().toUpperCase(Locale.ROOT)), List.of());
-            } catch (IllegalArgumentException ignored) {
-                // default below
-            }
-        }
-        return new SecurityBoundary(SecurityBoundaryType.PROTECTED, List.of());
-    }
-
-    private ClientType resolveFallbackClientType(SecurityRequest request, SecurityContext context, SecurityBoundary boundary) {
-        String boundaryType = boundary.type().name();
-        if (SecurityBoundaryType.INTERNAL.name().equals(boundaryType)) {
-            return ClientType.INTERNAL_SERVICE;
-        }
-        if (SecurityBoundaryType.ADMIN.name().equals(boundaryType)) {
-            return ClientType.ADMIN_CONSOLE;
-        }
-        if (request.attributes().containsKey("auth.sessionId")) {
-            return ClientType.BROWSER;
-        }
-        if (request.attributes().containsKey("auth.accessToken") || context.authenticated()) {
-            return ClientType.EXTERNAL_API;
-        }
-        return ClientType.EXTERNAL_API;
-    }
-
-    private AuthMode resolveFallbackAuthMode(SecurityRequest request, SecurityContext context, SecurityBoundary boundary) {
-        if (SecurityBoundaryType.PUBLIC.name().equals(boundary.type().name())) {
-            return AuthMode.NONE;
-        }
-        String sessionId = trimToNull(request.attributes().get("auth.sessionId"));
-        String accessToken = trimToNull(request.attributes().get("auth.accessToken"));
-        if (SecurityBoundaryType.INTERNAL.name().equals(boundary.type().name())) {
-            return AuthMode.HYBRID;
-        }
-        if (sessionId != null && accessToken != null) {
-            return AuthMode.HYBRID;
-        }
-        if (sessionId != null) {
-            return AuthMode.SESSION;
-        }
-        if (accessToken != null) {
-            return AuthMode.JWT;
-        }
-        return context.authenticated() ? AuthMode.HYBRID : AuthMode.NONE;
-    }
-
-    private String trimToNull(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private boolean isSelectionMode() {
-        return boundaryResolver != null
-                && clientTypeResolver != null
-                && authenticationModeResolver != null
-                && boundaryIpPolicyProvider != null
-                && boundaryRateLimitPolicyProvider != null;
     }
 }
