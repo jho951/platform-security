@@ -52,6 +52,6 @@
 - GitHub Packages private Maven registry를 사용한다.
 - `v*` tag push가 publish workflow를 실행한다.
 - `platform-security-sample-consumer`는 publish 대상이 아니다.
-- 현재 확인된 private publish tag는 `v1.0.2`이다.
+- 현재 확인된 private publish tag는 `v1.0.3`이다.
 - GitHub Actions publish는 `GITHUB_ACTOR=${{ github.actor }}`와 `GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}`를 사용한다.
 - private consumer는 `GITHUB_ACTOR`와 `GITHUB_TOKEN` 또는 `GH_PACKAGES_TOKEN` secret으로 GitHub Packages를 인증한다.

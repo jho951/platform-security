@@ -69,7 +69,7 @@ repositories {
 }
 
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:1.0.2")
+    implementation platform("io.github.jho951.platform:platform-security-bom:1.0.3")
     implementation "io.github.jho951.platform:platform-security-starter"
 }
 ```
@@ -131,12 +131,10 @@ SecurityContextResolver securityContextResolver(
 
 ## 비공개 배포
 
-이 레포는 GitHub Packages로 비공개 배포한다.
-
 - 릴리스는 `v1.2.3` 같은 tag push에서 publish한다.
 - private consumer는 `io.github.jho951.platform` group을 사용한다.
 - 실제 publish job은 `.github/workflows/publish.yml`에 있다.
-- 현재 확인된 private publish tag는 `v1.0.2`이다.
+- 현재 확인된 private publish tag는 `v1.0.3`이다.
 
 ## 빌드
 
@@ -144,15 +142,4 @@ SecurityContextResolver securityContextResolver(
 ./gradlew test
 ```
 
-## 문서
-
-1. [docs/README.md](docs/README.md)
-2. [docs/architecture.md](docs/architecture.md)
-3. [docs/modules.md](docs/modules.md)
-4. [docs/security-model.md](docs/security-model.md)
-5. [docs/configuration.md](docs/configuration.md)
-6. [docs/extension-guide.md](docs/extension-guide.md)
-7. [docs/troubleshooting.md](docs/troubleshooting.md)
-8. [docs/quickstart.md](docs/quickstart.md)
-9. [docs/auth-server-integration.md](docs/auth-server-integration.md)
-10. [docs/private-publish.md](docs/private-publish.md)
+## [문서](docs/README.md)

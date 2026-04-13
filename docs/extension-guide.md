@@ -72,7 +72,18 @@ JWT-only 서비스는 `SecurityContextResolver`를 직접 구현하거나, `Auth
 ## Auth 3.0.1 capability
 
 API key, HMAC, OIDC, service account 인증은 1계층 auth provider를 감싸는 capability로 제공한다.
-2계층은 credential 위치와 mode 선택만 표준화하고, 실제 key 조회, signature 검증, ID token 검증, service account 검증은 3계층 서비스가 bean으로 공급한다.
+2계층은 credential 위치, mode 선택, provider 조립, 기본 OIDC principal mapping만 표준화한다.
+실제 key 조회, signature 검증, ID token 검증, service account 검증은 1계층 구현 또는 3계층 서비스가 bean으로 공급한다.
+
+OIDC를 API 인증 수단으로 소비하는 3계층은 최소 `OidcTokenVerifier`만 제공하면 된다.
+`OidcPrincipalMapper`는 기본 bean이 등록되며, 도메인 권한/tenant 매핑이 필요할 때만 override한다.
+
+```java
+@Bean
+OidcTokenVerifier oidcTokenVerifier(ServiceOidcVerifier verifier) {
+    return request -> verifier.verify(request.idToken(), request.nonce());
+}
+```
 
 ## OAuth2 bridge
 

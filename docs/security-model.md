@@ -48,7 +48,7 @@
 - `HYBRID`: JWT와 session을 함께 받아 조합한다.
 - `API_KEY`: API key credential을 검증한다.
 - `HMAC`: 요청 서명 credential을 검증한다.
-- `OIDC`: OIDC ID token을 검증한다.
+- `OIDC`: 3계층이 제공한 `OidcTokenVerifier`로 OIDC ID token을 검증한다.
 - `SERVICE_ACCOUNT`: service account credential을 검증한다.
 
 `allowSessionForBrowser`, `allowBearerForApi`, `allowApiKeyForApi`, `allowHmacForApi`, `allowOidcForApi`, `serviceAccountEnabled`, `internalTokenEnabled` 값은 auth mode 선택에 반영된다.
@@ -81,3 +81,4 @@ ingress에서 신뢰하지 않는 downstream propagation 값:
 - 서비스별 URL, Redis key, role 이름은 여기서 정의하지 않는다.
 - 운영에서는 서비스가 `SecurityContextResolver`를 직접 제공한다.
 - dev fallback resolver는 local/test opt-in이다.
+- OIDC provider별 login flow와 ID token verifier 구현은 3계층 또는 1계층 구현 책임이다.

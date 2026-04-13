@@ -55,6 +55,7 @@
 - auth가 활성화되어 있고 `SecurityContextResolver` bean이 없으면 시작 시 실패한다.
 - dev fallback resolver는 기본 비활성화다.
 - API key, HMAC, OIDC, service account는 1계층 resolver/verifier bean이 있을 때만 기본 capability로 연결된다.
+- OIDC는 `OidcTokenVerifier` bean이 있을 때 활성화된다. 2계층은 `OidcPrincipalMapper` 기본값만 제공한다.
 
 ## 운영 인증 resolver
 
@@ -83,6 +84,27 @@ platform:
 ```
 
 prod에서는 `dev-fallback.enabled=false`를 유지하고, 운영용 resolver bean을 반드시 제공한다.
+
+## OIDC
+
+OIDC는 2계층에서 provider login flow나 id token 검증 구현을 소유하지 않는다.
+3계층이 `OidcTokenVerifier` bean을 제공하면 2계층이 `OidcAuthenticationProvider`와 `OIDC` capability를 조립한다.
+
+```yaml
+platform:
+  security:
+    auth:
+      allow-oidc-for-api: true
+      oidc:
+        principal-claim: sub
+        authorities-claim: roles
+        authority-prefix: ""
+        default-authorities:
+          - USER
+```
+
+기본 `OidcPrincipalMapper`는 `OidcIdentity.claims()`에서 principal과 authorities를 기계적으로 읽는다.
+서비스별 user, tenant, role 매핑이 필요하면 3계층에서 `OidcPrincipalMapper`를 override한다.
 
 ## 설정 예시
 

@@ -57,7 +57,7 @@ dependencyResolutionManagement {
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:1.0.2")
+    implementation platform("io.github.jho951.platform:platform-security-bom:1.0.3")
     implementation "io.github.jho951.platform:platform-security-starter"
 }
 ```

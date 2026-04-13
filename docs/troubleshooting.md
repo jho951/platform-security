@@ -57,4 +57,4 @@ SecurityContextResolver securityContextResolver(
 - consumer repo에 package read 권한이 있는지 확인한다.
 - `https://maven.pkg.github.com/jho951/platform-security` repository가 Gradle에 등록되어 있는지 확인한다.
 - `githubPackagesUsername`, `githubPackagesToken` 또는 `GITHUB_ACTOR`, `GITHUB_TOKEN`이 설정되어 있는지 확인한다.
-- 현재 배포 기준 tag는 `v1.0.2`이다.
+- 현재 배포 기준 tag는 `v1.0.3`이다.
