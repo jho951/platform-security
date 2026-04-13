@@ -24,7 +24,8 @@ public final class PlatformSecurityServletFilter implements Filter {
     private final SecurityContextResolver securityContextResolver;
     private final Clock clock;
     private final SecurityIngressRequestFactory requestFactory;
-    private final SecurityDownstreamIdentityPropagator downstreamIdentityPropagator = new SecurityDownstreamIdentityPropagator();
+    private final SecurityDownstreamIdentityPropagator downstreamIdentityPropagator;
+    private final SecurityAuditPublisher auditPublisher;
 
     public PlatformSecurityServletFilter(
             SecurityIngressAdapter securityIngressAdapter,
@@ -54,6 +55,24 @@ public final class PlatformSecurityServletFilter implements Filter {
         this.securityContextResolver = Objects.requireNonNull(securityContextResolver, "securityContextResolver");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.requestFactory = Objects.requireNonNull(requestFactory, "requestFactory");
+        this.downstreamIdentityPropagator = new SecurityDownstreamIdentityPropagator();
+        this.auditPublisher = SecurityAuditPublisher.noop();
+    }
+
+    public PlatformSecurityServletFilter(
+            SecurityIngressAdapter securityIngressAdapter,
+            SecurityContextResolver securityContextResolver,
+            Clock clock,
+            SecurityIngressRequestFactory requestFactory,
+            SecurityDownstreamIdentityPropagator downstreamIdentityPropagator,
+            SecurityAuditPublisher auditPublisher
+    ) {
+        this.securityIngressAdapter = Objects.requireNonNull(securityIngressAdapter, "securityIngressAdapter");
+        this.securityContextResolver = Objects.requireNonNull(securityContextResolver, "securityContextResolver");
+        this.clock = Objects.requireNonNull(clock, "clock");
+        this.requestFactory = Objects.requireNonNull(requestFactory, "requestFactory");
+        this.downstreamIdentityPropagator = Objects.requireNonNull(downstreamIdentityPropagator, "downstreamIdentityPropagator");
+        this.auditPublisher = Objects.requireNonNull(auditPublisher, "auditPublisher");
     }
 
     @Override
@@ -72,6 +91,7 @@ public final class PlatformSecurityServletFilter implements Filter {
         SecurityRequest securityRequest = requestFactory.fromServlet(httpRequest, clock);
         SecurityContext securityContext = securityContextResolver.resolve(securityRequest);
         SecurityEvaluationResult evaluationResult = securityIngressAdapter.evaluateResult(securityRequest, securityContext);
+        auditPublisher.publish(evaluationResult);
         SecurityFailureResponse failure = SecurityFailureResponse.from(evaluationResult.verdict());
         if (failure.status() != 200) {
             httpResponse.setStatus(failure.status());

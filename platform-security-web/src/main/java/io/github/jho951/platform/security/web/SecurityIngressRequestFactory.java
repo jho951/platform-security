@@ -50,6 +50,8 @@ public final class SecurityIngressRequestFactory {
         Map<String, String> attributes = new LinkedHashMap<>();
         putIfPresent(attributes, "auth.accessToken", extractBearerToken(header(headers, "Authorization")));
         putIfPresent(attributes, "auth.sessionId", header(headers, "X-Auth-Session-Id"));
+        putCredentialAttributes(attributes, headers);
+        putHmacSignedHeaders(attributes, headers);
         attributes.put("auth.authenticated", Boolean.toString(request.getUserPrincipal() != null));
         attributes.put("auth.principal", request.getUserPrincipal() == null ? "" : request.getUserPrincipal().getName());
         return Map.copyOf(attributes);
@@ -59,9 +61,36 @@ public final class SecurityIngressRequestFactory {
         Map<String, String> attributes = new LinkedHashMap<>();
         putIfPresent(attributes, "auth.accessToken", extractBearerToken(header(headers, "Authorization")));
         putIfPresent(attributes, "auth.sessionId", header(headers, "X-Auth-Session-Id"));
+        putCredentialAttributes(attributes, headers);
+        putHmacSignedHeaders(attributes, headers);
         attributes.put("auth.authenticated", Boolean.toString(principal != null && !principal.isBlank()));
         attributes.put("auth.principal", principal == null ? "" : principal.trim());
         return Map.copyOf(attributes);
+    }
+
+    private void putCredentialAttributes(Map<String, String> attributes, Map<String, String> headers) {
+        putIfPresent(attributes, "auth.apiKeyId", header(headers, "X-Auth-Api-Key-Id"));
+        putIfPresent(attributes, "auth.apiKeySecret", header(headers, "X-Auth-Api-Key-Secret"));
+        putIfPresent(attributes, "auth.hmac.keyId", header(headers, "X-Auth-Hmac-Key-Id"));
+        putIfPresent(attributes, "auth.hmac.signature", header(headers, "X-Auth-Hmac-Signature"));
+        putIfPresent(attributes, "auth.hmac.timestamp", header(headers, "X-Auth-Hmac-Timestamp"));
+        putIfPresent(attributes, "auth.oidc.idToken", header(headers, "X-Auth-Oidc-Id-Token"));
+        putIfPresent(attributes, "auth.oidc.nonce", header(headers, "X-Auth-Oidc-Nonce"));
+        putIfPresent(attributes, "auth.serviceAccountId", header(headers, "X-Auth-Service-Account-Id"));
+        putIfPresent(attributes, "auth.serviceAccountSecret", header(headers, "X-Auth-Service-Account-Secret"));
+    }
+
+    private void putHmacSignedHeaders(Map<String, String> attributes, Map<String, String> headers) {
+        String signedHeaders = header(headers, "X-Auth-Hmac-Signed-Headers");
+        if (signedHeaders == null || signedHeaders.isBlank()) {
+            return;
+        }
+        for (String headerName : signedHeaders.split(",")) {
+            String normalized = trimToNull(headerName);
+            if (normalized != null) {
+                putIfPresent(attributes, "auth.hmac.header." + normalized, header(headers, normalized));
+            }
+        }
     }
 
     private Map<String, String> scrubbedHeaders(Map<String, String> headers) {

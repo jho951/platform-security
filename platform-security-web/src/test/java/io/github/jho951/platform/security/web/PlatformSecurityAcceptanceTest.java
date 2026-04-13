@@ -85,6 +85,32 @@ class PlatformSecurityAcceptanceTest {
     }
 
     @Test
+    void publicLoginRouteCanBeRateLimited() {
+        PlatformSecurityProperties properties = baseProperties();
+        properties.getBoundary().setPublicPaths(List.of("/health", "/auth/login", "/auth/refresh", "/auth/sso/start"));
+        PlatformSecurityProperties.RouteRateLimitPolicyProperties login = new PlatformSecurityProperties.RouteRateLimitPolicyProperties();
+        login.setName("login");
+        login.setPatterns(List.of("/auth/login", "/auth/refresh", "/auth/sso/start"));
+        login.setRequests(1L);
+        login.setWindowSeconds(60L);
+        properties.getRateLimit().setRoutes(List.of(login));
+        SecurityIngressAdapter adapter = adapter(properties);
+        SecurityContext anonymous = new SecurityContext(false, null, Set.of(), Map.of());
+
+        SecurityFailureResponse first = adapter.evaluateFailureResponse(
+                newRequest("/auth/login", "127.0.0.1", Map.of()),
+                anonymous
+        );
+        SecurityFailureResponse second = adapter.evaluateFailureResponse(
+                newRequest("/auth/login", "127.0.0.1", Map.of()),
+                anonymous
+        );
+
+        assertEquals(200, first.status());
+        assertEquals(429, second.status());
+    }
+
+    @Test
     void trustProxyFalseIgnoresForwardedForHeader() {
         PlatformSecurityProperties properties = baseProperties();
         properties.getIpGuard().setTrustProxy(false);

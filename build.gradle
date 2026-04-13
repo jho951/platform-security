@@ -2,7 +2,7 @@ ext {
     springFrameworkVersion = findProperty('springFrameworkVersion') ?: '6.2.17'
     springBootVersion = findProperty('springBootVersion') ?: '3.5.13'
     junitVersion = findProperty('junitVersion') ?: '5.10.3'
-    authVersion = findProperty('authVersion') ?: '3.0.0'
+    authVersion = findProperty('authVersion') ?: '3.0.1'
     ipGuardVersion = findProperty('ipGuardVersion') ?: '3.0.0'
     rateLimiterVersion = findProperty('rateLimiterVersion') ?: '2.0.0'
 }

@@ -31,6 +31,16 @@ public final class PlatformAuthenticationFacade implements SecurityContextResolv
     public static final String ACCESS_TOKEN_ATTRIBUTE = "auth.accessToken";
     public static final String SESSION_ID_ATTRIBUTE = "auth.sessionId";
     public static final String INTERNAL_TOKEN_ATTRIBUTE = DefaultInternalServiceAuthenticationCapability.INTERNAL_TOKEN_ATTRIBUTE;
+    public static final String API_KEY_ID_ATTRIBUTE = "auth.apiKeyId";
+    public static final String API_KEY_SECRET_ATTRIBUTE = "auth.apiKeySecret";
+    public static final String HMAC_KEY_ID_ATTRIBUTE = "auth.hmac.keyId";
+    public static final String HMAC_SIGNATURE_ATTRIBUTE = "auth.hmac.signature";
+    public static final String HMAC_TIMESTAMP_ATTRIBUTE = "auth.hmac.timestamp";
+    public static final String HMAC_BODY_ATTRIBUTE = "auth.hmac.body";
+    public static final String OIDC_ID_TOKEN_ATTRIBUTE = "auth.oidc.idToken";
+    public static final String OIDC_NONCE_ATTRIBUTE = "auth.oidc.nonce";
+    public static final String SERVICE_ACCOUNT_ID_ATTRIBUTE = "auth.serviceAccountId";
+    public static final String SERVICE_ACCOUNT_SECRET_ATTRIBUTE = "auth.serviceAccountSecret";
 
     private final AuthenticationCapabilityResolver capabilityResolver;
 
@@ -63,9 +73,7 @@ public final class PlatformAuthenticationFacade implements SecurityContextResolv
         boolean internalService = isInternalService(attributes, authMode);
         Optional<Principal> principal = capabilityResolver.resolve(authMode, internalService).authenticate(request);
         if (principal.isPresent()) {
-            attributes.remove(ACCESS_TOKEN_ATTRIBUTE);
-            attributes.remove(SESSION_ID_ATTRIBUTE);
-            attributes.remove(INTERNAL_TOKEN_ATTRIBUTE);
+            removeCredentialAttributes(attributes);
             return fromPrincipal(principal.get(), attributes);
         }
 
@@ -75,9 +83,7 @@ public final class PlatformAuthenticationFacade implements SecurityContextResolv
         attributes.remove(AUTHENTICATED_ATTRIBUTE);
         attributes.remove(PRINCIPAL_ATTRIBUTE);
         attributes.remove(ROLES_ATTRIBUTE);
-        attributes.remove(ACCESS_TOKEN_ATTRIBUTE);
-        attributes.remove(SESSION_ID_ATTRIBUTE);
-        attributes.remove(INTERNAL_TOKEN_ATTRIBUTE);
+        removeCredentialAttributes(attributes);
         return new SecurityContext(authenticated, subject, roles, attributes);
     }
 
@@ -122,6 +128,18 @@ public final class PlatformAuthenticationFacade implements SecurityContextResolv
         if (accessToken != null) {
             return AuthMode.JWT;
         }
+        if (hasServiceAccountCredential(attributes)) {
+            return AuthMode.SERVICE_ACCOUNT;
+        }
+        if (hasHmacCredential(attributes)) {
+            return AuthMode.HMAC;
+        }
+        if (hasApiKeyCredential(attributes)) {
+            return AuthMode.API_KEY;
+        }
+        if (trimToNull(attributes.get(OIDC_ID_TOKEN_ATTRIBUTE)) != null) {
+            return AuthMode.OIDC;
+        }
         if (Boolean.parseBoolean(attributes.getOrDefault(INTERNAL_TOKEN_ATTRIBUTE, "false"))) {
             return AuthMode.HYBRID;
         }
@@ -129,6 +147,12 @@ public final class PlatformAuthenticationFacade implements SecurityContextResolv
     }
 
     private boolean isInternalService(Map<String, String> attributes, AuthMode authMode) {
+        if (authMode == AuthMode.API_KEY
+                || authMode == AuthMode.HMAC
+                || authMode == AuthMode.OIDC
+                || authMode == AuthMode.SERVICE_ACCOUNT) {
+            return false;
+        }
         String boundary = trimToNull(attributes.get(SecurityAttributes.BOUNDARY));
         if (boundary != null && "INTERNAL".equalsIgnoreCase(boundary)) {
             return true;
@@ -152,6 +176,38 @@ public final class PlatformAuthenticationFacade implements SecurityContextResolv
             }
         });
         return new SecurityContext(true, principal.getUserId(), roles, merged);
+    }
+
+    private boolean hasApiKeyCredential(Map<String, String> attributes) {
+        return trimToNull(attributes.get(API_KEY_ID_ATTRIBUTE)) != null
+                && trimToNull(attributes.get(API_KEY_SECRET_ATTRIBUTE)) != null;
+    }
+
+    private boolean hasHmacCredential(Map<String, String> attributes) {
+        return trimToNull(attributes.get(HMAC_KEY_ID_ATTRIBUTE)) != null
+                && trimToNull(attributes.get(HMAC_SIGNATURE_ATTRIBUTE)) != null;
+    }
+
+    private boolean hasServiceAccountCredential(Map<String, String> attributes) {
+        return trimToNull(attributes.get(SERVICE_ACCOUNT_ID_ATTRIBUTE)) != null
+                && trimToNull(attributes.get(SERVICE_ACCOUNT_SECRET_ATTRIBUTE)) != null;
+    }
+
+    private void removeCredentialAttributes(Map<String, String> attributes) {
+        attributes.remove(ACCESS_TOKEN_ATTRIBUTE);
+        attributes.remove(SESSION_ID_ATTRIBUTE);
+        attributes.remove(INTERNAL_TOKEN_ATTRIBUTE);
+        attributes.remove(API_KEY_ID_ATTRIBUTE);
+        attributes.remove(API_KEY_SECRET_ATTRIBUTE);
+        attributes.remove(HMAC_KEY_ID_ATTRIBUTE);
+        attributes.remove(HMAC_SIGNATURE_ATTRIBUTE);
+        attributes.remove(HMAC_TIMESTAMP_ATTRIBUTE);
+        attributes.remove(HMAC_BODY_ATTRIBUTE);
+        attributes.remove(OIDC_ID_TOKEN_ATTRIBUTE);
+        attributes.remove(OIDC_NONCE_ATTRIBUTE);
+        attributes.remove(SERVICE_ACCOUNT_ID_ATTRIBUTE);
+        attributes.remove(SERVICE_ACCOUNT_SECRET_ATTRIBUTE);
+        attributes.keySet().removeIf(key -> key != null && key.startsWith("auth.hmac.header."));
     }
 
     private static Set<String> parseRoles(String value) {

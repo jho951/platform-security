@@ -61,6 +61,51 @@ class PlatformAuthenticationFacadeTest {
         assertEquals("internal-user", context.principal());
     }
 
+    @Test
+    void selectsApiKeyCapabilityForApiKeyCredentials() {
+        AtomicReference<String> selected = new AtomicReference<>();
+        PlatformAuthenticationFacade facade = new PlatformAuthenticationFacade(new RecordingResolver(selected));
+
+        SecurityContext context = facade.resolve(new SecurityRequest(
+                null,
+                "127.0.0.1",
+                "/api/orders",
+                "GET",
+                Map.of(
+                        PlatformAuthenticationFacade.API_KEY_ID_ATTRIBUTE, "key-1",
+                        PlatformAuthenticationFacade.API_KEY_SECRET_ATTRIBUTE, "secret-1"
+                ),
+                Instant.parse("2026-01-01T00:00:00Z")
+        ));
+
+        assertEquals("api-key", selected.get());
+        assertTrue(context.authenticated());
+        assertEquals("api-key-user", context.principal());
+    }
+
+    @Test
+    void serviceAccountCredentialsUseServiceAccountCapabilityEvenOnInternalBoundary() {
+        AtomicReference<String> selected = new AtomicReference<>();
+        PlatformAuthenticationFacade facade = new PlatformAuthenticationFacade(new RecordingResolver(selected));
+
+        SecurityContext context = facade.resolve(new SecurityRequest(
+                null,
+                "10.0.0.10",
+                "/internal/sync",
+                "POST",
+                Map.of(
+                        PlatformAuthenticationFacade.SERVICE_ACCOUNT_ID_ATTRIBUTE, "svc-1",
+                        PlatformAuthenticationFacade.SERVICE_ACCOUNT_SECRET_ATTRIBUTE, "secret-1",
+                        io.github.jho951.platform.security.policy.SecurityAttributes.BOUNDARY, "INTERNAL"
+                ),
+                Instant.parse("2026-01-01T00:00:00Z")
+        ));
+
+        assertEquals("service-account", selected.get());
+        assertTrue(context.authenticated());
+        assertEquals("service-account-user", context.principal());
+    }
+
     private static final class RecordingResolver implements AuthenticationCapabilityResolver {
         private final AtomicReference<String> selected;
 
@@ -139,6 +184,70 @@ class PlatformAuthenticationFacadeTest {
                                 "hybrid-user",
                                 List.of("USER"),
                                 Map.of("source", "hybrid")
+                        ));
+                    }
+                };
+                case API_KEY -> new AuthenticationCapability() {
+                    @Override
+                    public String name() {
+                        return "api-key";
+                    }
+
+                    @Override
+                    public java.util.Optional<Principal> authenticate(SecurityRequest request) {
+                        selected.set("api-key");
+                        return java.util.Optional.of(new Principal(
+                                "api-key-user",
+                                List.of("API_CLIENT"),
+                                Map.of("source", "api-key")
+                        ));
+                    }
+                };
+                case HMAC -> new AuthenticationCapability() {
+                    @Override
+                    public String name() {
+                        return "hmac";
+                    }
+
+                    @Override
+                    public java.util.Optional<Principal> authenticate(SecurityRequest request) {
+                        selected.set("hmac");
+                        return java.util.Optional.of(new Principal(
+                                "hmac-user",
+                                List.of("API_CLIENT"),
+                                Map.of("source", "hmac")
+                        ));
+                    }
+                };
+                case OIDC -> new AuthenticationCapability() {
+                    @Override
+                    public String name() {
+                        return "oidc";
+                    }
+
+                    @Override
+                    public java.util.Optional<Principal> authenticate(SecurityRequest request) {
+                        selected.set("oidc");
+                        return java.util.Optional.of(new Principal(
+                                "oidc-user",
+                                List.of("USER"),
+                                Map.of("source", "oidc")
+                        ));
+                    }
+                };
+                case SERVICE_ACCOUNT -> new AuthenticationCapability() {
+                    @Override
+                    public String name() {
+                        return "service-account";
+                    }
+
+                    @Override
+                    public java.util.Optional<Principal> authenticate(SecurityRequest request) {
+                        selected.set("service-account");
+                        return java.util.Optional.of(new Principal(
+                                "service-account-user",
+                                List.of("SERVICE"),
+                                Map.of("source", "service-account")
                         ));
                     }
                 };

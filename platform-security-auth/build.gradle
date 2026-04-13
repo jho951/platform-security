@@ -6,6 +6,10 @@ dependencies {
     api "io.github.jho951:auth-jwt:${rootProject.authVersion}"
     api "io.github.jho951:auth-session:${rootProject.authVersion}"
     api "io.github.jho951:auth-hybrid:${rootProject.authVersion}"
+    api "io.github.jho951:auth-apikey:${rootProject.authVersion}"
+    api "io.github.jho951:auth-hmac:${rootProject.authVersion}"
+    api "io.github.jho951:auth-oidc:${rootProject.authVersion}"
+    api "io.github.jho951:auth-service-account:${rootProject.authVersion}"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitVersion}"

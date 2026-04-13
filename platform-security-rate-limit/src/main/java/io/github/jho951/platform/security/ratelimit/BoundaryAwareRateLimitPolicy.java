@@ -55,7 +55,7 @@ public final class BoundaryAwareRateLimitPolicy implements SecurityPolicy {
     public SecurityVerdict evaluate(SecurityRequest request, SecurityContext context) {
         Objects.requireNonNull(request, "request");
         Objects.requireNonNull(context, "context");
-        if (!properties.isEnabled() || boundary.type() == SecurityBoundaryType.PUBLIC) {
+        if (!properties.isEnabled()) {
             return SecurityVerdict.allow(name(), "rate limit disabled");
         }
 
@@ -85,6 +85,13 @@ public final class BoundaryAwareRateLimitPolicy implements SecurityPolicy {
     }
 
     private PlatformSecurityProperties.BoundaryRateLimitPolicyProperties selectProfile(SecurityRequest request, SecurityContext context) {
+        PlatformSecurityProperties.RouteRateLimitPolicyProperties routeProfile = selectRouteProfile(request.path());
+        if (routeProfile != null) {
+            return routeProfile;
+        }
+        if (boundary.type() == SecurityBoundaryType.PUBLIC) {
+            return null;
+        }
         String clientType = trimToUpper(request.attributes().get(SecurityAttributes.CLIENT_TYPE));
         String authMode = trimToUpper(request.attributes().get(SecurityAttributes.AUTH_MODE));
         if (boundary.type() == SecurityBoundaryType.INTERNAL || "INTERNAL_SERVICE".equals(clientType)) {
@@ -97,6 +104,36 @@ public final class BoundaryAwareRateLimitPolicy implements SecurityPolicy {
             return properties.getAuthenticated();
         }
         return context.authenticated() ? properties.getAuthenticated() : properties.getAnonymous();
+    }
+
+    private PlatformSecurityProperties.RouteRateLimitPolicyProperties selectRouteProfile(String path) {
+        if (path == null || properties.getRoutes().isEmpty()) {
+            return null;
+        }
+        for (PlatformSecurityProperties.RouteRateLimitPolicyProperties route : properties.getRoutes()) {
+            if (route == null || route.getPatterns().isEmpty()) {
+                continue;
+            }
+            for (String pattern : route.getPatterns()) {
+                if (matchesPattern(path, pattern)) {
+                    return route;
+                }
+            }
+        }
+        return null;
+    }
+
+    private boolean matchesPattern(String path, String pattern) {
+        if (pattern == null || pattern.isBlank()) {
+            return false;
+        }
+        String normalizedPath = path.startsWith("/") ? path : "/" + path;
+        String normalizedPattern = pattern.trim();
+        if (normalizedPattern.endsWith("/**")) {
+            String prefix = normalizedPattern.substring(0, normalizedPattern.length() - 3);
+            return normalizedPath.startsWith(prefix);
+        }
+        return normalizedPath.equals(normalizedPattern) || normalizedPath.startsWith(normalizedPattern + "/");
     }
 
     private String trimToUpper(String value) {

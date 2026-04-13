@@ -4,5 +4,9 @@ public enum AuthMode {
     NONE,
     JWT,
     SESSION,
-    HYBRID
+    HYBRID,
+    API_KEY,
+    HMAC,
+    OIDC,
+    SERVICE_ACCOUNT
 }

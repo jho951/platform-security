@@ -19,11 +19,25 @@ public final class SecurityIdentityScrubber {
             }
             String normalized = key.trim().toLowerCase(Locale.ROOT);
             if (normalized.startsWith("x-security-")
-                    || (normalized.startsWith("x-auth-") && !"x-auth-session-id".equals(normalized))) {
+                    || (normalized.startsWith("x-auth-") && !isInboundCredentialHeader(normalized))) {
                 continue;
             }
             sanitized.put(key, Objects.toString(entry.getValue(), ""));
         }
         return Map.copyOf(sanitized);
+    }
+
+    private boolean isInboundCredentialHeader(String normalized) {
+        return "x-auth-session-id".equals(normalized)
+                || "x-auth-api-key-id".equals(normalized)
+                || "x-auth-api-key-secret".equals(normalized)
+                || "x-auth-hmac-key-id".equals(normalized)
+                || "x-auth-hmac-signature".equals(normalized)
+                || "x-auth-hmac-timestamp".equals(normalized)
+                || "x-auth-hmac-signed-headers".equals(normalized)
+                || "x-auth-oidc-id-token".equals(normalized)
+                || "x-auth-oidc-nonce".equals(normalized)
+                || "x-auth-service-account-id".equals(normalized)
+                || "x-auth-service-account-secret".equals(normalized);
     }
 }

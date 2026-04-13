@@ -35,6 +35,23 @@ public final class DefaultAuthenticationCapabilityResolver implements Authentica
         this.internalCapability = Objects.requireNonNull(internalCapability, "internalCapability");
     }
 
+    public DefaultAuthenticationCapabilityResolver(
+            AuthenticationCapability jwtCapability,
+            AuthenticationCapability sessionCapability,
+            AuthenticationCapability hybridCapability,
+            AuthenticationCapability internalCapability,
+            AuthenticationCapability apiKeyCapability,
+            AuthenticationCapability hmacCapability,
+            AuthenticationCapability oidcCapability,
+            AuthenticationCapability serviceAccountCapability
+    ) {
+        this(jwtCapability, sessionCapability, hybridCapability, internalCapability);
+        putIfPresent(AuthMode.API_KEY, apiKeyCapability);
+        putIfPresent(AuthMode.HMAC, hmacCapability);
+        putIfPresent(AuthMode.OIDC, oidcCapability);
+        putIfPresent(AuthMode.SERVICE_ACCOUNT, serviceAccountCapability);
+    }
+
     @Override
     public AuthenticationCapability resolve(AuthMode authMode) {
         return capabilities.getOrDefault(authMode, capabilities.get(AuthMode.NONE));
@@ -46,5 +63,11 @@ public final class DefaultAuthenticationCapabilityResolver implements Authentica
             return internalCapability;
         }
         return resolve(authMode);
+    }
+
+    private void putIfPresent(AuthMode authMode, AuthenticationCapability capability) {
+        if (capability != null) {
+            capabilities.put(authMode, capability);
+        }
     }
 }

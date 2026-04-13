@@ -7,6 +7,7 @@ import com.auth.session.IdentitySessionPrincipalMapper;
 import com.auth.session.SessionPrincipalMapper;
 import com.auth.session.SessionStore;
 import com.auth.session.SimpleSessionStore;
+import com.auth.spi.OAuth2PrincipalResolver;
 import com.auth.spi.TokenService;
 import com.auth.support.jwt.JwtTokenService;
 import io.github.jho951.platform.security.api.SecurityContext;
@@ -64,5 +65,21 @@ public final class PlatformSecurityContextResolvers {
         SessionStore sessionStore = new SimpleSessionStore();
         SessionPrincipalMapper sessionPrincipalMapper = new IdentitySessionPrincipalMapper();
         return hybridAuthenticationProvider(tokenService, sessionStore, sessionPrincipalMapper);
+    }
+
+    public static OAuth2PrincipalBridge oauth2Bridge(OAuth2PrincipalResolver resolver) {
+        return new DefaultOAuth2PrincipalBridge(resolver);
+    }
+
+    public static TokenIssuanceCapability tokenIssuer(TokenService tokenService) {
+        return new DefaultTokenIssuanceCapability(tokenService);
+    }
+
+    public static SessionIssuanceCapability sessionIssuer(SessionStore sessionStore) {
+        return new DefaultSessionIssuanceCapability(sessionStore);
+    }
+
+    public static TokenIssuanceCapability hybridIssuer(TokenService tokenService, SessionStore sessionStore) {
+        return new HybridIssuanceCapability(tokenIssuer(tokenService), sessionIssuer(sessionStore));
     }
 }

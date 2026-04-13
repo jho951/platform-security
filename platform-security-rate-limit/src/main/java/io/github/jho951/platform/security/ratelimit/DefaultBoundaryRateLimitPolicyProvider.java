@@ -6,7 +6,6 @@ import io.github.jho951.platform.security.policy.BoundaryRateLimitPolicyProvider
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import io.github.jho951.platform.security.policy.RateLimitKeyResolver;
 import io.github.jho951.platform.security.policy.SecurityBoundary;
-import io.github.jho951.platform.security.policy.SecurityBoundaryType;
 import io.github.jho951.platform.security.core.policy.FixedWindowRateLimitPolicy;
 
 import io.github.jho951.platform.security.core.limiter.InMemoryRateLimiter;
@@ -37,7 +36,7 @@ public final class DefaultBoundaryRateLimitPolicyProvider implements BoundaryRat
     @Override
     public synchronized SecurityPolicy resolve(SecurityBoundary boundary, ResolvedSecurityProfile profile) {
         Objects.requireNonNull(boundary, "boundary");
-        if (!properties.isEnabled() || boundary.type() == SecurityBoundaryType.PUBLIC) {
+        if (!properties.isEnabled()) {
             return new FixedWindowRateLimitPolicy(0, java.time.Duration.ofSeconds(1));
         }
         String cacheKey = cacheKey(boundary, profile);

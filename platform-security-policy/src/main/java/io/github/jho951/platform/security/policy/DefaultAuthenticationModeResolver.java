@@ -30,6 +30,10 @@ public final class DefaultAuthenticationModeResolver implements AuthenticationMo
         if (!authProperties.isEnabled() || authProperties.getDefaultMode() == AuthMode.NONE) {
             return AuthMode.NONE;
         }
+        AuthMode credentialMode = resolveCredentialMode(request);
+        if (credentialMode != null) {
+            return credentialMode;
+        }
         String sessionId = trimToNull(request.attributes().get("auth.sessionId"));
         String accessToken = trimToNull(request.attributes().get("auth.accessToken"));
         boolean authenticated = context.authenticated();
@@ -112,6 +116,41 @@ public final class DefaultAuthenticationModeResolver implements AuthenticationMo
             return ClientType.BROWSER;
         }
         return ClientType.EXTERNAL_API;
+    }
+
+    private AuthMode resolveCredentialMode(SecurityRequest request) {
+        if (hasServiceAccountCredential(request) && authProperties.isServiceAccountEnabled()) {
+            return AuthMode.SERVICE_ACCOUNT;
+        }
+        if (hasHmacCredential(request) && authProperties.isAllowHmacForApi()) {
+            return AuthMode.HMAC;
+        }
+        if (hasApiKeyCredential(request) && authProperties.isAllowApiKeyForApi()) {
+            return AuthMode.API_KEY;
+        }
+        if (hasOidcCredential(request) && authProperties.isAllowOidcForApi()) {
+            return AuthMode.OIDC;
+        }
+        return null;
+    }
+
+    private boolean hasApiKeyCredential(SecurityRequest request) {
+        return trimToNull(request.attributes().get("auth.apiKeyId")) != null
+                && trimToNull(request.attributes().get("auth.apiKeySecret")) != null;
+    }
+
+    private boolean hasHmacCredential(SecurityRequest request) {
+        return trimToNull(request.attributes().get("auth.hmac.keyId")) != null
+                && trimToNull(request.attributes().get("auth.hmac.signature")) != null;
+    }
+
+    private boolean hasOidcCredential(SecurityRequest request) {
+        return trimToNull(request.attributes().get("auth.oidc.idToken")) != null;
+    }
+
+    private boolean hasServiceAccountCredential(SecurityRequest request) {
+        return trimToNull(request.attributes().get("auth.serviceAccountId")) != null
+                && trimToNull(request.attributes().get("auth.serviceAccountSecret")) != null;
     }
 
     private String normalize(String value) {

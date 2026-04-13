@@ -95,6 +95,10 @@ public class PlatformSecurityProperties {
         private AuthMode defaultMode = AuthMode.HYBRID;
         private boolean allowSessionForBrowser = true;
         private boolean allowBearerForApi = true;
+        private boolean allowApiKeyForApi = true;
+        private boolean allowHmacForApi = true;
+        private boolean allowOidcForApi = true;
+        private boolean serviceAccountEnabled = true;
         private boolean internalTokenEnabled = true;
         private DevFallbackProperties devFallback = new DevFallbackProperties();
         private String jwtSecret = "platform-security-dev-secret-platform-security-dev-secret";
@@ -131,6 +135,38 @@ public class PlatformSecurityProperties {
 
         public void setAllowBearerForApi(boolean allowBearerForApi) {
             this.allowBearerForApi = allowBearerForApi;
+        }
+
+        public boolean isAllowApiKeyForApi() {
+            return allowApiKeyForApi;
+        }
+
+        public void setAllowApiKeyForApi(boolean allowApiKeyForApi) {
+            this.allowApiKeyForApi = allowApiKeyForApi;
+        }
+
+        public boolean isAllowHmacForApi() {
+            return allowHmacForApi;
+        }
+
+        public void setAllowHmacForApi(boolean allowHmacForApi) {
+            this.allowHmacForApi = allowHmacForApi;
+        }
+
+        public boolean isAllowOidcForApi() {
+            return allowOidcForApi;
+        }
+
+        public void setAllowOidcForApi(boolean allowOidcForApi) {
+            this.allowOidcForApi = allowOidcForApi;
+        }
+
+        public boolean isServiceAccountEnabled() {
+            return serviceAccountEnabled;
+        }
+
+        public void setServiceAccountEnabled(boolean serviceAccountEnabled) {
+            this.serviceAccountEnabled = serviceAccountEnabled;
         }
 
         public boolean isInternalTokenEnabled() {
@@ -230,6 +266,7 @@ public class PlatformSecurityProperties {
         private BoundaryRateLimitPolicyProperties anonymous = new BoundaryRateLimitPolicyProperties();
         private BoundaryRateLimitPolicyProperties authenticated = new BoundaryRateLimitPolicyProperties();
         private BoundaryRateLimitPolicyProperties internal = new BoundaryRateLimitPolicyProperties();
+        private List<RouteRateLimitPolicyProperties> routes = new ArrayList<>();
 
         public boolean isEnabled() {
             return enabled;
@@ -262,6 +299,14 @@ public class PlatformSecurityProperties {
         public void setInternal(BoundaryRateLimitPolicyProperties internal) {
             this.internal = internal == null ? new BoundaryRateLimitPolicyProperties() : internal;
         }
+
+        public List<RouteRateLimitPolicyProperties> getRoutes() {
+            return routes;
+        }
+
+        public void setRoutes(List<RouteRateLimitPolicyProperties> routes) {
+            this.routes = routes == null ? new ArrayList<>() : routes;
+        }
     }
 
     public static class BoundaryRateLimitPolicyProperties {
@@ -282,6 +327,27 @@ public class PlatformSecurityProperties {
 
         public void setWindowSeconds(long windowSeconds) {
             this.windowSeconds = windowSeconds;
+        }
+    }
+
+    public static class RouteRateLimitPolicyProperties extends BoundaryRateLimitPolicyProperties {
+        private String name = "route";
+        private List<String> patterns = new ArrayList<>();
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name == null || name.isBlank() ? "route" : name.trim();
+        }
+
+        public List<String> getPatterns() {
+            return patterns;
+        }
+
+        public void setPatterns(List<String> patterns) {
+            this.patterns = patterns == null ? new ArrayList<>() : patterns;
         }
     }
 }
