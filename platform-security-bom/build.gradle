@@ -21,18 +21,18 @@ dependencies {
         api project(':platform-security-starter')
         api project(':platform-security-test-support')
 
-        api "io.github.jho951:auth-core:${findProperty('authVersion') ?: '3.0.1'}"
-        api "io.github.jho951:auth-jwt:${findProperty('authVersion') ?: '3.0.1'}"
-        api "io.github.jho951:auth-session:${findProperty('authVersion') ?: '3.0.1'}"
-        api "io.github.jho951:auth-hybrid:${findProperty('authVersion') ?: '3.0.1'}"
-        api "io.github.jho951:auth-apikey:${findProperty('authVersion') ?: '3.0.1'}"
-        api "io.github.jho951:auth-hmac:${findProperty('authVersion') ?: '3.0.1'}"
-        api "io.github.jho951:auth-oidc:${findProperty('authVersion') ?: '3.0.1'}"
-        api "io.github.jho951:auth-service-account:${findProperty('authVersion') ?: '3.0.1'}"
-        api "io.github.jho951:ip-guard-core:${findProperty('ipGuardVersion') ?: '3.0.0'}"
-        api "io.github.jho951:ip-guard-spi:${findProperty('ipGuardVersion') ?: '3.0.0'}"
-        api "io.github.jho951:rate-limiter-core:${findProperty('rateLimiterVersion') ?: '2.0.0'}"
-        api "io.github.jho951:rate-limiter-spi:${findProperty('rateLimiterVersion') ?: '2.0.0'}"
+        api "io.github.jho951:auth-core:${rootProject.authVersion}"
+        api "io.github.jho951:auth-jwt:${rootProject.authVersion}"
+        api "io.github.jho951:auth-session:${rootProject.authVersion}"
+        api "io.github.jho951:auth-hybrid:${rootProject.authVersion}"
+        api "io.github.jho951:auth-apikey:${rootProject.authVersion}"
+        api "io.github.jho951:auth-hmac:${rootProject.authVersion}"
+        api "io.github.jho951:auth-oidc:${rootProject.authVersion}"
+        api "io.github.jho951:auth-service-account:${rootProject.authVersion}"
+        api "io.github.jho951:ip-guard-core:${rootProject.ipGuardVersion}"
+        api "io.github.jho951:ip-guard-spi:${rootProject.ipGuardVersion}"
+        api "io.github.jho951:rate-limiter-core:${rootProject.rateLimiterVersion}"
+        api "io.github.jho951:rate-limiter-spi:${rootProject.rateLimiterVersion}"
     }
 }
 

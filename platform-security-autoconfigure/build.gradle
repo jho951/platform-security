@@ -8,8 +8,8 @@ dependencies {
     api project(':platform-security-web')
     api "org.springframework:spring-context:${rootProject.springFrameworkVersion}"
     api "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
-    compileOnly "jakarta.servlet:jakarta.servlet-api:${rootProject.findProperty('jakartaServletVersion') ?: '6.1.0'}"
-    compileOnly "org.springframework:spring-web:6.2.11"
+    compileOnly "jakarta.servlet:jakarta.servlet-api:${rootProject.jakartaServletVersion}"
+    compileOnly "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
     compileOnly "org.springframework.boot:spring-boot-configuration-processor:${rootProject.springBootVersion}"
     annotationProcessor "org.springframework.boot:spring-boot-configuration-processor:${rootProject.springBootVersion}"
 
@@ -19,7 +19,7 @@ dependencies {
     testImplementation "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
     testImplementation "io.projectreactor:reactor-core:3.7.11"
     testImplementation "org.assertj:assertj-core:3.27.7"
-    testImplementation "jakarta.servlet:jakarta.servlet-api:${rootProject.findProperty('jakartaServletVersion') ?: '6.1.0'}"
+    testImplementation "jakarta.servlet:jakarta.servlet-api:${rootProject.jakartaServletVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitVersion}"
 }

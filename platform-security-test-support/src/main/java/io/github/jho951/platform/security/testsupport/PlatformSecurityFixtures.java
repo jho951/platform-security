@@ -12,6 +12,12 @@ import java.util.Set;
 public final class PlatformSecurityFixtures {
     private PlatformSecurityFixtures() {}
 
+	private static PlatformSecurityProperties baseProperties() {
+		PlatformSecurityProperties properties = new PlatformSecurityProperties();
+		properties.setEnabled(true);
+		return properties;
+	}
+
     public static SecurityRequest sampleRequest() {
         return new SecurityRequest(
                 "user-1",
@@ -77,12 +83,6 @@ public final class PlatformSecurityFixtures {
         properties.getRateLimit().getAuthenticated().setWindowSeconds(60L);
         properties.getRateLimit().getInternal().setRequests(1000L);
         properties.getRateLimit().getInternal().setWindowSeconds(60L);
-        return properties;
-    }
-
-    private static PlatformSecurityProperties baseProperties() {
-        PlatformSecurityProperties properties = new PlatformSecurityProperties();
-        properties.setEnabled(true);
         return properties;
     }
 }

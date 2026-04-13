@@ -13,6 +13,27 @@ public final class PathPatternSecurityBoundaryResolver implements io.github.jho9
     private final List<String> adminPaths;
     private final List<String> internalPaths;
 
+	private boolean matches(String path, List<String> patterns, String... defaults) {
+		for (String pattern : patterns) {
+			if (pattern != null && matchesPattern(path, pattern)) return true;
+		}
+		for (String pattern : defaults) {
+			if (matchesPattern(path, pattern)) return true;
+		}
+		return false;
+	}
+
+	private boolean matchesPattern(String path, String pattern) {
+		if (pattern == null) return false;
+		if (pattern.isBlank()) return false;
+		String normalized = pattern.trim();
+		if (normalized.endsWith("/**")) {
+			String prefix = normalized.substring(0, normalized.length() - 3);
+			return path.startsWith(prefix);
+		}
+		return path.equals(normalized) || path.startsWith(normalized + "/");
+	}
+
     public PathPatternSecurityBoundaryResolver() {
         this(List.of(), List.of(), List.of(), List.of());
     }
@@ -53,26 +74,5 @@ public final class PathPatternSecurityBoundaryResolver implements io.github.jho9
         String normalized = requestPath.trim();
         if (normalized.isEmpty()) throw new IllegalArgumentException("requestPath must not be blank");
         return normalized.startsWith("/") ? normalized : "/" + normalized;
-    }
-
-    private boolean matches(String path, List<String> patterns, String... defaults) {
-        for (String pattern : patterns) {
-            if (pattern != null && matchesPattern(path, pattern)) return true;
-        }
-        for (String pattern : defaults) {
-            if (matchesPattern(path, pattern)) return true;
-        }
-        return false;
-    }
-
-    private boolean matchesPattern(String path, String pattern) {
-        if (pattern == null) return false;
-		if (pattern.isBlank()) return false;
-        String normalized = pattern.trim();
-        if (normalized.endsWith("/**")) {
-            String prefix = normalized.substring(0, normalized.length() - 3);
-            return path.startsWith(prefix);
-        }
-        return path.equals(normalized) || path.startsWith(normalized + "/");
     }
 }
