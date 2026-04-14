@@ -49,11 +49,11 @@ permissions:
   packages: write
 ```
 
-현재 workflow는 `GH_PACKAGES_TOKEN` secret을 `GITHUB_TOKEN` 환경 변수로 넘긴다.
+현재 publish workflow는 repository 기본 `GITHUB_TOKEN`을 사용한다.
 
 ```text
-GITHUB_ACTOR=jho951
-GITHUB_TOKEN=${{ secrets.GH_PACKAGES_TOKEN }}
+GITHUB_ACTOR=${{ github.actor }}
+GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
 ```
 
 현재 publish command 형태:
