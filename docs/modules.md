@@ -15,6 +15,20 @@
 - `platform-security-api`: 내부 런타임 계약
 - `platform-security-core`: 내부 평가 엔진
 
+## 내부 좌표
+
+- `io.github.jho951.platform:platform-security-bom`
+- `io.github.jho951.platform:platform-security-policy`
+- `io.github.jho951.platform:platform-security-auth`
+- `io.github.jho951.platform:platform-security-ip`
+- `io.github.jho951.platform:platform-security-rate-limit`
+- `io.github.jho951.platform:platform-security-web`
+- `io.github.jho951.platform:platform-security-autoconfigure`
+- `io.github.jho951.platform:platform-security-starter`
+- `io.github.jho951.platform:platform-security-test-support`
+
+`platform-security-api`와 `platform-security-core`는 내부 지원층이다. 서비스가 직접 바라보는 기본 진입점은 `platform-security-starter`다.
+
 ## 읽는 법
 
 - 공통 모델과 상위 의미를 보려면 `platform-security-policy`부터 본다.
@@ -82,3 +96,9 @@ GitHub Packages private publish 대상:
 publish 제외:
 
 - `platform-security-sample-consumer`
+
+## 1계층 OSS 의존성
+
+- `ip-guard`: `io.github.jho951:ip-guard-core:3.0.0`, `io.github.jho951:ip-guard-spi:3.0.0`
+- `rate-limiter`: `io.github.jho951:rate-limiter-core:2.0.0`, `io.github.jho951:rate-limiter-spi:2.0.0`
+- `auth`: `io.github.jho951:auth-core:3.0.1`, `io.github.jho951:auth-jwt:3.0.1`, `io.github.jho951:auth-session:3.0.1`, `io.github.jho951:auth-hybrid:3.0.1`, `io.github.jho951:auth-apikey:3.0.1`, `io.github.jho951:auth-hmac:3.0.1`, `io.github.jho951:auth-oidc:3.0.1`, `io.github.jho951:auth-service-account:3.0.1`
