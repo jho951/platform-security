@@ -1,39 +1,10 @@
 # Quickstart
 
-이 문서는 3계층 Spring Boot 서비스가 `platform-security`를 붙이는 최소 절차다.
+이 문서는 3계층 Spring Boot 서비스에 `platform-security`를 붙이는 최소 절차다.
 
-## 1. GitHub Packages 인증 준비
+## 1. Repository 설정
 
 `platform-security`는 private GitHub Packages로 배포된다.
-소비 서비스는 package를 내려받기 위해 GitHub Packages credential이 필요하다.
-
-로컬:
-
-```bash
-export GITHUB_ACTOR=jho951
-export GITHUB_TOKEN=<read:packages 권한이 있는 PAT>
-```
-
-CI:
-
-```yaml
-env:
-  GITHUB_ACTOR: jho951
-  GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
-```
-
-권장 PAT 권한:
-
-- `read:packages`
-- private repo/package 접근이 필요하면 `repo`
-
-publish까지 하는 token이면 추가로:
-
-- `write:packages`
-
-## 2. Repository 설정
-
-서비스의 `settings.gradle` 또는 root `build.gradle`에 GitHub Packages repository를 추가한다.
 
 ```gradle
 dependencyResolutionManagement {
@@ -51,35 +22,55 @@ dependencyResolutionManagement {
 }
 ```
 
-## 3. Dependency 추가
+로컬 환경 변수:
 
-서비스는 보통 BOM과 starter만 의존한다.
+```bash
+export GITHUB_ACTOR=jho951
+export GITHUB_TOKEN=<read:packages 권한이 있는 PAT>
+```
+
+## 2. Starter 선택
+
+서비스는 BOM과 starter 하나만 사용한다.
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:1.0.3")
-    implementation "io.github.jho951.platform:platform-security-starter"
+    implementation platform("io.github.jho951.platform:platform-security-bom:1.0.4")
+    implementation "io.github.jho951.platform:platform-security-resource-server-starter"
 }
 ```
 
-테스트 fixture가 필요하면 추가한다.
+역할별 starter는 서비스의 주 역할(primary role)을 기준으로 하나만 고른다.
+
+| 서비스 역할 | Starter |
+| --- | --- |
+| gateway/edge | `platform-security-edge-starter` |
+| login/token/session issuer | `platform-security-issuer-starter` |
+| 일반 API 서버 | `platform-security-resource-server-starter` |
+| 전체가 내부 호출 전용인 서비스 | `platform-security-internal-service-starter` |
+
+한 서비스에 여러 종류의 endpoint가 있어도 starter를 여러 개 넣지 않는다. 예를 들어 auth-server에 internal API가 있어도 `platform-security-issuer-starter` 하나만 사용하고 internal endpoint는 `boundary.internal-paths`로 선언한다.
+
+역할 preset을 직접 설정하려면 일반 starter를 사용한다.
 
 ```gradle
-testImplementation "io.github.jho951.platform:platform-security-test-support"
+implementation "io.github.jho951.platform:platform-security-starter"
 ```
-
-## 4. 최소 설정
 
 ```yaml
 platform:
   security:
-    enabled: true
+    service-role-preset: resource-server
+```
 
+## 3. 최소 설정
+
+```yaml
+platform:
+  security:
     boundary:
       public-paths:
         - /health
-        - /auth/login
-        - /auth/refresh
       protected-paths:
         - /api/**
       admin-paths:
@@ -89,16 +80,11 @@ platform:
 
     auth:
       enabled: true
-      default-mode: HYBRID
-      allow-session-for-browser: true
-      allow-bearer-for-api: true
-      internal-token-enabled: true
       dev-fallback:
         enabled: false
 
     ip-guard:
       enabled: true
-      trust-proxy: true
       admin-allow-cidrs:
         - 10.0.0.0/8
       internal-allow-cidrs:
@@ -115,19 +101,26 @@ platform:
       internal:
         requests: 1000
         window-seconds: 60
+```
+
+로그인, refresh, OAuth2 시작점처럼 public이지만 공격 대상인 endpoint는 route limit을 추가한다.
+
+```yaml
+platform:
+  security:
+    rate-limit:
       routes:
         - name: login
           patterns:
             - /auth/login
-            - /auth/refresh
+            - /v1/auth/login
           requests: 5
           window-seconds: 60
 ```
 
-## 5. 운영용 SecurityContextResolver 등록
+## 4. 운영용 resolver 등록
 
-`auth.enabled=true`이면 운영 서비스는 반드시 `SecurityContextResolver`를 제공해야 한다.
-제공하지 않으면 application startup 시 fail-fast 한다.
+`auth.enabled=true`이면 운영 서비스는 `SecurityContextResolver`를 직접 제공해야 한다.
 
 ```java
 @Configuration
@@ -148,7 +141,7 @@ class PlatformSecurityConfig {
 }
 ```
 
-local/test에서만 dev fallback을 쓸 수 있다.
+local/test에서만 dev fallback을 쓴다.
 
 ```yaml
 platform:
@@ -158,11 +151,9 @@ platform:
         enabled: true
 ```
 
-운영에서 이 값을 켜지 않는다.
+## 5. 자주 쓰는 override
 
-## 6. Override 예시
-
-### Internal token claims 검증
+Internal token claim 검증:
 
 ```java
 @Bean
@@ -171,7 +162,7 @@ InternalTokenClaimsValidator internalTokenClaimsValidator() {
 }
 ```
 
-### Rate limit key 변경
+Rate limit key 변경:
 
 ```java
 @Bean
@@ -185,7 +176,7 @@ RateLimitKeyResolver rateLimitKeyResolver() {
 }
 ```
 
-### Audit event 발행
+Audit event 발행:
 
 ```java
 @Bean
@@ -199,17 +190,15 @@ SecurityAuditPublisher securityAuditPublisher() {
 }
 ```
 
-## 7. 확인 방법
+## 6. 확인
 
 ```bash
 ./gradlew test
 ```
 
-서비스에서 package 인증 문제가 나면 먼저 아래를 확인한다.
+GitHub Packages 인증 문제가 나면 먼저 확인한다.
 
 ```bash
 echo "$GITHUB_ACTOR"
 test -n "$GITHUB_TOKEN" && echo "token exists"
 ```
-
-401/403이면 token 권한 또는 package 접근 권한 문제다.

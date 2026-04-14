@@ -2,6 +2,7 @@ package io.github.jho951.platform.security.core.policy;
 
 import com.ipguard.core.decision.Decision;
 import com.ipguard.core.engine.IpGuardEngine;
+import com.ipguard.spi.RuleSource;
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityPolicy;
 import io.github.jho951.platform.security.api.SecurityRequest;
@@ -10,10 +11,21 @@ import io.github.jho951.platform.security.policy.SecurityAttributes;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public final class IpAllowListPolicy implements SecurityPolicy {
     private final List<String> allowedIps;
     private final IpGuardEngine engine;
+
+    public static IpAllowListPolicy fromRules(List<String> rules, boolean defaultAllow) {
+        RuleSource source = () -> rules == null
+                ? ""
+                : rules.stream()
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.joining("\n"));
+
+        return new IpAllowListPolicy(new IpGuardEngine(source, defaultAllow));
+    }
 
     public IpAllowListPolicy(List<String> allowedIps) {
         this.allowedIps = allowedIps == null ? List.of() : List.copyOf(allowedIps);

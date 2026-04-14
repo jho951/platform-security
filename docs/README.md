@@ -1,36 +1,33 @@
-# Docs
+# Documentation
 
-## 현재 기준
+이 디렉터리는 `platform-security`를 이해하고 적용하기 위한 문서다. 각 문서는 역할이 다르다.
 
-- 1계층 OSS는 공개 배포본이다.
-- 2계층 `platform-security`는 내부 비공개 플랫폼이다.
-- 서비스는 보통 `platform-security-bom`과 `platform-security-starter`를 사용한다.
-- 운영 서비스는 `SecurityContextResolver`를 직접 제공한다.
-- dev fallback resolver는 local/test에서만 opt-in으로 켠다.
-- private publish는 GitHub Packages와 `v*` tag 기준으로 수행한다.
-
-## 먼저 읽기
-
-### 시작할 때
+## 처음 읽는 순서
 
 1. [아키텍처](./architecture.md)
-2. [빠른 시작](./quickstart.md)
-3. [모듈 가이드](./modules.md)
+2. [모듈 가이드](./modules.md)
+3. [빠른 시작](./quickstart.md)
+4. [설정 레퍼런스](./configuration.md)
+5. [보안 모델](./security-model.md)
 
-### auth-server에 붙일 때
+## 목적별 문서
 
-1. [auth-server 적용 가이드](./auth-server-integration.md)
-2. [설정](./configuration.md)
+| 목적 | 문서 |
+| --- | --- |
+| 2계층/3계층 책임 경계 이해 | [architecture.md](./architecture.md) |
+| 어떤 starter를 써야 하는지 확인 | [modules.md](./modules.md) |
+| Spring Boot 서비스에 붙이기 | [quickstart.md](./quickstart.md) |
+| `platform.security.*` 설정 확인 | [configuration.md](./configuration.md) |
+| 런타임 평가 순서와 header 계약 확인 | [security-model.md](./security-model.md) |
+| auth-server 적용 | [auth-server-integration.md](./auth-server-integration.md) |
+| override/SPI 확장 | [extension-guide.md](./extension-guide.md) |
+| private publish와 소비 설정 | [private-publish.md](./private-publish.md) |
+| 장애 대응 | [troubleshooting.md](./troubleshooting.md) |
 
-### 설정을 볼 때
+## 핵심 기준
 
-1. [보안 모델](./security-model.md)
-2. [설정](./configuration.md)
-
-### 비공개 배포/소비를 볼 때
-
-1. [Private publish and consumption](./private-publish.md)
-
-### 문제가 생겼을 때
-
-1. [트러블슈팅](./troubleshooting.md)
+- 2계층은 공통 인프라 운영 질서를 제공한다.
+- 3계층은 서비스별 설정, resolver, provider, 도메인 로직을 제공한다.
+- 역할 starter는 서비스 이름이 아니라 서비스 역할을 표현한다.
+- 운영에서는 dev fallback을 쓰지 않는다.
+- 운영에서는 `SecurityContextResolver`가 없으면 기동 실패한다.

@@ -5,7 +5,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PlatformSecurityProperties {
+    public static final String DEFAULT_JWT_SECRET = "platform-security-dev-secret-platform-security-dev-secret";
+
     private boolean enabled = true;
+    private ServiceRolePreset serviceRolePreset = ServiceRolePreset.GENERAL;
+    private OperationalPolicyProperties operationalPolicy = new OperationalPolicyProperties();
     private BoundaryPolicyProperties boundary = new BoundaryPolicyProperties();
     private AuthProperties auth = new AuthProperties();
     private IpGuardProperties ipGuard = new IpGuardProperties();
@@ -17,6 +21,22 @@ public class PlatformSecurityProperties {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public ServiceRolePreset getServiceRolePreset() {
+        return serviceRolePreset;
+    }
+
+    public void setServiceRolePreset(ServiceRolePreset serviceRolePreset) {
+        this.serviceRolePreset = serviceRolePreset == null ? ServiceRolePreset.GENERAL : serviceRolePreset;
+    }
+
+    public OperationalPolicyProperties getOperationalPolicy() {
+        return operationalPolicy;
+    }
+
+    public void setOperationalPolicy(OperationalPolicyProperties operationalPolicy) {
+        this.operationalPolicy = operationalPolicy == null ? new OperationalPolicyProperties() : operationalPolicy;
     }
 
     public BoundaryPolicyProperties getBoundary() {
@@ -100,9 +120,16 @@ public class PlatformSecurityProperties {
         private boolean allowOidcForApi = true;
         private boolean serviceAccountEnabled = true;
         private boolean internalTokenEnabled = true;
+        private boolean defaultModeConfigured = false;
+        private boolean allowSessionForBrowserConfigured = false;
+        private boolean allowApiKeyForApiConfigured = false;
+        private boolean allowHmacForApiConfigured = false;
+        private boolean allowOidcForApiConfigured = false;
+        private boolean serviceAccountEnabledConfigured = false;
+        private boolean internalTokenEnabledConfigured = false;
         private DevFallbackProperties devFallback = new DevFallbackProperties();
         private OidcProperties oidc = new OidcProperties();
-        private String jwtSecret = "platform-security-dev-secret-platform-security-dev-secret";
+        private String jwtSecret = DEFAULT_JWT_SECRET;
         private Duration accessTokenTtl = Duration.ofMinutes(30);
         private Duration refreshTokenTtl = Duration.ofDays(14);
 
@@ -119,6 +146,15 @@ public class PlatformSecurityProperties {
         }
 
         public void setDefaultMode(AuthMode defaultMode) {
+            this.defaultModeConfigured = true;
+            this.defaultMode = defaultMode == null ? AuthMode.HYBRID : defaultMode;
+        }
+
+        public boolean isDefaultModeConfigured() {
+            return defaultModeConfigured;
+        }
+
+        public void applyDefaultMode(AuthMode defaultMode) {
             this.defaultMode = defaultMode == null ? AuthMode.HYBRID : defaultMode;
         }
 
@@ -127,6 +163,15 @@ public class PlatformSecurityProperties {
         }
 
         public void setAllowSessionForBrowser(boolean allowSessionForBrowser) {
+            this.allowSessionForBrowserConfigured = true;
+            this.allowSessionForBrowser = allowSessionForBrowser;
+        }
+
+        public boolean isAllowSessionForBrowserConfigured() {
+            return allowSessionForBrowserConfigured;
+        }
+
+        public void applyAllowSessionForBrowser(boolean allowSessionForBrowser) {
             this.allowSessionForBrowser = allowSessionForBrowser;
         }
 
@@ -143,6 +188,15 @@ public class PlatformSecurityProperties {
         }
 
         public void setAllowApiKeyForApi(boolean allowApiKeyForApi) {
+            this.allowApiKeyForApiConfigured = true;
+            this.allowApiKeyForApi = allowApiKeyForApi;
+        }
+
+        public boolean isAllowApiKeyForApiConfigured() {
+            return allowApiKeyForApiConfigured;
+        }
+
+        public void applyAllowApiKeyForApi(boolean allowApiKeyForApi) {
             this.allowApiKeyForApi = allowApiKeyForApi;
         }
 
@@ -151,6 +205,15 @@ public class PlatformSecurityProperties {
         }
 
         public void setAllowHmacForApi(boolean allowHmacForApi) {
+            this.allowHmacForApiConfigured = true;
+            this.allowHmacForApi = allowHmacForApi;
+        }
+
+        public boolean isAllowHmacForApiConfigured() {
+            return allowHmacForApiConfigured;
+        }
+
+        public void applyAllowHmacForApi(boolean allowHmacForApi) {
             this.allowHmacForApi = allowHmacForApi;
         }
 
@@ -159,6 +222,15 @@ public class PlatformSecurityProperties {
         }
 
         public void setAllowOidcForApi(boolean allowOidcForApi) {
+            this.allowOidcForApiConfigured = true;
+            this.allowOidcForApi = allowOidcForApi;
+        }
+
+        public boolean isAllowOidcForApiConfigured() {
+            return allowOidcForApiConfigured;
+        }
+
+        public void applyAllowOidcForApi(boolean allowOidcForApi) {
             this.allowOidcForApi = allowOidcForApi;
         }
 
@@ -167,6 +239,15 @@ public class PlatformSecurityProperties {
         }
 
         public void setServiceAccountEnabled(boolean serviceAccountEnabled) {
+            this.serviceAccountEnabledConfigured = true;
+            this.serviceAccountEnabled = serviceAccountEnabled;
+        }
+
+        public boolean isServiceAccountEnabledConfigured() {
+            return serviceAccountEnabledConfigured;
+        }
+
+        public void applyServiceAccountEnabled(boolean serviceAccountEnabled) {
             this.serviceAccountEnabled = serviceAccountEnabled;
         }
 
@@ -175,6 +256,15 @@ public class PlatformSecurityProperties {
         }
 
         public void setInternalTokenEnabled(boolean internalTokenEnabled) {
+            this.internalTokenEnabledConfigured = true;
+            this.internalTokenEnabled = internalTokenEnabled;
+        }
+
+        public boolean isInternalTokenEnabledConfigured() {
+            return internalTokenEnabledConfigured;
+        }
+
+        public void applyInternalTokenEnabled(boolean internalTokenEnabled) {
             this.internalTokenEnabled = internalTokenEnabled;
         }
 
@@ -216,6 +306,51 @@ public class PlatformSecurityProperties {
 
         public void setRefreshTokenTtl(Duration refreshTokenTtl) {
             this.refreshTokenTtl = refreshTokenTtl == null ? Duration.ofDays(14) : refreshTokenTtl;
+        }
+    }
+
+    public static class OperationalPolicyProperties {
+        private boolean enabled = true;
+        private boolean production = false;
+        private List<String> productionProfiles = new ArrayList<>(List.of("prod", "production", "live"));
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public boolean isProduction() {
+            return production;
+        }
+
+        public void setProduction(boolean production) {
+            this.production = production;
+        }
+
+        public List<String> getProductionProfiles() {
+            return productionProfiles;
+        }
+
+        public void setProductionProfiles(List<String> productionProfiles) {
+            this.productionProfiles = productionProfiles == null
+                    ? new ArrayList<>()
+                    : new ArrayList<>(productionProfiles);
+        }
+
+        public boolean isProductionProfile(String profile) {
+            if (profile == null || profile.isBlank()) {
+                return false;
+            }
+            String normalized = profile.trim();
+            for (String productionProfile : productionProfiles) {
+                if (productionProfile != null && normalized.equalsIgnoreCase(productionProfile.trim())) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 

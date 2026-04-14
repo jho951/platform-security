@@ -15,6 +15,10 @@
 - `platform-security-web`
 - `platform-security-autoconfigure`
 - `platform-security-starter`
+- `platform-security-edge-starter`
+- `platform-security-issuer-starter`
+- `platform-security-resource-server-starter`
+- `platform-security-internal-service-starter`
 - `platform-security-test-support`
 - 내부 지원 모듈: `platform-security-api`, `platform-security-core`
 
@@ -27,14 +31,14 @@
 publish workflow는 `v*` tag push 또는 수동 dispatch로 실행된다.
 
 ```bash
-git tag v1.0.3
-git push origin v1.0.3
+git tag v1.0.4
+git push origin v1.0.4
 ```
 
 workflow는 tag에서 version을 계산한다.
 
 ```text
-v1.0.3 -> releaseVersion=1.0.3
+v1.0.4 -> release_version=1.0.4
 ```
 
 필수 workflow 권한:
@@ -45,18 +49,18 @@ permissions:
   packages: write
 ```
 
-Actions에서는 아래 값이 자동 제공된다.
+현재 workflow는 `GH_PACKAGES_TOKEN` secret을 `GITHUB_TOKEN` 환경 변수로 넘긴다.
 
 ```text
-GITHUB_ACTOR=${{ github.actor }}
-GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+GITHUB_ACTOR=jho951
+GITHUB_TOKEN=${{ secrets.GH_PACKAGES_TOKEN }}
 ```
 
 현재 publish command 형태:
 
 ```bash
 ./gradlew clean test publish \
-  -PreleaseVersion="${VERSION}" \
+  -Prelease_version="${VERSION}" \
   -PgithubPackagesUrl="https://maven.pkg.github.com/jho951/platform-security" \
   -PgithubPackagesUsername="${GITHUB_ACTOR}" \
   -PgithubPackagesToken="${GITHUB_TOKEN}"
@@ -71,7 +75,7 @@ export GITHUB_ACTOR=jho951
 export GITHUB_TOKEN=<write:packages 권한이 있는 PAT>
 
 ./gradlew clean test publish \
-  -PreleaseVersion=1.0.3 \
+  -Prelease_version=1.0.4 \
   -PgithubPackagesUrl=https://maven.pkg.github.com/jho951/platform-security \
   -PgithubPackagesUsername="$GITHUB_ACTOR" \
   -PgithubPackagesToken="$GITHUB_TOKEN"
@@ -104,8 +108,8 @@ dependency:
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:1.0.3")
-    implementation "io.github.jho951.platform:platform-security-starter"
+    implementation platform("io.github.jho951.platform:platform-security-bom:1.0.4")
+    implementation "io.github.jho951.platform:platform-security-resource-server-starter"
 }
 ```
 
@@ -169,10 +173,10 @@ test -n "$GITHUB_TOKEN" && echo "token exists"
 
 - version이 publish되지 않음
 - GitHub Packages repository URL이 틀림
-- BOM version과 starter version이 다름
+- BOM version이 publish되지 않았거나 starter artifact가 같은 version으로 publish되지 않음
 
 확인:
 
 ```bash
-./gradlew dependencyInsight --dependency platform-security-starter
+./gradlew dependencyInsight --dependency platform-security-resource-server-starter
 ```

@@ -4,14 +4,18 @@ import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.policy.ClientIpResolver;
+import io.github.jho951.platform.security.policy.AuthMode;
 import io.github.jho951.platform.security.policy.PlatformSecurityCustomizer;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
+import io.github.jho951.platform.security.policy.ServiceRolePreset;
+import io.github.jho951.platform.security.policy.ServiceRolePresetProvider;
 import io.github.jho951.platform.security.policy.SecurityBoundary;
 import io.github.jho951.platform.security.policy.SecurityBoundaryResolver;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import com.auth.spi.TokenService;
 
 import java.time.Instant;
 import java.util.List;
@@ -64,6 +68,106 @@ class PlatformSecurityAutoConfigurationTest {
                 .run(context -> {
                     assertNotNull(context.getStartupFailure());
                     assertTrue(context.getStartupFailure().getMessage().contains("No SecurityContextResolver configured"));
+                });
+    }
+
+    @Test
+    void failsFastWhenProductionPolicyIsViolated() {
+        contextRunner
+                .withPropertyValues(
+                        "spring.profiles.active=prod",
+                        "platform.security.auth.dev-fallback.enabled=true"
+                )
+                .run(context -> {
+                    assertNotNull(context.getStartupFailure());
+                    assertTrue(context.getStartupFailure().getMessage().contains("operational policy violation"));
+                    assertTrue(context.getStartupFailure().getMessage().contains("dev-fallback.enabled must be false"));
+                });
+    }
+
+    @Test
+    void acceptsProductionPolicyWhenRequiredInputsAreProvided() {
+        contextRunner
+                .withBean(SecurityContextResolver.class, () -> request -> new SecurityContext(true, "prod-user", Set.of("USER"), Map.of()))
+                .withBean(TokenService.class, () -> new TokenService() {
+                    @Override
+                    public String issueAccessToken(com.auth.api.model.Principal principal) {
+                        return "access";
+                    }
+
+                    @Override
+                    public String issueRefreshToken(com.auth.api.model.Principal principal) {
+                        return "refresh";
+                    }
+
+                    @Override
+                    public com.auth.api.model.Principal verifyAccessToken(String token) {
+                        return null;
+                    }
+
+                    @Override
+                    public com.auth.api.model.Principal verifyRefreshToken(String token) {
+                        return null;
+                    }
+                })
+                .withPropertyValues(
+                        "spring.profiles.active=prod",
+                        "platform.security.ip-guard.admin-allow-cidrs[0]=10.0.0.0/8",
+                        "platform.security.ip-guard.internal-allow-cidrs[0]=10.0.0.0/8"
+                )
+                .run(context -> {
+                    assertEquals(null, context.getStartupFailure());
+                    assertNotNull(context.getBean(SecurityContextResolver.class));
+                });
+    }
+
+    @Test
+    void serviceRolePresetAppliesCommonDefaultsBeforeCustomizers() {
+        contextRunner
+                .withBean(SecurityContextResolver.class, () -> request -> new SecurityContext(true, "issuer", Set.of("USER"), Map.of()))
+                .withBean(PlatformSecurityCustomizer.class, () -> properties -> properties.getBoundary().getPublicPaths().add("/custom/public"))
+                .withPropertyValues("platform.security.service-role-preset=issuer")
+                .run(context -> {
+                    PlatformSecurityProperties properties = context.getBean(PlatformSecurityProperties.class);
+                    assertEquals(AuthMode.HYBRID, properties.getAuth().getDefaultMode());
+                    assertTrue(properties.getBoundary().getProtectedPaths().contains("/api/**"));
+                    assertTrue(properties.getBoundary().getPublicPaths().contains("/custom/public"));
+                    assertTrue(properties.getRateLimit().getRoutes().isEmpty());
+                });
+    }
+
+    @Test
+    void roleStarterProviderSelectsPresetWhenPropertyIsGeneral() {
+        contextRunner
+                .withBean(SecurityContextResolver.class, () -> request -> new SecurityContext(true, "resource", Set.of("USER"), Map.of()))
+                .withBean(ServiceRolePresetProvider.class, () -> () -> ServiceRolePreset.RESOURCE_SERVER)
+                .run(context -> {
+                    PlatformSecurityProperties properties = context.getBean(PlatformSecurityProperties.class);
+                    assertEquals(ServiceRolePreset.RESOURCE_SERVER, properties.getServiceRolePreset());
+                    assertEquals(AuthMode.JWT, properties.getAuth().getDefaultMode());
+                    assertEquals(false, properties.getAuth().isAllowSessionForBrowser());
+                });
+    }
+
+    @Test
+    void failsFastWhenMultipleRoleStartersAreSelected() {
+        contextRunner
+                .withBean("edgePresetProvider", ServiceRolePresetProvider.class, () -> () -> ServiceRolePreset.EDGE)
+                .withBean("issuerPresetProvider", ServiceRolePresetProvider.class, () -> () -> ServiceRolePreset.ISSUER)
+                .run(context -> {
+                    assertNotNull(context.getStartupFailure());
+                    assertTrue(context.getStartupFailure().getMessage().contains("Only one platform-security role starter"));
+                });
+    }
+
+    @Test
+    void failsFastWhenRoleStarterConflictsWithExplicitPreset() {
+        contextRunner
+                .withBean(ServiceRolePresetProvider.class, () -> () -> ServiceRolePreset.EDGE)
+                .withPropertyValues("platform.security.service-role-preset=issuer")
+                .run(context -> {
+                    assertNotNull(context.getStartupFailure());
+                    assertTrue(context.getStartupFailure().getMessage().contains("conflicts with selected starter"));
                 });
     }
 

@@ -6,11 +6,12 @@ ext {
     authVersion = findProperty('auth_version') ?: '3.0.1'
     ipGuardVersion = findProperty('ipGuard_version') ?: '3.0.0'
     rateLimiterVersion = findProperty('rateLimiter_version') ?: '2.0.0'
+    platformReleaseVersion = findProperty('release_version') ?: '0.1.0-SNAPSHOT'
 }
 
 allprojects {
     group = 'io.github.jho951.platform'
-    version = findProperty('releaseVersion') ?: '0.1.0-SNAPSHOT'
+    version = rootProject.ext.platformReleaseVersion
 
     repositories {
         mavenCentral()

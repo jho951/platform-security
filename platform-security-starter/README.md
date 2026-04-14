@@ -1,6 +1,6 @@
 # platform-security-starter
 
-`platform-security-starter`는 서비스가 붙는 단일 dependency entry point다.
+`platform-security-starter`는 역할 preset을 자동 선택하지 않는 일반 dependency entry point다.
 
 ## 책임
 
@@ -13,7 +13,14 @@
 - auto-configuration 구현
 - filter 구현
 - policy engine 구현
-- 서비스별 preset
+- 역할 preset 자동 선택
 - auth-server/gateway-server 전용 설정
+
+역할이 정해진 서비스는 다음 중 하나를 선택한다.
+
+- `platform-security-edge-starter`
+- `platform-security-issuer-starter`
+- `platform-security-resource-server-starter`
+- `platform-security-internal-service-starter`
 
 실제 Spring Boot 자동 구성은 `platform-security-autoconfigure`에 있다.

@@ -35,8 +35,12 @@ import io.github.jho951.platform.security.policy.DefaultClientTypeResolver;
 import io.github.jho951.platform.security.policy.DefaultPlatformPrincipalFactory;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import io.github.jho951.platform.security.policy.PlatformPrincipalFactory;
+import io.github.jho951.platform.security.policy.OperationalSecurityPolicyEnforcer;
+import io.github.jho951.platform.security.policy.PlatformSecurityPresetApplier;
 import io.github.jho951.platform.security.policy.RateLimitKeyResolver;
 import io.github.jho951.platform.security.policy.PlatformSecurityCustomizer;
+import io.github.jho951.platform.security.policy.ServiceRolePreset;
+import io.github.jho951.platform.security.policy.ServiceRolePresetProvider;
 import io.github.jho951.platform.security.web.PlatformSecurityServletFilter;
 import io.github.jho951.platform.security.web.PlatformSecurityWebFilter;
 import io.github.jho951.platform.security.web.DefaultClientIpResolver;
@@ -71,6 +75,7 @@ import com.auth.spi.TokenService;
 import com.auth.support.jwt.JwtTokenService;
 import jakarta.servlet.Filter;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.ApplicationContext;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -79,9 +84,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
 import org.springframework.web.server.WebFilter;
 
 import java.time.Clock;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Set;
 
@@ -97,15 +104,49 @@ public class PlatformSecurityAutoConfiguration {
 
     @Bean
     public static BeanPostProcessor platformSecurityPropertiesCustomizerPostProcessor(
+            ObjectProvider<ServiceRolePresetProvider> presetProviders,
             ObjectProvider<PlatformSecurityCustomizer> customizers
     ) {
+        PlatformSecurityPresetApplier presetApplier = new PlatformSecurityPresetApplier();
         return new BeanPostProcessor() {
             @Override
             public Object postProcessAfterInitialization(Object bean, String beanName) {
                 if (bean instanceof PlatformSecurityProperties properties) {
+                    applyStarterPreset(properties, presetProviders);
+                    presetApplier.apply(properties);
                     customizers.orderedStream().forEach(customizer -> customizer.customize(properties));
                 }
                 return bean;
+            }
+
+            private void applyStarterPreset(
+                    PlatformSecurityProperties properties,
+                    ObjectProvider<ServiceRolePresetProvider> presetProviders
+            ) {
+                List<ServiceRolePreset> presets = presetProviders.orderedStream()
+                        .map(ServiceRolePresetProvider::serviceRolePreset)
+                        .filter(preset -> preset != null && preset != ServiceRolePreset.GENERAL)
+                        .distinct()
+                        .toList();
+                if (presets.size() > 1) {
+                    throw new IllegalStateException("Only one platform-security role starter can be used: " + presets);
+                }
+                if (presets.isEmpty()) {
+                    return;
+                }
+                ServiceRolePreset starterPreset = presets.get(0);
+                if (properties.getServiceRolePreset() == ServiceRolePreset.GENERAL) {
+                    properties.setServiceRolePreset(starterPreset);
+                    return;
+                }
+                if (properties.getServiceRolePreset() != starterPreset) {
+                    throw new IllegalStateException(
+                            "platform.security.service-role-preset conflicts with selected starter: "
+                                    + properties.getServiceRolePreset()
+                                    + " vs "
+                                    + starterPreset
+                    );
+                }
             }
         };
     }
@@ -400,11 +441,25 @@ public class PlatformSecurityAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty(prefix = "platform.security.auth", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public org.springframework.beans.factory.SmartInitializingSingleton securityContextResolverGuard(
-            ObjectProvider<SecurityContextResolver> resolverProvider
+    public OperationalSecurityPolicyEnforcer operationalSecurityPolicyEnforcer() {
+        return new OperationalSecurityPolicyEnforcer();
+    }
+
+    @Bean
+    public org.springframework.beans.factory.SmartInitializingSingleton platformSecurityOperationalPolicyGuard(
+            PlatformSecurityProperties properties,
+            OperationalSecurityPolicyEnforcer enforcer,
+            ObjectProvider<SecurityContextResolver> resolverProvider,
+            Environment environment,
+            ApplicationContext applicationContext
     ) {
         return () -> {
+            enforcer.enforce(
+                    properties,
+                    resolverProvider.getIfAvailable() != null,
+                    applicationContext.containsBean("platformSecurityTokenService"),
+                    environment.getActiveProfiles()
+            );
             if (resolverProvider.getIfAvailable() == null) {
                 throw new IllegalStateException(
                         "No SecurityContextResolver configured. " +

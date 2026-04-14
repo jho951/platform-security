@@ -1,104 +1,82 @@
 # Modules
 
-## 모듈
+이 문서는 모듈의 역할과 서비스가 직접 의존할 artifact를 설명한다. 설계 원칙은 [architecture.md](./architecture.md)를 본다.
 
-- `platform-security-bom`: 버전 정렬
-- `platform-security-policy`: 공통 경계/모델/설정
-- `platform-security-auth`: auth capability 조립
-- `platform-security-ip`: IP 보호 capability 조립
-- `platform-security-rate-limit`: rate limit capability 조립
-- `platform-security-web`: HTTP / Servlet / WebFlux 어댑터와 ingress 변환
-- `platform-security-autoconfigure`: Spring boot auto-configuration
-- `platform-security-starter`: 얇은 dependency aggregator
-- `platform-security-test-support`: 테스트 픽스처와 샘플
-- `platform-security-sample-consumer`: 2계층 사용 예제 소비자
-- `platform-security-api`: 내부 런타임 계약
-- `platform-security-core`: 내부 평가 엔진
+## 소비용 artifact
 
-## 내부 좌표
+3계층 서비스는 보통 아래 조합을 사용한다.
 
-- `io.github.jho951.platform:platform-security-bom`
-- `io.github.jho951.platform:platform-security-policy`
-- `io.github.jho951.platform:platform-security-auth`
-- `io.github.jho951.platform:platform-security-ip`
-- `io.github.jho951.platform:platform-security-rate-limit`
-- `io.github.jho951.platform:platform-security-web`
-- `io.github.jho951.platform:platform-security-autoconfigure`
-- `io.github.jho951.platform:platform-security-starter`
-- `io.github.jho951.platform:platform-security-test-support`
+```gradle
+dependencies {
+    implementation platform("io.github.jho951.platform:platform-security-bom:1.0.4")
+    implementation "io.github.jho951.platform:platform-security-resource-server-starter"
+}
+```
 
-`platform-security-api`와 `platform-security-core`는 내부 지원층이다. 서비스가 직접 바라보는 기본 진입점은 `platform-security-starter`다.
+역할별 starter는 서비스의 모든 endpoint 종류가 아니라 주 역할(primary role)을 고르는 진입점이다.
 
-## 읽는 법
+| Artifact | 용도 |
+| --- | --- |
+| `platform-security-edge-starter` | 외부 트래픽을 받는 edge/gateway가 주 역할인 서비스 |
+| `platform-security-issuer-starter` | token/session issuer가 주 역할인 서비스 |
+| `platform-security-resource-server-starter` | 일반 resource API가 주 역할인 서비스 |
+| `platform-security-internal-service-starter` | 전체 서비스가 내부 호출 전용인 서비스 |
 
-- 공통 모델과 상위 의미를 보려면 `platform-security-policy`부터 본다.
-- 인증 조립은 `platform-security-auth`를 본다.
-- IP 보호 조립은 `platform-security-ip`를 본다.
-- rate limit 조립은 `platform-security-rate-limit`를 본다.
-- HTTP / Reactive 진입점과 downstream 전달을 보려면 `platform-security-web`를 본다.
-- Spring 조립과 bean wiring을 보려면 `platform-security-autoconfigure`를 본다.
-- 테스트 도움말은 `platform-security-test-support`를 본다.
-- 실제 소비 예제는 `platform-security-sample-consumer`를 본다.
-- 서비스가 직접 의존할 모듈은 보통 `platform-security-starter`와 `platform-security-bom`이다.
+일반 starter:
 
-## 책임 경계
+| Artifact | 용도 |
+| --- | --- |
+| `platform-security-starter` | preset을 직접 설정하고 싶을 때 |
 
-- `platform-security-policy`
-  - 경계 계약만 둔다.
-  - 구현 세부와 Spring 타입을 넣지 않는다.
-  - boundary, auth mode, client type, common properties를 정의한다.
-  - `SecurityBoundaryResolver`, `ClientTypeResolver`, `AuthenticationModeResolver`, `ClientIpResolver`, `RateLimitKeyResolver` 같은 override point를 정의한다.
-- `platform-security-auth`
-  - auth OSS 8개 모듈을 서비스용 인증 capability로 조립한다.
-  - `PlatformSecurityContextResolvers`로 운영용 resolver 조립 지식을 제공한다.
-  - 회원가입, 토큰 발급 비즈니스, 서비스별 권한 판단은 넣지 않는다.
-- `platform-security-ip`
-  - 클라이언트 IP와 boundary별 IP 정책을 capability로 제공한다.
-  - 서비스별 URL, Redis key, 도메인 판단은 넣지 않는다.
-- `platform-security-rate-limit`
-  - boundary와 client type별 rate limit capability를 제공한다.
-  - 서비스별 도메인 정책은 넣지 않는다.
-- `platform-security-sample-consumer`
-  - gateway/auth-server 형태의 소비 예제를 제공한다.
-  - override 가능한 resolver/provider 사용 예시를 담는다.
-- `platform-security-web`
-  - ingress 해석과 header / response 적응만 둔다.
-  - auth, ip-guard, rate-limiter 정책 자체는 넣지 않는다.
-- `platform-security-autoconfigure`
-  - 빈 등록과 조립만 담당한다.
-  - 운영에서 resolver가 없으면 fail-fast 한다.
-  - dev fallback은 opt-in일 때만 등록한다.
-  - 비즈니스 정책을 다시 정의하지 않는다.
-- `platform-security-test-support`
-  - 테스트 데이터와 fixture를 제공한다.
-- `platform-security-api`
-  - `SecurityRequest`, `SecurityContext`, `SecurityEvaluationResult`, `ResolvedSecurityProfile`을 제공한다.
-  - 공개 소비 표면이 아니라 platform 내부 지원 계약으로 취급한다.
-- `platform-security-core`
-  - `DefaultSecurityEvaluationService`로 boundary/client/auth-mode 기반 capability chain을 실행한다.
-  - Servlet, Spring, Redis, DB를 직접 알지 않는다.
+역할별 starter는 둘 이상 동시에 쓰면 fail-fast 된다. 한 서비스 안에 internal endpoint가 일부 있다고 해서 `internal-service-starter`를 추가하지 않는다. 예를 들어 auth-server는 `issuer-starter` 하나를 쓰고, 내부 API는 `boundary.internal-paths`와 `internal-allow-cidrs`로 선언한다.
+
+## 내부 모듈
+
+| Module | 책임 |
+| --- | --- |
+| `platform-security-policy` | 공통 모델, 설정, SPI, preset, 운영정책 enforcer |
+| `platform-security-api` | 런타임 요청/결과 계약 |
+| `platform-security-core` | policy chain 평가 엔진 |
+| `platform-security-auth` | auth 1계층 provider를 platform capability로 조립 |
+| `platform-security-ip` | boundary/profile 기반 IP guard 조립 |
+| `platform-security-rate-limit` | boundary/profile/route 기반 rate limit 조립 |
+| `platform-security-web` | Servlet/WebFlux ingress, header scrub, response, downstream propagation |
+| `platform-security-autoconfigure` | Spring bean 조립과 fail-fast guard |
+| `platform-security-test-support` | 테스트 fixture |
+| `platform-security-sample-consumer` | 소비 예제 |
+
+`platform-security-api`와 `platform-security-core`는 내부 지원층이다. 서비스는 starter와 공개 SPI를 통해 사용한다.
 
 ## 배포 대상
 
-GitHub Packages private publish 대상:
+Private GitHub Packages publish 대상:
 
 - `platform-security-bom`
 - `platform-security-policy`
+- `platform-security-api`
+- `platform-security-core`
 - `platform-security-auth`
 - `platform-security-ip`
 - `platform-security-rate-limit`
 - `platform-security-web`
 - `platform-security-autoconfigure`
 - `platform-security-starter`
+- `platform-security-edge-starter`
+- `platform-security-issuer-starter`
+- `platform-security-resource-server-starter`
+- `platform-security-internal-service-starter`
 - `platform-security-test-support`
-- 내부 지원 모듈: `platform-security-api`, `platform-security-core`
 
-publish 제외:
+Publish 제외:
 
 - `platform-security-sample-consumer`
 
-## 1계층 OSS 의존성
+## 1계층 OSS 버전
 
-- `ip-guard`: `io.github.jho951:ip-guard-core:3.0.0`, `io.github.jho951:ip-guard-spi:3.0.0`
-- `rate-limiter`: `io.github.jho951:rate-limiter-core:2.0.0`, `io.github.jho951:rate-limiter-spi:2.0.0`
-- `auth`: `io.github.jho951:auth-core:3.0.1`, `io.github.jho951:auth-jwt:3.0.1`, `io.github.jho951:auth-session:3.0.1`, `io.github.jho951:auth-hybrid:3.0.1`, `io.github.jho951:auth-apikey:3.0.1`, `io.github.jho951:auth-hmac:3.0.1`, `io.github.jho951:auth-oidc:3.0.1`, `io.github.jho951:auth-service-account:3.0.1`
+버전은 [gradle.properties](../gradle.properties)에서 관리한다.
+
+| Property | 현재 값 |
+| --- | --- |
+| `auth_version` | `3.0.1` |
+| `ipGuard_version` | `3.0.0` |
+| `rateLimiter_version` | `2.0.0` |
