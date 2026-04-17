@@ -49,12 +49,12 @@ class PolicyConfigPlatformIpRuleSourceFactoryTest {
     }
 
     @Test
-    void autoConfigurationAdaptsGovernancePolicyConfigSource() {
+    void autoConfigurationUsesPlatformPolicyConfigSource() {
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(PlatformSecurityPolicyConfigBridgeAutoConfiguration.class))
                 .withBean(
-                        io.github.jho951.platform.governance.api.PolicyConfigSource.class,
-                        () -> new GovernanceMapPolicyConfigSource(Map.of(
+                        PolicyConfigSource.class,
+                        () -> new MapPolicyConfigSource(Map.of(
                                 "security.ip-guard.admin.allow-cidrs",
                                 "10.0.0.0/8, 203.0.113.10/32"
                         ))
@@ -78,18 +78,11 @@ class PolicyConfigPlatformIpRuleSourceFactoryTest {
         public Optional<String> resolve(String key) {
             return Optional.ofNullable(values.get(key));
         }
-    }
-
-    private record GovernanceMapPolicyConfigSource(Map<String, String> values)
-            implements io.github.jho951.platform.governance.api.PolicyConfigSource {
-        @Override
-        public Optional<String> resolve(String key) {
-            return Optional.ofNullable(values.get(key));
-        }
 
         @Override
         public Map<String, String> snapshot() {
             return values;
         }
     }
+
 }

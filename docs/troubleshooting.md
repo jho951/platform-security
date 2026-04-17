@@ -53,10 +53,13 @@ SecurityContextResolver securityContextResolver(CurrentUserResolver currentUserR
 운영으로 보는 경우:
 
 ```text
-Spring profile = prod / production / live
+Spring profile이 platform.security.operational.production-profiles에 포함됨
 또는
-platform.security.operational-policy.production=true
+platform.security.operational.production=true
 ```
+
+기본 운영 profile은 `prod` 하나다. `production`, `live`는 기본값으로는 운영 profile이 아니다.  
+기존 `platform.security.operational-policy.*` 설정도 계속 동작한다.
 
 확인할 것:
 
@@ -81,7 +84,7 @@ platform.security.operational-policy.production=true
 확인 순서:
 
 ```text
-1. 선택한 starter가 맞는가?
+1. service-role-preset 설정이 맞는가?
 2. path가 의도한 boundary로 잡히는가?
 3. Authorization header가 Bearer 형식인가?
 4. session cookie나 internal token header가 들어오는가?
@@ -167,7 +170,6 @@ governance audit에 남기려면:
 ```text
 - starter가 classpath에 있는지
 - platform.security.enabled=false 가 아닌지
-- 역할별 starter를 둘 이상 넣지 않았는지
 - 직접 등록한 bean이 기본 bean을 대체하는지
 ```
 

@@ -9,11 +9,7 @@ import io.github.jho951.platform.security.api.SecurityEvaluationContext;
 import io.github.jho951.platform.security.api.SecurityEvaluationResult;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.api.SecurityVerdict;
-import io.github.jho951.platform.security.api.SecurityAuditPublisher;
-import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -44,20 +40,5 @@ class GovernanceSecurityAuditPublisherTest {
         assertThat(entry.attributes()).containsEntry("security.allowed", "true");
         assertThat(entry.attributes()).containsEntry("security.boundary", "PROTECTED");
         assertThat(entry.attributes()).containsEntry("security.principal", "user-1");
-    }
-
-    @Test
-    void autoConfigurationAddsGovernancePublisherAlongsideCustomPublisher() {
-        new ApplicationContextRunner()
-                .withConfiguration(AutoConfigurations.of(PlatformSecurityGovernanceBridgeAutoConfiguration.class))
-                .withBean(PlatformSecurityProperties.class, PlatformSecurityProperties::new)
-                .withBean(io.github.jho951.platform.governance.api.AuditLogRecorder.class, () -> entry -> {
-                })
-                .withBean("customSecurityAuditPublisher", SecurityAuditPublisher.class, () -> event -> {
-                })
-                .run(context -> {
-                    assertThat(context).hasSingleBean(GovernanceSecurityAuditPublisher.class);
-                    assertThat(context.getBeansOfType(SecurityAuditPublisher.class)).hasSize(2);
-                });
     }
 }

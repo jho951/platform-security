@@ -1,36 +1,35 @@
 # Modules
 
-이 문서는 어떤 artifact를 3계층 서비스가 직접 쓰면 되는지 설명한다.
+## 2계층 사용법
 
-## 3계층이 보통 쓰는 것
-
-서비스는 BOM과 starter 하나를 사용한다.
+서비스는 BOM과 단일 starter를 사용한다.
 
 ```gradle
 dependencies {
     implementation platform("io.github.jho951.platform:platform-security-bom:${version}")
-    implementation "io.github.jho951.platform:platform-security-resource-server-starter"
+    implementation "io.github.jho951.platform:platform-security-starter"
 }
 ```
 
-## Starter 선택
+역할은 starter가 아니라 설정으로 고른다. `platform.security.role`처럼 짧은 이름은 RBAC role과 헷갈릴 수 있으므로 쓰지 않는다.
 
-| Starter | 언제 쓰나 |
-| --- | --- |
-| `platform-security-edge-starter` | 외부 요청이 처음 들어오는 gateway/edge 서비스 |
-| `platform-security-issuer-starter` | 로그인 후 token/session을 발급하는 서비스 |
-| `platform-security-resource-server-starter` | 일반 API를 제공하는 서비스 |
-| `platform-security-internal-service-starter` | 서비스 전체가 내부 호출 전용인 서비스 |
-| `platform-security-starter` | 역할을 설정으로 직접 정하고 싶을 때 |
+```yaml
+platform:
+  security:
+    service-role-preset: api-server
+```
 
-starter는 하나만 고른다.
+사용 가능한 preset은 `edge`, `issuer`, `api-server`, `internal-service`다.
 
-예:
+## 모듈 분리 기준
 
 ```text
-issuer 서비스에 /internal/** API가 있어도
--> issuer-starter 하나만 사용
--> /internal/** 는 boundary.internal-paths로 선언
+auth 구현 의존성
+IP rule engine 의존성
+rate limiter 의존성
+Servlet/WebFlux 경계
+Spring Boot auto-configuration
+local/test 전용 구현
 ```
 
 ## 3계층이 추가로 붙일 수 있는 것
@@ -45,7 +44,7 @@ issuer 서비스에 /internal/** API가 있어도
 
 ## 3계층이 직접 조립하지 않는 것
 
-아래 모듈은 `starter`가 내부에서 끌고 온다.  
+아래 모듈은 `starter`가 내부에서 끌고 온다.
 서비스가 직접 의존해서 조립할 필요가 없다.
 
 ```text
@@ -72,9 +71,9 @@ platform-security-sample-consumer
 
 이 모듈은 사용 예시라서 package로 배포하지 않는다.
 
-## 1계층 버전
+## 외부 보안 의존성 버전
 
-`platform-security`가 소비하는 1계층 OSS 버전이다.
+`platform-security` 내부 모듈이 사용하는 외부 보안 라이브러리 버전이다.
 
 | Property | 현재 값 |
 | --- | --- |

@@ -16,18 +16,6 @@ allprojects {
 
     repositories {
         mavenCentral()
-        def githubPackagesUsername = rootProject.findProperty('githubPackagesUsername') ?: System.getenv('GITHUB_ACTOR')
-        def githubPackagesToken = rootProject.findProperty('githubPackagesToken') ?: System.getenv('GITHUB_TOKEN')
-        if (githubPackagesUsername && githubPackagesToken) {
-            maven {
-                name = 'GitHubPlatformGovernance'
-                url = uri(rootProject.findProperty('githubGovernancePackagesUrl') ?: 'https://maven.pkg.github.com/jho951/platform-governance')
-                credentials {
-                    username = githubPackagesUsername
-                    password = githubPackagesToken
-                }
-            }
-        }
     }
 }
 
@@ -90,5 +78,22 @@ project(':platform-security-core') {
         api project(':platform-security-api')
         testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
         testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    }
+}
+
+project(':platform-security-governance-bridge') {
+    repositories {
+        def githubPackagesUsername = rootProject.findProperty('githubPackagesUsername') ?: System.getenv('GITHUB_ACTOR')
+        def githubPackagesToken = rootProject.findProperty('githubPackagesToken') ?: System.getenv('GITHUB_TOKEN')
+        if (githubPackagesUsername && githubPackagesToken) {
+            maven {
+                name = 'GitHubPlatformGovernance'
+                url = uri(rootProject.findProperty('githubGovernancePackagesUrl') ?: 'https://maven.pkg.github.com/jho951/platform-governance')
+                credentials {
+                    username = githubPackagesUsername
+                    password = githubPackagesToken
+                }
+            }
+        }
     }
 }

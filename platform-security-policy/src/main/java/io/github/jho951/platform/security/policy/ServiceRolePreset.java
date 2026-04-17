@@ -13,8 +13,8 @@ public enum ServiceRolePreset {
     /** token/session 발급을 담당하는 identity issuer 서비스다. */
     ISSUER,
 
-    /** JWT/API credential 검증 중심의 resource server다. */
-    RESOURCE_SERVER,
+    /** JWT/API credential 검증 중심의 일반 API 서비스다. */
+    API_SERVER,
 
     /** 내부 서비스 간 호출만 처리하는 service다. */
     INTERNAL_SERVICE

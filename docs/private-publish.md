@@ -3,11 +3,8 @@
 `platform-security`는 private GitHub Packages로 배포한다.
 
 ```text
-1계층 auth/ip/rate-limiter OSS
--> 공개 Maven Central artifact
-
-2계층 platform-security
--> 1계층 OSS를 소비해서 조립한 내부 서비스용 private GitHub Packages
+platform-security
+-> 내부 서비스용 private GitHub Packages
 ```
 
 ## 배포하는 것
@@ -17,10 +14,6 @@
 ```text
 platform-security-bom
 platform-security-starter
-platform-security-edge-starter
-platform-security-issuer-starter
-platform-security-resource-server-starter
-platform-security-internal-service-starter
 platform-security-client
 platform-security-local-support
 platform-security-test-support
@@ -40,8 +33,7 @@ platform-security-internal-autoconfigure
 platform-policy-api
 ```
 
-`platform-security-policyconfig-bridge`는 `platform-policy-api`의 `PolicyConfigSource`만 소비한다.  
-governance가 정책을 관리하더라도 security bridge가 governance 관리 API를 직접 보지 않는다.
+`platform-security-policyconfig-bridge`는 `platform-policy-api`의 `PolicyConfigSource`를 공식 타입으로 소비한다.
 
 배포하지 않는 것:
 
@@ -54,15 +46,15 @@ platform-security-sample-consumer
 tag를 push하면 publish workflow가 돈다.
 
 ```bash
-git tag v1.0.6
-git push origin v1.0.6
+git tag v1.1.0
+git push origin v1.1.0
 ```
 
 version은 tag에서 계산한다.
 
 ```text
-v1.0.6
--> release_version=1.0.6
+v1.1.0
+-> release_version=1.1.0
 ```
 
 workflow 권한:
@@ -92,7 +84,7 @@ export GITHUB_ACTOR=jho951
 export GITHUB_TOKEN=<write:packages 권한이 있는 PAT>
 
 ./gradlew clean test publish \
-  -Prelease_version=1.0.6 \
+  -Prelease_version=1.1.0 \
   -PgithubPackagesUrl=https://maven.pkg.github.com/jho951/platform-security \
   -PgithubPackagesUsername="$GITHUB_ACTOR" \
   -PgithubPackagesToken="$GITHUB_TOKEN"
@@ -127,8 +119,8 @@ dependency:
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:1.0.6")
-    implementation "io.github.jho951.platform:platform-security-resource-server-starter"
+    implementation platform("io.github.jho951.platform:platform-security-bom:1.1.0")
+    implementation "io.github.jho951.platform:platform-security-starter"
 }
 ```
 
@@ -164,5 +156,5 @@ env:
 ```bash
 echo "$GITHUB_ACTOR"
 test -n "$GITHUB_TOKEN" && echo "token exists"
-./gradlew dependencyInsight --dependency platform-security-resource-server-starter
+./gradlew dependencyInsight --dependency platform-security-starter
 ```

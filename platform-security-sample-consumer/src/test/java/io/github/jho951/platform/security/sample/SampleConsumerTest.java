@@ -8,7 +8,6 @@ import io.github.jho951.platform.security.api.SecurityVerdict;
 import io.github.jho951.platform.security.policy.AuthMode;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import io.github.jho951.platform.security.policy.ServiceRolePreset;
-import io.github.jho951.platform.security.resource.starter.PlatformSecurityResourceServerStarterAutoConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
@@ -25,11 +24,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SampleConsumerTest {
-    private final ApplicationContextRunner resourceServerRunner = new ApplicationContextRunner()
+    private final ApplicationContextRunner apiServerRunner = new ApplicationContextRunner()
             .withConfiguration(autoConfigurations(
                     ConfigurationPropertiesAutoConfiguration.class,
-                    "io.github.jho951.platform.security.autoconfigure.PlatformSecurityAutoConfiguration",
-                    PlatformSecurityResourceServerStarterAutoConfiguration.class
+                    "io.github.jho951.platform.security.autoconfigure.PlatformSecurityAutoConfiguration"
             ))
             .withBean(SecurityContextResolver.class, () -> request -> new SecurityContext(
                     true,
@@ -38,17 +36,18 @@ class SampleConsumerTest {
                     Map.of()
             ))
             .withPropertyValues(
+                    "platform.security.service-role-preset=api-server",
                     "platform.security.ip-guard.admin-allow-cidrs[0]=10.0.0.0/8",
                     "platform.security.ip-guard.internal-allow-cidrs[0]=10.0.0.0/8"
             );
 
     @Test
-    void resourceServerConsumesRoleStarterWithoutManualPlatformAssembly() {
-        resourceServerRunner.run(context -> {
+    void apiServerConsumesRoleStarterWithoutManualPlatformAssembly() {
+        apiServerRunner.run(context -> {
             assertNull(context.getStartupFailure());
 
             PlatformSecurityProperties properties = context.getBean(PlatformSecurityProperties.class);
-            assertEquals(ServiceRolePreset.RESOURCE_SERVER, properties.getServiceRolePreset());
+            assertEquals(ServiceRolePreset.API_SERVER, properties.getServiceRolePreset());
             assertEquals(AuthMode.JWT, properties.getAuth().getDefaultMode());
             assertFalse(properties.getAuth().isAllowSessionForBrowser());
 
@@ -63,7 +62,7 @@ class SampleConsumerTest {
 
     @Test
     void serviceKeepsDomainAuthorizationOutsidePlatformSecurity() {
-        resourceServerRunner.run(context -> {
+        apiServerRunner.run(context -> {
             SecurityVerdict platformVerdict = context.getBean(SecurityPolicyService.class).evaluate(
                     apiRequest("/api/documents/1", Map.of("auth.accessToken", "token-1")),
                     authenticatedUser()

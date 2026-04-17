@@ -4,6 +4,7 @@ import io.github.jho951.platform.security.api.SecurityPolicyService;
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
 import io.github.jho951.platform.security.api.SecurityAuditPublisher;
+import io.github.jho951.platform.policy.api.OperationalProfileResolver;
 import io.github.jho951.platform.security.auth.AuthenticationCapability;
 import io.github.jho951.platform.security.auth.AuthenticationCapabilityResolver;
 import io.github.jho951.platform.security.auth.DefaultApiKeyAuthenticationCapability;
@@ -37,8 +38,6 @@ import io.github.jho951.platform.security.policy.OperationalSecurityPolicyEnforc
 import io.github.jho951.platform.security.policy.PlatformSecurityPresetApplier;
 import io.github.jho951.platform.security.policy.RateLimitKeyResolver;
 import io.github.jho951.platform.security.policy.PlatformSecurityCustomizer;
-import io.github.jho951.platform.security.policy.ServiceRolePreset;
-import io.github.jho951.platform.security.policy.ServiceRolePresetProvider;
 import io.github.jho951.platform.security.web.PlatformSecurityServletFilter;
 import io.github.jho951.platform.security.web.PlatformSecurityWebFilter;
 import io.github.jho951.platform.security.web.DefaultClientIpResolver;
@@ -86,7 +85,6 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.web.server.WebFilter;
 
 import java.time.Clock;
-import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Set;
 
@@ -108,7 +106,6 @@ public class PlatformSecurityAutoConfiguration {
 
     @Bean
     public static BeanPostProcessor platformSecurityPropertiesCustomizerPostProcessor(
-            ObjectProvider<ServiceRolePresetProvider> presetProviders,
             ObjectProvider<PlatformSecurityCustomizer> customizers
     ) {
         PlatformSecurityPresetApplier presetApplier = new PlatformSecurityPresetApplier();
@@ -116,41 +113,10 @@ public class PlatformSecurityAutoConfiguration {
             @Override
             public Object postProcessAfterInitialization(Object bean, String beanName) {
                 if (bean instanceof PlatformSecurityProperties properties) {
-                    applyStarterPreset(properties, presetProviders);
                     presetApplier.apply(properties);
                     customizers.orderedStream().forEach(customizer -> customizer.customize(properties));
                 }
                 return bean;
-            }
-
-            private void applyStarterPreset(
-                    PlatformSecurityProperties properties,
-                    ObjectProvider<ServiceRolePresetProvider> presetProviders
-            ) {
-                List<ServiceRolePreset> presets = presetProviders.orderedStream()
-                        .map(ServiceRolePresetProvider::serviceRolePreset)
-                        .filter(preset -> preset != null && preset != ServiceRolePreset.GENERAL)
-                        .distinct()
-                        .toList();
-                if (presets.size() > 1) {
-                    throw new IllegalStateException("Only one platform-security role starter can be used: " + presets);
-                }
-                if (presets.isEmpty()) {
-                    return;
-                }
-                ServiceRolePreset starterPreset = presets.get(0);
-                if (properties.getServiceRolePreset() == ServiceRolePreset.GENERAL) {
-                    properties.setServiceRolePreset(starterPreset);
-                    return;
-                }
-                if (properties.getServiceRolePreset() != starterPreset) {
-                    throw new IllegalStateException(
-                            "platform.security.service-role-preset conflicts with selected starter: "
-                                    + properties.getServiceRolePreset()
-                                    + " vs "
-                                    + starterPreset
-                    );
-                }
             }
         };
     }
@@ -450,8 +416,16 @@ public class PlatformSecurityAutoConfiguration {
     }
 
     @Bean
-    public OperationalSecurityPolicyEnforcer operationalSecurityPolicyEnforcer() {
-        return new OperationalSecurityPolicyEnforcer();
+    @ConditionalOnMissingBean
+    public OperationalProfileResolver operationalProfileResolver() {
+        return OperationalProfileResolver.standard();
+    }
+
+    @Bean
+    public OperationalSecurityPolicyEnforcer operationalSecurityPolicyEnforcer(
+            OperationalProfileResolver operationalProfileResolver
+    ) {
+        return new OperationalSecurityPolicyEnforcer(operationalProfileResolver);
     }
 
     @Bean
@@ -503,7 +477,7 @@ public class PlatformSecurityAutoConfiguration {
             SecurityContextResolver securityContextResolver,
             SecurityIngressRequestFactory securityIngressRequestFactory,
             SecurityDownstreamIdentityPropagator downstreamIdentityPropagator,
-            ObjectProvider<SecurityAuditPublisher> securityAuditPublishers,
+            SecurityAuditPublisher securityAuditPublisher,
             SecurityFailureResponseWriter failureResponseWriter
     ) {
         return new PlatformSecurityServletFilter(
@@ -512,7 +486,7 @@ public class PlatformSecurityAutoConfiguration {
                 Clock.systemUTC(),
                 securityIngressRequestFactory,
                 downstreamIdentityPropagator,
-                compositeSecurityAuditPublisher(securityAuditPublishers.orderedStream().toList()),
+                securityAuditPublisher,
                 failureResponseWriter
         );
     }
@@ -526,7 +500,7 @@ public class PlatformSecurityAutoConfiguration {
             SecurityContextResolver securityContextResolver,
             SecurityIngressRequestFactory securityIngressRequestFactory,
             SecurityDownstreamIdentityPropagator downstreamIdentityPropagator,
-            ObjectProvider<SecurityAuditPublisher> securityAuditPublishers,
+            SecurityAuditPublisher securityAuditPublisher,
             ReactiveSecurityFailureResponseWriter failureResponseWriter
     ) {
         return new PlatformSecurityWebFilter(
@@ -535,25 +509,9 @@ public class PlatformSecurityAutoConfiguration {
                 Clock.systemUTC(),
                 securityIngressRequestFactory,
                 downstreamIdentityPropagator,
-                compositeSecurityAuditPublisher(securityAuditPublishers.orderedStream().toList()),
+                securityAuditPublisher,
                 failureResponseWriter
         );
-    }
-
-    private static SecurityAuditPublisher compositeSecurityAuditPublisher(
-            List<SecurityAuditPublisher> auditPublishers
-    ) {
-        if (auditPublishers.isEmpty()) {
-            return SecurityAuditPublisher.noop();
-        }
-        if (auditPublishers.size() == 1) {
-            return auditPublishers.get(0);
-        }
-        return event -> {
-            for (SecurityAuditPublisher publisher : auditPublishers) {
-                publisher.publish(event);
-            }
-        };
     }
 
     @Bean

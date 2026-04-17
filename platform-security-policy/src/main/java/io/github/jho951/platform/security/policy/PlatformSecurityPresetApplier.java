@@ -22,7 +22,7 @@ public final class PlatformSecurityPresetApplier {
         switch (preset) {
             case EDGE -> applyEdge(properties);
             case ISSUER -> applyIssuer(properties);
-            case RESOURCE_SERVER -> applyResourceServer(properties);
+            case API_SERVER -> applyApiServer(properties);
             case INTERNAL_SERVICE -> applyInternalService(properties);
             case GENERAL -> {
             }
@@ -39,7 +39,7 @@ public final class PlatformSecurityPresetApplier {
         ensureAuthDefaults(properties.getAuth(), AuthMode.HYBRID);
     }
 
-    private void applyResourceServer(PlatformSecurityProperties properties) {
+    private void applyApiServer(PlatformSecurityProperties properties) {
         addCommonBoundaries(properties);
         ensureAuthDefaults(properties.getAuth(), AuthMode.JWT);
         if (!properties.getAuth().isAllowSessionForBrowserConfigured()) {

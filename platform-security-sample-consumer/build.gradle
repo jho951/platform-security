@@ -1,5 +1,5 @@
 dependencies {
-    implementation project(':platform-security-resource-server-starter')
+    implementation project(':platform-security-starter')
 
     testImplementation "org.springframework.boot:spring-boot-test:${rootProject.springBootVersion}"
     testImplementation "org.springframework.boot:spring-boot-test-autoconfigure:${rootProject.springBootVersion}"

@@ -1,5 +1,7 @@
 package io.github.jho951.platform.security.policy;
 
+import io.github.jho951.platform.policy.api.OperationalProfileResolver;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -12,6 +14,16 @@ import java.util.Objects;
  * 있다. 이 enforcer는 Spring auto-configuration의 부팅 guard에서 호출된다.</p>
  */
 public final class OperationalSecurityPolicyEnforcer {
+    private final OperationalProfileResolver operationalProfileResolver;
+
+    public OperationalSecurityPolicyEnforcer() {
+        this(OperationalProfileResolver.standard());
+    }
+
+    public OperationalSecurityPolicyEnforcer(OperationalProfileResolver operationalProfileResolver) {
+        this.operationalProfileResolver = Objects.requireNonNull(operationalProfileResolver, "operationalProfileResolver");
+    }
+
     public void enforce(
             PlatformSecurityProperties properties,
             boolean securityContextResolverPresent,
@@ -135,8 +147,10 @@ public final class OperationalSecurityPolicyEnforcer {
         if (properties.getOperationalPolicy().isProduction()) {
             return true;
         }
-        return Arrays.stream(activeProfiles == null ? new String[0] : activeProfiles)
-                .anyMatch(properties.getOperationalPolicy()::isProductionProfile);
+        return operationalProfileResolver.isProduction(
+                Arrays.asList(activeProfiles == null ? new String[0] : activeProfiles),
+                properties.getOperationalPolicy().getProductionProfiles()
+        );
     }
 
     private void validateAuth(

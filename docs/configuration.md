@@ -8,7 +8,7 @@
 | 설정 | 기본값 | 쉬운 설명 |
 | --- | --- | --- |
 | `enabled` | `true` | 이 서비스에서 `platform-security`를 사용할지 정한다. |
-| `service-role-preset` | `GENERAL` | 일반 starter를 쓸 때 이 서비스를 edge/issuer/resource-server/internal-service 중 무엇으로 볼지 정한다. 역할별 starter를 쓰면 보통 직접 설정하지 않는다. |
+| `service-role-preset` | `GENERAL` | 이 서비스를 edge/issuer/api-server/internal-service 중 무엇으로 볼지 정한다. |
 | `operational.enabled` | `true` | 위험한 운영 설정을 애플리케이션 시작 시점에 막는 검사를 켠다. 기존 `operational-policy.enabled`도 계속 동작한다. |
 | `operational.production` | `false` | 현재 Spring profile과 상관없이 이 서비스를 운영처럼 검사한다. CI나 staging에서 운영 수준 검사를 강제로 걸 때 쓴다. 기존 `operational-policy.production`도 계속 동작한다. |
 | `operational.production-profiles` | `prod` | 이 Spring profile로 뜨면 운영으로 보고 강하게 검사한다. 기존 `operational-policy.production-profiles`도 계속 동작한다. |
@@ -17,25 +17,13 @@
 
 ## 서비스 역할
 
-보통은 starter 하나를 고르면 역할이 자동으로 정해진다.
-
-| Starter | 역할 |
-| --- | --- |
-| `platform-security-edge-starter` | 외부 요청이 처음 들어오는 서비스 |
-| `platform-security-issuer-starter` | token/session을 발급하는 서비스 |
-| `platform-security-resource-server-starter` | 일반 API를 제공하는 서비스 |
-| `platform-security-internal-service-starter` | 내부 호출 전용 서비스 |
-
-일반 starter를 쓰면 역할을 직접 적는다.
+starter는 하나만 쓰고, 역할은 설정으로 고른다. 이 값은 사용자 권한 role이 아니라 서비스 성격에 맞는 보안 기본값 묶음이다.
 
 ```yaml
 platform:
   security:
-    service-role-preset: resource-server
+    service-role-preset: api-server
 ```
-
-한 서비스에는 starter를 하나만 쓴다.  
-예를 들어 issuer 역할 서비스에 internal API가 있어도 `issuer-starter` 하나만 쓰고, internal API는 `boundary.internal-paths`에 추가한다.
 
 issuer 역할의 운영 서비스는 `TokenService`와 `SessionStore`를 직접 제공해야 한다.  
 `platform-security`는 발급 흐름만 연결하고, 운영 token/session 저장소는 3계층이 소유한다.
@@ -172,9 +160,12 @@ platform:
 아래 중 하나면 운영으로 보고 강하게 검사한다.
 
 ```text
-active Spring profile이 prod / production / live
-platform.security.operational-policy.production=true
+active Spring profile이 platform.security.operational.production-profiles에 포함됨
+platform.security.operational.production=true
 ```
+
+기본 운영 profile은 `prod` 하나다. `production`, `live`는 기본 운영 profile로 해석하지 않는다.  
+기존 설정 이름인 `platform.security.operational-policy.*`도 호환된다.
 
 운영에서 막는 것:
 

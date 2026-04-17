@@ -1,6 +1,6 @@
 # platform-security
 
-1계층 auth/ip-guard/rate-limiter OSS를 소비해서 3계층 서비스가 같은 방식으로 쓰도록 조립하는 2계층 보안 플랫폼이다.
+Spring Boot 서비스가 인증, IP 제한, rate limit 보안 흐름을 같은 방식으로 쓰도록 조립하는 2계층 보안 플랫폼이다.
 
 ## Documentation
 

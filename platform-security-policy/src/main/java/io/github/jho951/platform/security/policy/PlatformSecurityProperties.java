@@ -10,7 +10,7 @@ import java.util.List;
  * {@code platform.security.*} 설정을 담는 Spring configuration properties 모델이다.
  *
  * <p>boundary, auth, IP guard, rate limit, 운영 fail-fast 정책을 한 곳에 모은다.
- * role starter와 customizer는 이 객체를 보정한 뒤 runtime bean graph가 이를 소비한다.</p>
+ * preset과 customizer는 이 객체를 보정한 뒤 runtime bean graph가 이를 소비한다.</p>
  */
 public class PlatformSecurityProperties {
     /** local/test fallback JWT token service가 쓰는 개발 기본 secret이다. 운영에서는 금지된다. */

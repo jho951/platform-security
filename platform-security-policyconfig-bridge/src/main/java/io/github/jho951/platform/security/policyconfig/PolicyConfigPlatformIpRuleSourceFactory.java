@@ -34,4 +34,5 @@ public final class PolicyConfigPlatformIpRuleSourceFactory extends SpringPlatfor
         }
         return super.create(effective, legacyRules);
     }
+
 }
