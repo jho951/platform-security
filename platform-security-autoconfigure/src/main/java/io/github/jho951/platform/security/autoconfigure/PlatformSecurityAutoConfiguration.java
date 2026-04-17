@@ -24,8 +24,10 @@ import io.github.jho951.platform.security.auth.OAuth2PrincipalBridge;
 import io.github.jho951.platform.security.auth.SessionIssuanceCapability;
 import io.github.jho951.platform.security.auth.TokenIssuanceCapability;
 import io.github.jho951.platform.security.core.DefaultSecurityPolicyService;
+import io.github.jho951.platform.security.core.limiter.InMemoryRateLimiter;
 import io.github.jho951.platform.security.policy.ClientIpResolver;
 import io.github.jho951.platform.security.ip.DefaultBoundaryIpPolicyProvider;
+import io.github.jho951.platform.security.ip.PlatformIpRuleSourceFactory;
 import io.github.jho951.platform.security.policy.AuthenticationModeResolver;
 import io.github.jho951.platform.security.policy.BoundaryIpPolicyProvider;
 import io.github.jho951.platform.security.policy.BoundaryRateLimitPolicyProvider;
@@ -52,6 +54,7 @@ import io.github.jho951.platform.security.web.SecurityAuditPublisher;
 import io.github.jho951.platform.security.web.SecurityDownstreamIdentityPropagator;
 import io.github.jho951.platform.security.ratelimit.DefaultBoundaryRateLimitPolicyProvider;
 import io.github.jho951.platform.security.ratelimit.DefaultRateLimitKeyResolver;
+import io.github.jho951.ratelimiter.spi.RateLimiter;
 import com.auth.apikey.ApiKeyAuthenticationProvider;
 import com.auth.apikey.ApiKeyPrincipalResolver;
 import com.auth.hmac.HmacAuthenticationProvider;
@@ -85,6 +88,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.web.server.WebFilter;
 
 import java.time.Clock;
@@ -92,6 +96,12 @@ import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Set;
 
+/**
+ * platform-security의 Spring Boot 자동 구성 진입점이다.
+ *
+ * <p>properties 바인딩, role preset 적용, core policy service, auth capability,
+ * IP guard, rate limit, servlet/reactive filter, 운영 fail-fast guard를 조립한다.</p>
+ */
 @AutoConfiguration
 @ConditionalOnProperty(prefix = "platform.security", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PlatformSecurityAutoConfiguration {
@@ -202,8 +212,17 @@ public class PlatformSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public BoundaryIpPolicyProvider boundaryIpPolicyProvider(PlatformSecurityProperties properties) {
-        return new DefaultBoundaryIpPolicyProvider(properties.getIpGuard());
+    public PlatformIpRuleSourceFactory platformIpRuleSourceFactory(ResourceLoader resourceLoader) {
+        return new SpringPlatformIpRuleSourceFactory(resourceLoader);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public BoundaryIpPolicyProvider boundaryIpPolicyProvider(
+            PlatformSecurityProperties properties,
+            PlatformIpRuleSourceFactory ruleSourceFactory
+    ) {
+        return new DefaultBoundaryIpPolicyProvider(properties.getIpGuard(), ruleSourceFactory);
     }
 
     @Bean
@@ -213,12 +232,19 @@ public class PlatformSecurityAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean(RateLimiter.class)
+    public RateLimiter platformSecurityRateLimiter() {
+        return new InMemoryRateLimiter(Clock.systemUTC());
+    }
+
+    @Bean
     @ConditionalOnMissingBean
     public BoundaryRateLimitPolicyProvider boundaryRateLimitPolicyProvider(
             PlatformSecurityProperties properties,
-            RateLimitKeyResolver rateLimitKeyResolver
+            RateLimitKeyResolver rateLimitKeyResolver,
+            RateLimiter rateLimiter
     ) {
-        return new DefaultBoundaryRateLimitPolicyProvider(properties.getRateLimit(), rateLimitKeyResolver);
+        return new DefaultBoundaryRateLimitPolicyProvider(properties.getRateLimit(), rateLimitKeyResolver, rateLimiter);
     }
 
     @Bean
@@ -458,6 +484,9 @@ public class PlatformSecurityAutoConfiguration {
                     properties,
                     resolverProvider.getIfAvailable() != null,
                     applicationContext.containsBean("platformSecurityTokenService"),
+                    applicationContext.containsBean("platformSecuritySessionStore"),
+                    hasBeanOfType(applicationContext, RateLimiter.class, InMemoryRateLimiter.class),
+                    hasAllowAllInternalTokenClaimsValidator(applicationContext),
                     environment.getActiveProfiles()
             );
             if (resolverProvider.getIfAvailable() == null) {
@@ -468,6 +497,20 @@ public class PlatformSecurityAutoConfiguration {
                 );
             }
         };
+    }
+
+    private static boolean hasAllowAllInternalTokenClaimsValidator(ApplicationContext applicationContext) {
+        return applicationContext.getBeansOfType(InternalTokenClaimsValidator.class).values().stream()
+                .anyMatch(InternalTokenClaimsValidator::isAllowAll);
+    }
+
+    private static <T> boolean hasBeanOfType(
+            ApplicationContext applicationContext,
+            Class<T> beanType,
+            Class<?> targetType
+    ) {
+        return applicationContext.getBeansOfType(beanType).values().stream()
+                .anyMatch(targetType::isInstance);
     }
 
     @Bean

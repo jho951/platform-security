@@ -11,6 +11,9 @@ import io.github.jho951.platform.security.policy.SecurityAttributes;
 import java.util.Locale;
 import java.util.Objects;
 
+/**
+ * boundary, client type, auth mode, principal 또는 IP를 조합해 기본 rate limit key를 만든다.
+ */
 public final class DefaultRateLimitKeyResolver implements RateLimitKeyResolver {
     @Override
     public String resolve(SecurityRequest request, SecurityContext context) {

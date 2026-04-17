@@ -5,11 +5,47 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * 운영 profile에서 local/test fallback이나 느슨한 보안 설정을 fail-fast로 차단한다.
+ *
+ * <p>현재 기본 운영 profile은 {@code prod}이며, 설정으로 강제 production mode를 켤 수
+ * 있다. 이 enforcer는 Spring auto-configuration의 부팅 guard에서 호출된다.</p>
+ */
 public final class OperationalSecurityPolicyEnforcer {
     public void enforce(
             PlatformSecurityProperties properties,
             boolean securityContextResolverPresent,
             boolean platformDefaultTokenServicePresent,
+            String... activeProfiles
+    ) {
+        enforce(properties, securityContextResolverPresent, platformDefaultTokenServicePresent, false, false, false, activeProfiles);
+    }
+
+    public void enforce(
+            PlatformSecurityProperties properties,
+            boolean securityContextResolverPresent,
+            boolean platformDefaultTokenServicePresent,
+            boolean platformDefaultRateLimiterPresent,
+            String... activeProfiles
+    ) {
+        enforce(
+                properties,
+                securityContextResolverPresent,
+                platformDefaultTokenServicePresent,
+                false,
+                platformDefaultRateLimiterPresent,
+                false,
+                activeProfiles
+        );
+    }
+
+    public void enforce(
+            PlatformSecurityProperties properties,
+            boolean securityContextResolverPresent,
+            boolean platformDefaultTokenServicePresent,
+            boolean platformDefaultSessionStorePresent,
+            boolean inMemoryRateLimiterPresent,
+            boolean platformDefaultInternalTokenClaimsValidatorPresent,
             String... activeProfiles
     ) {
         Objects.requireNonNull(properties, "properties");
@@ -21,9 +57,16 @@ public final class OperationalSecurityPolicyEnforcer {
         }
 
         List<String> violations = new ArrayList<>();
-        validateAuth(properties, securityContextResolverPresent, platformDefaultTokenServicePresent, violations);
+        validateAuth(
+                properties,
+                securityContextResolverPresent,
+                platformDefaultTokenServicePresent,
+                platformDefaultSessionStorePresent,
+                platformDefaultInternalTokenClaimsValidatorPresent,
+                violations
+        );
         validateIpGuard(properties, violations);
-        validateRateLimit(properties, violations);
+        validateRateLimit(properties, inMemoryRateLimiterPresent, violations);
         if (!violations.isEmpty()) {
             throw new IllegalStateException("Platform security operational policy violation: " + String.join("; ", violations));
         }
@@ -41,6 +84,8 @@ public final class OperationalSecurityPolicyEnforcer {
             PlatformSecurityProperties properties,
             boolean securityContextResolverPresent,
             boolean platformDefaultTokenServicePresent,
+            boolean platformDefaultSessionStorePresent,
+            boolean platformDefaultInternalTokenClaimsValidatorPresent,
             List<String> violations
     ) {
         PlatformSecurityProperties.AuthProperties auth = properties.getAuth();
@@ -57,8 +102,17 @@ public final class OperationalSecurityPolicyEnforcer {
         if (!securityContextResolverPresent) {
             violations.add("production SecurityContextResolver bean is required");
         }
-        if (platformDefaultTokenServicePresent && PlatformSecurityProperties.DEFAULT_JWT_SECRET.equals(auth.getJwtSecret())) {
+        if (platformDefaultTokenServicePresent) {
+            violations.add("production TokenService bean must be provided; platform JwtTokenService is local/test only");
+        }
+        if (PlatformSecurityProperties.DEFAULT_JWT_SECRET.equals(auth.getJwtSecret())) {
             violations.add("platform.security.auth.jwt-secret must not use the platform dev default in production");
+        }
+        if (platformDefaultSessionStorePresent) {
+            violations.add("production SessionStore bean must be provided; platform SimpleSessionStore is local/test only");
+        }
+        if (auth.isInternalTokenEnabled() && platformDefaultInternalTokenClaimsValidatorPresent) {
+            violations.add("production InternalTokenClaimsValidator bean must be provided; platform allowAll validator is local/test only");
         }
     }
 
@@ -67,23 +121,36 @@ public final class OperationalSecurityPolicyEnforcer {
         if (!ipGuard.isEnabled()) {
             violations.add("platform.security.ip-guard.enabled must be true in production");
         }
-        if (ipGuard.getAdminAllowCidrs().isEmpty()) {
-            violations.add("platform.security.ip-guard.admin-allow-cidrs must not be empty in production");
+        if (ipGuard.isTrustProxy() && ipGuard.getTrustedProxyCidrs().isEmpty()) {
+            violations.add("platform.security.ip-guard.trusted-proxy-cidrs must not be empty when trust-proxy=true in production");
         }
-        if (ipGuard.getInternalAllowCidrs().isEmpty()) {
-            violations.add("platform.security.ip-guard.internal-allow-cidrs must not be empty in production");
-        }
+        validateIpRulePolicy("platform.security.ip-guard.admin", ipGuard.getAdmin(), violations);
+        validateIpRulePolicy("platform.security.ip-guard.internal", ipGuard.getInternal(), violations);
     }
 
-    private void validateRateLimit(PlatformSecurityProperties properties, List<String> violations) {
+    private void validateRateLimit(
+            PlatformSecurityProperties properties,
+            boolean inMemoryRateLimiterPresent,
+            List<String> violations
+    ) {
         PlatformSecurityProperties.RateLimitProperties rateLimit = properties.getRateLimit();
         if (!rateLimit.isEnabled()) {
             violations.add("platform.security.rate-limit.enabled must be true in production");
             return;
         }
+        if (inMemoryRateLimiterPresent) {
+            violations.add("production RateLimiter bean must be distributed; in-memory rate limiter is local/test only");
+        }
         validateQuota("platform.security.rate-limit.anonymous", rateLimit.getAnonymous(), violations);
         validateQuota("platform.security.rate-limit.authenticated", rateLimit.getAuthenticated(), violations);
         validateQuota("platform.security.rate-limit.internal", rateLimit.getInternal(), violations);
+        for (int i = 0; i < rateLimit.getRoutes().size(); i++) {
+            PlatformSecurityProperties.RouteRateLimitPolicyProperties route = rateLimit.getRoutes().get(i);
+            validateQuota("platform.security.rate-limit.routes[" + i + "]", route, violations);
+            if (route.getPatterns().isEmpty()) {
+                violations.add("platform.security.rate-limit.routes[" + i + "].patterns must not be empty in production");
+            }
+        }
     }
 
     private void validateQuota(
@@ -96,6 +163,47 @@ public final class OperationalSecurityPolicyEnforcer {
         }
         if (quota.getWindowSeconds() <= 0L) {
             violations.add(prefix + ".window-seconds must be greater than 0 in production");
+        }
+    }
+
+    private void validateIpRulePolicy(
+            String prefix,
+            PlatformSecurityProperties.BoundaryIpGuardPolicy policy,
+            List<String> violations
+    ) {
+        PlatformSecurityProperties.BoundaryIpGuardPolicy effective =
+                policy == null ? new PlatformSecurityProperties.BoundaryIpGuardPolicy() : policy;
+        if (effective.isDefaultAllow()) {
+            violations.add(prefix + ".default-allow must be false in production");
+        }
+        switch (effective.getSource()) {
+            case INLINE -> {
+                if (effective.getRules().isEmpty()) {
+                    violations.add(prefix + ".rules must not be empty when source=INLINE in production");
+                }
+            }
+            case FILE -> {
+                if (effective.getLocation() == null || effective.getLocation().isBlank()) {
+                    violations.add(prefix + ".location must not be empty when source=FILE in production");
+                }
+                validateDynamicSourceReloadTtl(prefix, effective, violations);
+            }
+            case POLICY_CONFIG -> {
+                if (effective.getPolicyKey() == null || effective.getPolicyKey().isBlank()) {
+                    violations.add(prefix + ".policy-key must not be empty when source=POLICY_CONFIG in production");
+                }
+                validateDynamicSourceReloadTtl(prefix, effective, violations);
+            }
+        }
+    }
+
+    private void validateDynamicSourceReloadTtl(
+            String prefix,
+            PlatformSecurityProperties.BoundaryIpGuardPolicy policy,
+            List<String> violations
+    ) {
+        if (policy.getReloadTtl() == null || policy.getReloadTtl().isZero() || policy.getReloadTtl().isNegative()) {
+            violations.add(prefix + ".reload-ttl must be greater than 0 for dynamic IP rule sources in production");
         }
     }
 }

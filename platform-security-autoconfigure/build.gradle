@@ -1,13 +1,22 @@
 dependencies {
     api project(':platform-security-api')
     api project(':platform-security-policy')
-    api project(':platform-security-core')
-    api project(':platform-security-auth')
-    api project(':platform-security-ip')
-    api project(':platform-security-rate-limit')
-    api project(':platform-security-web')
-    api "org.springframework:spring-context:${rootProject.springFrameworkVersion}"
-    api "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
+    implementation project(':platform-security-core')
+    implementation project(':platform-security-auth')
+    implementation project(':platform-security-ip')
+    implementation project(':platform-security-rate-limit')
+    implementation project(':platform-security-web')
+    implementation "org.springframework:spring-context:${rootProject.springFrameworkVersion}"
+    implementation "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
+    implementation "io.github.jho951:auth-core:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-jwt:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-session:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-hybrid:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-apikey:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-hmac:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-oidc:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-service-account:${rootProject.authVersion}"
+    implementation "io.github.jho951:rate-limiter-spi:${rootProject.rateLimiterVersion}"
     compileOnly "jakarta.servlet:jakarta.servlet-api:${rootProject.jakartaServletVersion}"
     compileOnly "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
     compileOnly "org.springframework.boot:spring-boot-configuration-processor:${rootProject.springBootVersion}"

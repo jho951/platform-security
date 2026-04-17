@@ -6,6 +6,9 @@ import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.api.SecurityVerdict;
 import io.github.jho951.platform.security.policy.SecurityAttributes;
 
+/**
+ * PUBLIC boundary나 auth mode NONE이 아닌 요청에 인증을 요구하는 기본 policy다.
+ */
 public final class RequireAuthenticatedPolicy implements SecurityPolicy {
     @Override
     public String name() {

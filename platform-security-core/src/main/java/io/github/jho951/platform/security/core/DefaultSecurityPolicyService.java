@@ -17,6 +17,11 @@ import io.github.jho951.platform.security.policy.SecurityBoundaryResolver;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * {@link DefaultSecurityEvaluationService}를 감싼 기본 facade 구현이다.
+ *
+ * <p>legacy policy list 방식과 selection-mode 평가 방식을 모두 지원한다.</p>
+ */
 public final class DefaultSecurityPolicyService implements SecurityPolicyService, SecurityEvaluationService {
     private final DefaultSecurityEvaluationService delegate;
 

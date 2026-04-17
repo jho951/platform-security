@@ -6,9 +6,17 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * 평가 결과에서 downstream service로 전달할 표준 security header를 만든다.
+ */
 public final class SecurityDownstreamIdentityPropagator {
+    /** servlet request attribute에 downstream header map을 저장할 때 쓰는 key다. */
     public static final String ATTR_DOWNSTREAM_HEADERS = "security.downstream.headers";
 
+    /**
+     * @param evaluationResult security 평가 결과
+     * @return downstream header 묶음
+     */
     public SecurityDownstreamHeaders propagate(SecurityEvaluationResult evaluationResult) {
         Objects.requireNonNull(evaluationResult, "evaluationResult");
 
@@ -28,6 +36,10 @@ public final class SecurityDownstreamIdentityPropagator {
         return new SecurityDownstreamHeaders(headers);
     }
 
+    /**
+     * @param evaluationResult security 평가 결과
+     * @return request attribute에 넣기 쉬운 header map
+     */
     public Map<String, String> asAttributes(SecurityEvaluationResult evaluationResult) {
         return propagate(evaluationResult).asMap();
     }

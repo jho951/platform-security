@@ -15,11 +15,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import com.auth.api.model.Principal;
+import com.auth.session.SessionStore;
 import com.auth.spi.TokenService;
+import io.github.jho951.platform.security.auth.InternalTokenClaimsValidator;
+import io.github.jho951.ratelimiter.core.RateLimitDecision;
+import io.github.jho951.ratelimiter.spi.RateLimiter;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -86,9 +92,33 @@ class PlatformSecurityAutoConfigurationTest {
     }
 
     @Test
+    void failsFastWhenProductionUsesPlatformLocalFallbackBeans() {
+        contextRunner
+                .withBean(SecurityContextResolver.class, () -> request -> new SecurityContext(true, "prod-user", Set.of("USER"), Map.of()))
+                .withPropertyValues(
+                        "spring.profiles.active=prod",
+                        "platform.security.auth.jwt-secret=prod-secret-prod-secret-prod-secret-prod-secret",
+                        "platform.security.ip-guard.trusted-proxy-cidrs[0]=10.0.0.0/8",
+                        "platform.security.ip-guard.admin.rules[0]=10.0.0.0/8",
+                        "platform.security.ip-guard.internal.rules[0]=10.0.0.0/8"
+                )
+                .run(context -> {
+                    assertNotNull(context.getStartupFailure());
+                    String message = context.getStartupFailure().getMessage();
+                    assertTrue(message.contains("production TokenService bean must be provided"));
+                    assertTrue(message.contains("production SessionStore bean must be provided"));
+                    assertTrue(message.contains("production InternalTokenClaimsValidator bean must be provided"));
+                    assertTrue(message.contains("in-memory rate limiter is local/test only"));
+                });
+    }
+
+    @Test
     void acceptsProductionPolicyWhenRequiredInputsAreProvided() {
         contextRunner
                 .withBean(SecurityContextResolver.class, () -> request -> new SecurityContext(true, "prod-user", Set.of("USER"), Map.of()))
+                .withBean(RateLimiter.class, () -> (key, permits, plan) -> RateLimitDecision.allow(plan.getCapacity()))
+                .withBean(SessionStore.class, InMemorySessionStore::new)
+                .withBean(InternalTokenClaimsValidator.class, () -> (principal, request) -> principal != null)
                 .withBean(TokenService.class, () -> new TokenService() {
                     @Override
                     public String issueAccessToken(com.auth.api.model.Principal principal) {
@@ -112,8 +142,10 @@ class PlatformSecurityAutoConfigurationTest {
                 })
                 .withPropertyValues(
                         "spring.profiles.active=prod",
-                        "platform.security.ip-guard.admin-allow-cidrs[0]=10.0.0.0/8",
-                        "platform.security.ip-guard.internal-allow-cidrs[0]=10.0.0.0/8"
+                        "platform.security.auth.jwt-secret=prod-secret-prod-secret-prod-secret-prod-secret",
+                        "platform.security.ip-guard.trusted-proxy-cidrs[0]=10.0.0.0/8",
+                        "platform.security.ip-guard.admin.rules[0]=10.0.0.0/8",
+                        "platform.security.ip-guard.internal.rules[0]=10.0.0.0/8"
                 )
                 .run(context -> {
                     assertEquals(null, context.getStartupFailure());
@@ -204,5 +236,20 @@ class PlatformSecurityAutoConfigurationTest {
                     PlatformSecurityProperties properties = context.getBean(PlatformSecurityProperties.class);
                     assertEquals(false, properties.getIpGuard().isTrustProxy());
                 });
+    }
+
+    private static final class InMemorySessionStore implements SessionStore {
+        @Override
+        public void save(String sessionId, Principal principal) {
+        }
+
+        @Override
+        public Optional<Principal> find(String sessionId) {
+            return Optional.empty();
+        }
+
+        @Override
+        public void revoke(String sessionId) {
+        }
     }
 }

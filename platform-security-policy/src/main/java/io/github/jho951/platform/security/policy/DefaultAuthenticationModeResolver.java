@@ -6,6 +6,13 @@ import io.github.jho951.platform.security.api.SecurityRequest;
 import java.util.Locale;
 import java.util.Objects;
 
+/**
+ * platform-security 기본 인증 방식 resolver다.
+ *
+ * <p>boundary가 PUBLIC이면 인증을 생략하고, credential attribute가 명확하면 해당
+ * capability를 우선 선택한다. credential이 없으면 client type과 auth 설정의 기본 mode를
+ * 사용한다.</p>
+ */
 public final class DefaultAuthenticationModeResolver implements AuthenticationModeResolver {
     private final PlatformSecurityProperties.AuthProperties authProperties;
 

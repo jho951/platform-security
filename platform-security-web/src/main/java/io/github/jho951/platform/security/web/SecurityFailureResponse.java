@@ -3,6 +3,13 @@ package io.github.jho951.platform.security.web;
 import io.github.jho951.platform.security.api.SecurityDecision;
 import io.github.jho951.platform.security.api.SecurityVerdict;
 
+/**
+ * 보안 verdict를 HTTP 실패 응답으로 변환한 값이다.
+ *
+ * @param status HTTP 상태 코드
+ * @param code 응답과 로그에 사용할 표준 오류 코드
+ * @param message 실패 사유
+ */
 public record SecurityFailureResponse(int status, String code, String message) {
     public SecurityFailureResponse {
         if (status < 100) {
@@ -12,6 +19,12 @@ public record SecurityFailureResponse(int status, String code, String message) {
         message = message == null || message.isBlank() ? null : message.trim();
     }
 
+    /**
+     * verdict를 표준 HTTP 실패 응답으로 변환한다.
+     *
+     * @param verdict 보안 평가 verdict
+     * @return HTTP 응답 표현
+     */
     public static SecurityFailureResponse from(SecurityVerdict verdict) {
         if (verdict == null) throw new IllegalArgumentException("verdict must not be null");
         if (verdict.decision() == SecurityDecision.ALLOW) return new SecurityFailureResponse(200, "security.allowed", verdict.reason());

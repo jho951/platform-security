@@ -18,19 +18,32 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * web adapter가 만든 요청과 인증 context를 core security service 평가로 연결한다.
+ */
 public final class SecurityIngressAdapter {
     private final SecurityPolicyService securityPolicyService;
     private final SecurityBoundaryResolver boundaryResolver;
 
+    /**
+     * @param securityPolicyService 최종 정책 평가 service
+     * @param boundaryResolver 요청 boundary resolver
+     */
     public SecurityIngressAdapter(SecurityPolicyService securityPolicyService, SecurityBoundaryResolver boundaryResolver) {
         this.securityPolicyService = Objects.requireNonNull(securityPolicyService, "securityPolicyService");
         this.boundaryResolver = Objects.requireNonNull(boundaryResolver, "boundaryResolver");
     }
 
+    /**
+     * 요청을 평가하고 verdict만 반환한다.
+     */
     public SecurityVerdict evaluate(SecurityRequest request, SecurityContext context) {
         return evaluateResult(request, context).verdict();
     }
 
+    /**
+     * 요청을 평가하고 감사에 필요한 전체 결과를 반환한다.
+     */
     public SecurityEvaluationResult evaluateResult(SecurityRequest request, SecurityContext context) {
         Objects.requireNonNull(request, "request");
         Objects.requireNonNull(context, "context");

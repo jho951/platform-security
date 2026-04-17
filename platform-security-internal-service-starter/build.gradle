@@ -1,3 +1,7 @@
 dependencies {
-    api project(':platform-security-autoconfigure')
+    api project(':platform-security-api')
+    api project(':platform-security-policy')
+    implementation project(':platform-security-autoconfigure')
+    compileOnly "org.springframework:spring-context:${rootProject.springFrameworkVersion}"
+    compileOnly "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
 }

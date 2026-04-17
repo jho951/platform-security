@@ -1,90 +1,119 @@
 package io.github.jho951.platform.security.sample;
 
 import io.github.jho951.platform.security.api.SecurityContext;
-import io.github.jho951.platform.security.api.SecurityEvaluationResult;
+import io.github.jho951.platform.security.api.SecurityContextResolver;
+import io.github.jho951.platform.security.api.SecurityPolicyService;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.api.SecurityVerdict;
-import io.github.jho951.platform.security.core.DefaultSecurityPolicyService;
-import io.github.jho951.platform.security.ip.DefaultBoundaryIpPolicyProvider;
-import io.github.jho951.platform.security.policy.DefaultAuthenticationModeResolver;
-import io.github.jho951.platform.security.policy.DefaultClientTypeResolver;
-import io.github.jho951.platform.security.policy.DefaultPlatformPrincipalFactory;
+import io.github.jho951.platform.security.policy.AuthMode;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
-import io.github.jho951.platform.security.ratelimit.DefaultBoundaryRateLimitPolicyProvider;
-import io.github.jho951.platform.security.ratelimit.DefaultRateLimitKeyResolver;
-import io.github.jho951.platform.security.testsupport.PlatformSecurityFixtures;
-import io.github.jho951.platform.security.web.PathPatternSecurityBoundaryResolver;
-import io.github.jho951.platform.security.web.SecurityIngressAdapter;
+import io.github.jho951.platform.security.policy.ServiceRolePreset;
+import io.github.jho951.platform.security.resource.starter.PlatformSecurityResourceServerStarterAutoConfiguration;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SampleConsumerTest {
+    private final ApplicationContextRunner resourceServerRunner = new ApplicationContextRunner()
+            .withConfiguration(autoConfigurations(
+                    ConfigurationPropertiesAutoConfiguration.class,
+                    "io.github.jho951.platform.security.autoconfigure.PlatformSecurityAutoConfiguration",
+                    PlatformSecurityResourceServerStarterAutoConfiguration.class
+            ))
+            .withBean(SecurityContextResolver.class, () -> request -> new SecurityContext(
+                    true,
+                    "user-1",
+                    Set.of("USER"),
+                    Map.of()
+            ))
+            .withPropertyValues(
+                    "platform.security.ip-guard.admin-allow-cidrs[0]=10.0.0.0/8",
+                    "platform.security.ip-guard.internal-allow-cidrs[0]=10.0.0.0/8"
+            );
+
     @Test
-    void gatewaySampleUsesBoundaryAwareSelection() {
-        PlatformSecurityProperties properties = PlatformSecurityFixtures.gatewayServerProperties();
-        properties.getIpGuard().setAdminAllowCidrs(java.util.List.of("10.0.0.0/8"));
+    void resourceServerConsumesRoleStarterWithoutManualPlatformAssembly() {
+        resourceServerRunner.run(context -> {
+            assertNull(context.getStartupFailure());
 
-        SecurityIngressAdapter adapter = adapter(properties);
-        SecurityVerdict verdict = adapter.evaluate(
-                new SecurityRequest(
-                        "admin-1",
-                        "10.10.2.15",
-                        "/admin/users",
-                        "GET",
-                        Map.of(
-                                "auth.sessionId", "session-1",
-                                "auth.accessToken", "token-1"
-                        ),
-                        java.time.Instant.parse("2026-01-01T00:00:00Z")
-                ),
-                new SecurityContext(true, "admin-1", Set.of("ADMIN"), Map.of())
-        );
+            PlatformSecurityProperties properties = context.getBean(PlatformSecurityProperties.class);
+            assertEquals(ServiceRolePreset.RESOURCE_SERVER, properties.getServiceRolePreset());
+            assertEquals(AuthMode.JWT, properties.getAuth().getDefaultMode());
+            assertFalse(properties.getAuth().isAllowSessionForBrowser());
 
-        assertTrue(verdict.allowed(), () -> verdict.policy() + ":" + verdict.reason());
+            SecurityVerdict verdict = context.getBean(SecurityPolicyService.class).evaluate(
+                    apiRequest("/api/documents/1", Map.of("auth.accessToken", "token-1")),
+                    authenticatedUser()
+            );
+
+            assertTrue(verdict.allowed(), () -> verdict.policy() + ":" + verdict.reason());
+        });
     }
 
     @Test
-    void authServerSampleUsesPresetAndCanBeOverridden() {
-        PlatformSecurityProperties properties = PlatformSecurityFixtures.authServerProperties();
-        SecurityIngressAdapter adapter = adapter(properties);
+    void serviceKeepsDomainAuthorizationOutsidePlatformSecurity() {
+        resourceServerRunner.run(context -> {
+            SecurityVerdict platformVerdict = context.getBean(SecurityPolicyService.class).evaluate(
+                    apiRequest("/api/documents/1", Map.of("auth.accessToken", "token-1")),
+                    authenticatedUser()
+            );
 
-        SecurityEvaluationResult result = adapter.evaluateResult(
-                new SecurityRequest(
-                        "user-1",
-                        "127.0.0.1",
-                        "/auth/login",
-                        "POST",
-                        Map.of("auth.sessionId", "session-1"),
-                        java.time.Instant.parse("2026-01-01T00:00:00Z")
-                ),
-                new SecurityContext(true, "user-1", Set.of("USER"), Map.of())
-        );
-
-        assertEquals("PUBLIC", result.evaluationContext().profile().boundaryType());
-        assertEquals("NONE", result.evaluationContext().profile().authMode());
-        assertTrue(result.verdict().allowed());
+            assertTrue(platformVerdict.allowed(), () -> platformVerdict.policy() + ":" + platformVerdict.reason());
+            assertFalse(new DocumentAccessPolicy().canUpdate("user-1", new Document("document-1", "owner-1")));
+        });
     }
 
-    private SecurityIngressAdapter adapter(PlatformSecurityProperties properties) {
-        var boundaryResolver = new PathPatternSecurityBoundaryResolver(
-                properties.getBoundary().getPublicPaths(),
-                properties.getBoundary().getProtectedPaths(),
-                properties.getBoundary().getAdminPaths(),
-                properties.getBoundary().getInternalPaths()
+    private SecurityRequest apiRequest(String path, Map<String, String> attributes) {
+        return new SecurityRequest(
+                null,
+                "127.0.0.1",
+                path,
+                "GET",
+                attributes,
+                Instant.parse("2026-01-01T00:00:00Z")
         );
-        var service = new DefaultSecurityPolicyService(
-                boundaryResolver,
-                new DefaultClientTypeResolver(),
-                new DefaultAuthenticationModeResolver(properties.getAuth()),
-                new DefaultBoundaryIpPolicyProvider(properties.getIpGuard()),
-                new DefaultBoundaryRateLimitPolicyProvider(properties.getRateLimit(), new DefaultRateLimitKeyResolver()),
-                new DefaultPlatformPrincipalFactory()
-        );
-        return new SecurityIngressAdapter(service, boundaryResolver);
+    }
+
+    private SecurityContext authenticatedUser() {
+        return new SecurityContext(true, "user-1", Set.of("USER"), Map.of());
+    }
+
+    private record Document(String id, String ownerId) { }
+
+    private static final class DocumentAccessPolicy {
+        boolean canUpdate(String principal, Document document) {
+            return document.ownerId().equals(principal);
+        }
+    }
+
+    private static AutoConfigurations autoConfigurations(Object... autoConfigurationClasses) {
+        return AutoConfigurations.of(Arrays.stream(autoConfigurationClasses)
+                .map(SampleConsumerTest::resolveAutoConfigurationClass)
+                .toArray(Class<?>[]::new));
+    }
+
+    private static Class<?> resolveAutoConfigurationClass(Object autoConfigurationClass) {
+        if (autoConfigurationClass instanceof Class<?> type) {
+            return type;
+        }
+        try {
+            return Class.forName(String.valueOf(autoConfigurationClass));
+        } catch (ClassNotFoundException exception) {
+            throw new IllegalStateException(
+                    "Auto-configuration class is not on the runtime classpath: " + autoConfigurationClass,
+                    exception
+            );
+        }
     }
 }

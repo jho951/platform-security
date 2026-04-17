@@ -20,6 +20,9 @@ import io.github.jho951.ratelimiter.spi.RateLimiter;
 import java.time.Clock;
 import java.util.Objects;
 
+/**
+ * boundary, client type, auth mode, route pattern에 맞는 quota를 선택해 평가하는 rate limit policy다.
+ */
 public final class BoundaryAwareRateLimitPolicy implements SecurityPolicy {
     private final SecurityBoundary boundary;
     private final PlatformSecurityProperties.RateLimitProperties properties;

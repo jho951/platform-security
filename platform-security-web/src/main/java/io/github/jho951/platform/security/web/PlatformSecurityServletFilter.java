@@ -19,6 +19,12 @@ import java.io.IOException;
 import java.time.Clock;
 import java.util.Objects;
 
+/**
+ * servlet 요청을 platform-security 평가 흐름에 연결하는 filter다.
+ *
+ * <p>요청을 {@link SecurityRequest}로 변환하고, 인증 context를 해석한 뒤, 정책 평가와 감사
+ * 발행을 수행한다. 실패 verdict는 JSON 오류 응답으로 반환한다.</p>
+ */
 public final class PlatformSecurityServletFilter implements Filter {
     private final SecurityIngressAdapter securityIngressAdapter;
     private final SecurityContextResolver securityContextResolver;

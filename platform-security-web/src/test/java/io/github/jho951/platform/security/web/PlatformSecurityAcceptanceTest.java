@@ -152,6 +152,7 @@ class PlatformSecurityAcceptanceTest {
     @Test
     void internalBoundaryUsesInternalQuota() {
         PlatformSecurityProperties properties = baseProperties();
+        properties.getIpGuard().getInternal().setRules(List.of("127.0.0.1/32"));
         properties.getRateLimit().getInternal().setRequests(1L);
         properties.getRateLimit().getInternal().setWindowSeconds(60L);
         SecurityIngressAdapter adapter = adapter(properties);

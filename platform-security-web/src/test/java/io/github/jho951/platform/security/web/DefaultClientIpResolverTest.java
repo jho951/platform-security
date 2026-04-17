@@ -29,4 +29,15 @@ class DefaultClientIpResolverTest {
 
         assertEquals("1.2.3.4", resolved);
     }
+
+    @Test
+    void usesForwardedForOnlyFromTrustedProxyWhenTrustedCidrsAreConfigured() {
+        PlatformSecurityProperties.IpGuardProperties properties = new PlatformSecurityProperties.IpGuardProperties();
+        properties.setTrustProxy(true);
+        properties.setTrustedProxyCidrs(java.util.List.of("10.0.0.0/8"));
+        DefaultClientIpResolver resolver = new DefaultClientIpResolver(properties);
+
+        assertEquals("1.2.3.4", resolver.resolve("10.0.0.10", Map.of("X-Forwarded-For", "1.2.3.4")));
+        assertEquals("192.168.1.10", resolver.resolve("192.168.1.10", Map.of("X-Forwarded-For", "1.2.3.4")));
+    }
 }

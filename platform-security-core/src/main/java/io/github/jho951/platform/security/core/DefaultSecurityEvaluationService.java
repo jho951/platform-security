@@ -29,6 +29,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * boundary, client type, auth mode를 해석한 뒤 기본 보안 policy chain을 실행하는 core 평가 서비스다.
+ *
+ * <p>기본 chain은 인증 필수 여부, IP guard, rate limit, 추가 등록 policy 순서로 평가한다.
+ * 첫 deny verdict가 나오면 즉시 평가를 중단한다.</p>
+ */
 public class DefaultSecurityEvaluationService implements SecurityEvaluationService, SecurityPolicyService {
     private final List<SecurityPolicy> policies;
     private final SecurityBoundaryResolver boundaryResolver;

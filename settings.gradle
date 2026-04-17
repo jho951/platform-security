@@ -9,6 +9,8 @@ include 'platform-security-rate-limit'
 include 'platform-security-core'
 include 'platform-security-web'
 include 'platform-security-autoconfigure'
+include 'platform-security-policyconfig-bridge'
+include 'platform-security-governance-bridge'
 include 'platform-security-starter'
 include 'platform-security-edge-starter'
 include 'platform-security-issuer-starter'
@@ -16,3 +18,12 @@ include 'platform-security-resource-server-starter'
 include 'platform-security-internal-service-starter'
 include 'platform-security-test-support'
 include 'platform-security-sample-consumer'
+
+def platformGovernanceRoot = file('../platform-governance')
+if (platformGovernanceRoot.exists()) {
+    includeBuild(platformGovernanceRoot) {
+        dependencySubstitution {
+            substitute module('io.github.jho951.platform:platform-governance-api') using project(':platform-governance-api')
+        }
+    }
+}

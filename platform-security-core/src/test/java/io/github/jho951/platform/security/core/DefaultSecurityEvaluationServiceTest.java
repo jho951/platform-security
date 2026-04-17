@@ -30,6 +30,7 @@ class DefaultSecurityEvaluationServiceTest {
         properties.getBoundary().setProtectedPaths(List.of("/api/**"));
         properties.getBoundary().setAdminPaths(List.of("/admin/**"));
         properties.getBoundary().setInternalPaths(List.of("/internal/**"));
+        properties.getIpGuard().getAdmin().setRules(List.of("127.0.0.1/32"));
 
         DefaultSecurityEvaluationService service = new DefaultSecurityEvaluationService(
                 new PathPatternSecurityBoundaryResolver(

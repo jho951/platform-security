@@ -8,6 +8,9 @@ import io.github.jho951.platform.security.core.policy.IpAllowListPolicy;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * IP guard policy를 직접 호출해야 하는 코드에서 쓰는 작은 facade다.
+ */
 public final class PlatformIpGuardFacade {
     private final IpAllowListPolicy policy;
 

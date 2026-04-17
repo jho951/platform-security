@@ -3,6 +3,12 @@ package io.github.jho951.platform.security.policy;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * 선택된 service role preset을 실제 platform-security 기본 설정으로 변환한다.
+ *
+ * <p>starter가 제공한 role은 여기서 boundary 기본값, auth mode, 허용 credential 조합으로
+ * 확장된다. 사용자가 명시한 설정은 가능한 한 유지한다.</p>
+ */
 public final class PlatformSecurityPresetApplier {
     public void apply(PlatformSecurityProperties properties) {
         Objects.requireNonNull(properties, "properties");

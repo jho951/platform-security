@@ -27,6 +27,28 @@ public interface InternalTokenClaimsValidator {
      * @return non-null principal을 허용하는 validator
      */
     static InternalTokenClaimsValidator allowAll() {
-        return (principal, request) -> principal != null;
+        return AllowAllInternalTokenClaimsValidator.INSTANCE;
+    }
+
+    /**
+     * 기본 allow-all validator인지 확인한다.
+     *
+     * @param validator 확인할 validator
+     * @return platform 기본 allow-all validator이면 true
+     */
+    static boolean isAllowAll(InternalTokenClaimsValidator validator) {
+        return validator instanceof AllowAllInternalTokenClaimsValidator;
+    }
+}
+
+final class AllowAllInternalTokenClaimsValidator implements InternalTokenClaimsValidator {
+    static final AllowAllInternalTokenClaimsValidator INSTANCE = new AllowAllInternalTokenClaimsValidator();
+
+    private AllowAllInternalTokenClaimsValidator() {
+    }
+
+    @Override
+    public boolean validate(Principal principal, SecurityRequest request) {
+        return principal != null;
     }
 }

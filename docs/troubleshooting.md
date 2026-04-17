@@ -15,12 +15,14 @@
 
 ```java
 @Bean
-SecurityContextResolver securityContextResolver(
-        TokenService tokenService,
-        SessionStore sessionStore,
-        SessionPrincipalMapper mapper
-) {
-    return PlatformSecurityContextResolvers.hybrid(tokenService, sessionStore, mapper);
+SecurityContextResolver securityContextResolver(CurrentUserResolver currentUserResolver) {
+    return request -> {
+        CurrentUser user = currentUserResolver.resolve(request);
+        if (user == null) {
+            return new SecurityContext(false, null, Set.of(), request.attributes());
+        }
+        return new SecurityContext(true, user.id(), user.roles(), request.attributes());
+    };
 }
 ```
 
@@ -34,11 +36,14 @@ SecurityContextResolver securityContextResolver(
 - `auth.default-mode`가 `NONE`이 아님
 - `auth.dev-fallback.enabled=false`
 - `SecurityContextResolver` bean 존재
+- 운영용 token/session/internal token validator bean 존재
 - `ip-guard.enabled=true`
-- `ip-guard.admin-allow-cidrs` 값 존재
-- `ip-guard.internal-allow-cidrs` 값 존재
+- `ip-guard.trust-proxy=true`이면 `ip-guard.trusted-proxy-cidrs` 값 존재
+- admin/internal IP rule 존재
 - `rate-limit.enabled=true`
-- quota 값이 0보다 큼
+- 운영용 공유 `RateLimiter` bean 존재
+- anonymous/authenticated/internal/route quota 값이 0보다 큼
+- route limit에는 최소 하나 이상의 pattern 존재
 
 운영 profile이 아닌데 검사가 돈다면 `platform.security.operational-policy.production` 값을 확인한다.
 
@@ -61,10 +66,13 @@ SecurityContextResolver securityContextResolver(
 
 - `ip-guard.enabled`
 - `ip-guard.trust-proxy`
-- `ip-guard.admin-allow-cidrs`
-- `ip-guard.internal-allow-cidrs`
+- `ip-guard.trusted-proxy-cidrs`
+- `ip-guard.admin.source`, `ip-guard.admin.rules/location/policy-key`
+- `ip-guard.internal.source`, `ip-guard.internal.rules/location/policy-key`
 - 실제 요청의 boundary
 - proxy 환경에서 해석된 client IP
+
+`trusted-proxy-cidrs`가 비어 있으면 하위 호환을 위해 모든 proxy header를 신뢰한다. 운영에서는 이 상태가 fail-fast 대상이다.
 
 `PROTECTED` boundary는 기본적으로 admin/internal CIDR 정책을 받지 않는다.
 
@@ -78,8 +86,19 @@ SecurityContextResolver securityContextResolver(
 - `rate-limit.internal`
 - `rate-limit.routes[]`
 - `RateLimitKeyResolver` override 여부
+- 운영 공유 `RateLimiter` bean 등록 여부
 
 `PUBLIC` boundary는 기본 boundary quota를 건너뛴다. 로그인/refresh처럼 public이지만 제한이 필요한 endpoint는 `rate-limit.routes[]`에 등록한다.
+
+운영 다중 인스턴스에서 in-memory rate limiter를 쓰면 인스턴스별 quota가 따로 적용된다. prod에서는 Redis 같은 공유 구현을 `RateLimiter` bean으로 등록한다.
+
+## Governance audit에 security 결과가 남지 않음
+
+확인할 것:
+
+- `platform-security-governance-bridge`가 classpath에 있는지 확인한다.
+- `platform-governance-spring-boot-starter` 또는 `AuditLogRecorder` bean이 있는지 확인한다.
+- 직접 등록한 `SecurityAuditPublisher` bean이 bridge 기본 bean을 대체하지 않았는지 확인한다.
 
 ## Downstream 신원이 전달되지 않음
 
@@ -109,5 +128,3 @@ SecurityContextResolver securityContextResolver(
 - token에 `read:packages` 권한 존재
 - private repo/package 접근 권한 존재
 - 요청한 version이 실제 publish됨
-
-현재 문서 기준 version은 `1.0.4`다.

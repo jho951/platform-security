@@ -4,7 +4,14 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * {@code platform.security.*} 설정을 담는 Spring configuration properties 모델이다.
+ *
+ * <p>boundary, auth, IP guard, rate limit, 운영 fail-fast 정책을 한 곳에 모은다.
+ * role starter와 customizer는 이 객체를 보정한 뒤 runtime bean graph가 이를 소비한다.</p>
+ */
 public class PlatformSecurityProperties {
+    /** local/test fallback JWT token service가 쓰는 개발 기본 secret이다. 운영에서는 금지된다. */
     public static final String DEFAULT_JWT_SECRET = "platform-security-dev-secret-platform-security-dev-secret";
 
     private boolean enabled = true;
@@ -71,6 +78,9 @@ public class PlatformSecurityProperties {
         this.rateLimit = rateLimit == null ? new RateLimitProperties() : rateLimit;
     }
 
+    /**
+     * path pattern을 boundary별로 나누는 설정이다.
+     */
     public static class BoundaryPolicyProperties {
         private List<String> publicPaths = new ArrayList<>();
         private List<String> protectedPaths = new ArrayList<>();
@@ -110,6 +120,9 @@ public class PlatformSecurityProperties {
         }
     }
 
+    /**
+     * 인증 capability 선택과 local fallback token/session 설정이다.
+     */
     public static class AuthProperties {
         private boolean enabled = true;
         private AuthMode defaultMode = AuthMode.HYBRID;
@@ -309,10 +322,13 @@ public class PlatformSecurityProperties {
         }
     }
 
+    /**
+     * 운영 profile에서 fail-fast로 검증할 보안 기준 설정이다.
+     */
     public static class OperationalPolicyProperties {
         private boolean enabled = true;
         private boolean production = false;
-        private List<String> productionProfiles = new ArrayList<>(List.of("prod", "production", "live"));
+        private List<String> productionProfiles = new ArrayList<>(List.of("prod"));
 
         public boolean isEnabled() {
             return enabled;
@@ -354,6 +370,9 @@ public class PlatformSecurityProperties {
         }
     }
 
+    /**
+     * local/test 전용 security context fallback 활성화 설정이다.
+     */
     public static class DevFallbackProperties {
         private boolean enabled = false;
 
@@ -412,9 +431,15 @@ public class PlatformSecurityProperties {
         }
     }
 
+    /**
+     * trusted proxy, admin/internal boundary IP guard rule 설정이다.
+     */
     public static class IpGuardProperties {
         private boolean enabled = true;
         private boolean trustProxy = true;
+        private BoundaryIpGuardPolicy admin = new BoundaryIpGuardPolicy();
+        private BoundaryIpGuardPolicy internal = new BoundaryIpGuardPolicy();
+        private List<String> trustedProxyCidrs = new ArrayList<>();
         private List<String> adminAllowCidrs = new ArrayList<>();
         private List<String> internalAllowCidrs = new ArrayList<>();
 
@@ -434,23 +459,132 @@ public class PlatformSecurityProperties {
             this.trustProxy = trustProxy;
         }
 
+        public List<String> getTrustedProxyCidrs() {
+            return trustedProxyCidrs;
+        }
+
+        public void setTrustedProxyCidrs(List<String> trustedProxyCidrs) {
+            this.trustedProxyCidrs = trustedProxyCidrs == null ? new ArrayList<>() : trustedProxyCidrs;
+        }
+
+        public BoundaryIpGuardPolicy getAdmin() {
+            return admin;
+        }
+
+        public void setAdmin(BoundaryIpGuardPolicy admin) {
+            this.admin = admin == null ? new BoundaryIpGuardPolicy() : admin;
+        }
+
+        public BoundaryIpGuardPolicy getInternal() {
+            return internal;
+        }
+
+        public void setInternal(BoundaryIpGuardPolicy internal) {
+            this.internal = internal == null ? new BoundaryIpGuardPolicy() : internal;
+        }
+
+        @Deprecated
         public List<String> getAdminAllowCidrs() {
             return adminAllowCidrs;
         }
 
+        @Deprecated
         public void setAdminAllowCidrs(List<String> adminAllowCidrs) {
             this.adminAllowCidrs = adminAllowCidrs == null ? new ArrayList<>() : adminAllowCidrs;
         }
 
+        @Deprecated
         public List<String> getInternalAllowCidrs() {
             return internalAllowCidrs;
         }
 
+        @Deprecated
         public void setInternalAllowCidrs(List<String> internalAllowCidrs) {
             this.internalAllowCidrs = internalAllowCidrs == null ? new ArrayList<>() : internalAllowCidrs;
         }
     }
 
+    /**
+     * boundary 하나에 적용할 IP guard rule source 설정이다.
+     */
+    public static class BoundaryIpGuardPolicy {
+        private IpRuleSourceType source = IpRuleSourceType.INLINE;
+        private List<String> rules = new ArrayList<>();
+        private String location = "";
+        private String policyKey = "";
+        private Duration reloadTtl = Duration.ofSeconds(5);
+        private boolean defaultAllow = false;
+        private boolean staleWhileError = true;
+
+        public IpRuleSourceType getSource() {
+            return source;
+        }
+
+        public void setSource(IpRuleSourceType source) {
+            this.source = source == null ? IpRuleSourceType.INLINE : source;
+        }
+
+        public List<String> getRules() {
+            return rules;
+        }
+
+        public void setRules(List<String> rules) {
+            this.rules = rules == null ? new ArrayList<>() : rules;
+        }
+
+        public String getLocation() {
+            return location;
+        }
+
+        public void setLocation(String location) {
+            this.location = location == null ? "" : location;
+        }
+
+        public String getPolicyKey() {
+            return policyKey;
+        }
+
+        public void setPolicyKey(String policyKey) {
+            this.policyKey = policyKey == null ? "" : policyKey;
+        }
+
+        public Duration getReloadTtl() {
+            return reloadTtl;
+        }
+
+        public void setReloadTtl(Duration reloadTtl) {
+            this.reloadTtl = reloadTtl == null ? Duration.ZERO : reloadTtl;
+        }
+
+        public boolean isDefaultAllow() {
+            return defaultAllow;
+        }
+
+        public void setDefaultAllow(boolean defaultAllow) {
+            this.defaultAllow = defaultAllow;
+        }
+
+        public boolean isStaleWhileError() {
+            return staleWhileError;
+        }
+
+        public void setStaleWhileError(boolean staleWhileError) {
+            this.staleWhileError = staleWhileError;
+        }
+    }
+
+    /**
+     * IP guard rule을 읽어오는 source 종류다.
+     */
+    public enum IpRuleSourceType {
+        INLINE,
+        FILE,
+        POLICY_CONFIG
+    }
+
+    /**
+     * boundary와 route별 rate limit quota 설정이다.
+     */
     public static class RateLimitProperties {
         private boolean enabled = true;
         private BoundaryRateLimitPolicyProperties anonymous = new BoundaryRateLimitPolicyProperties();
@@ -499,6 +633,9 @@ public class PlatformSecurityProperties {
         }
     }
 
+    /**
+     * 하나의 rate limit profile quota다.
+     */
     public static class BoundaryRateLimitPolicyProperties {
         private long requests = 100L;
         private long windowSeconds = 60L;
@@ -520,6 +657,9 @@ public class PlatformSecurityProperties {
         }
     }
 
+    /**
+     * path pattern 기반 route rate limit profile이다.
+     */
     public static class RouteRateLimitPolicyProperties extends BoundaryRateLimitPolicyProperties {
         private String name = "route";
         private List<String> patterns = new ArrayList<>();

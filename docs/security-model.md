@@ -55,6 +55,8 @@
 
 ## Header Contract
 
+`trust-proxy=true`이면 remote address가 `ip-guard.trusted-proxy-cidrs`에 포함될 때만 `X-Forwarded-For`를 client IP로 사용한다. 운영에서는 trusted proxy CIDR를 비워 두지 않는다.
+
 인증 입력으로 허용하는 값:
 
 - `Authorization`
@@ -82,3 +84,5 @@ ingress에서 신뢰하지 않는 downstream propagation 값:
 - 운영에서는 서비스가 `SecurityContextResolver`를 직접 제공한다.
 - dev fallback resolver는 local/test opt-in이다.
 - OIDC provider별 login flow와 ID token verifier 구현은 3계층 또는 1계층 구현 책임이다.
+- 운영 rate limit은 공유 `RateLimiter` bean으로 적용한다. 기본 in-memory 구현은 local/test용이며 production에서는 fail-fast 된다.
+- governance bridge를 쓰면 최종 security verdict가 governance audit entry로 기록된다.

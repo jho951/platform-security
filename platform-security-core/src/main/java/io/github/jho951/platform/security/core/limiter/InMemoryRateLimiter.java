@@ -9,6 +9,12 @@ import java.time.Clock;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * JVM 메모리 안에서만 token bucket 상태를 유지하는 rate limiter다.
+ *
+ * <p>노드 간 공유가 되지 않으므로 운영 기본 경로에서는 사용하면 안 된다. 테스트,
+ * local 개발, 단일 JVM 샘플에서만 사용한다.</p>
+ */
 public final class InMemoryRateLimiter implements RateLimiter {
     private final Clock clock;
     private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();

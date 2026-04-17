@@ -16,6 +16,9 @@ import java.security.Principal;
 import java.time.Clock;
 import java.util.Objects;
 
+/**
+ * WebFlux 요청을 platform-security 평가 흐름에 연결하는 reactive filter다.
+ */
 public final class PlatformSecurityWebFilter implements WebFilter {
     private final SecurityIngressAdapter securityIngressAdapter;
     private final SecurityContextResolver securityContextResolver;

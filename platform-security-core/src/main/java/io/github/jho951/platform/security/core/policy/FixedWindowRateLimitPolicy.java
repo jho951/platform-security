@@ -16,6 +16,12 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.Objects;
 
+/**
+ * 고정 window quota를 적용하는 단순 rate limit policy다.
+ *
+ * <p>운영에서는 auto-configuration이 공유 {@link RateLimiter} bean을 주입해야 한다.
+ * 기본 생성자의 in-memory limiter는 local/test 또는 단독 unit test 용도다.</p>
+ */
 public final class FixedWindowRateLimitPolicy implements SecurityPolicy {
     private final int limit;
     private final Duration window;
@@ -38,9 +44,7 @@ public final class FixedWindowRateLimitPolicy implements SecurityPolicy {
 
     @Override
     public SecurityVerdict evaluate(SecurityRequest request, SecurityContext context) {
-        if (limit <= 0) {
-            return SecurityVerdict.allow(name(), "rate limit disabled");
-        }
+        if (limit <= 0) return SecurityVerdict.allow(name(), "rate limit disabled");
 
         String value = request.subject() != null ? request.subject() : request.clientIp();
         RateLimitKeyType keyType = request.subject() != null ? RateLimitKeyType.USER_ID : RateLimitKeyType.IP;
@@ -50,9 +54,7 @@ public final class FixedWindowRateLimitPolicy implements SecurityPolicy {
         double refillPerSecond = (double) limit / (double) windowSeconds;
         RateLimitPlan plan = RateLimitPlan.perSecond(limit, refillPerSecond);
         RateLimitDecision decision = rateLimiter.tryAcquire(key, 1L, plan);
-        if (!decision.isAllowed()) {
-            return SecurityVerdict.deny(name(), "rate limit exceeded for " + key.asString());
-        }
+        if (!decision.isAllowed()) return SecurityVerdict.deny(name(), "rate limit exceeded for " + key.asString());
         return SecurityVerdict.allow(name(), "within rate limit");
     }
 }

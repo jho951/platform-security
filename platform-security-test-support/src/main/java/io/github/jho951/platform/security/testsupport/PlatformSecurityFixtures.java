@@ -9,6 +9,9 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * platform-security 소비 예시와 테스트에서 재사용하는 fixture 모음이다.
+ */
 public final class PlatformSecurityFixtures {
     private PlatformSecurityFixtures() {}
 

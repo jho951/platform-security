@@ -1,9 +1,5 @@
 # Configuration
 
-`platform-security` 설정 prefix는 `platform.security`다.
-
-이 문서는 설정 레퍼런스다. 적용 절차는 [quickstart.md](./quickstart.md)를 본다.
-
 ## 최상위 설정
 
 | Property | 기본값 | 설명 |
@@ -12,7 +8,7 @@
 | `service-role-preset` | `GENERAL` | 일반 starter를 쓸 때 역할 preset을 직접 지정한다. |
 | `operational-policy.enabled` | `true` | 운영정책 검사를 켠다. |
 | `operational-policy.production` | `false` | profile과 무관하게 운영정책 검사를 강제한다. |
-| `operational-policy.production-profiles` | `prod,production,live` | 운영 profile 이름 목록이다. |
+| `operational-policy.production-profiles` | `prod` | 운영 profile 이름 목록이다. |
 
 ## 서비스 역할 preset
 
@@ -70,7 +66,7 @@ Preset은 공통 boundary 골격과 auth mode 기본값만 제공한다. public 
 | `auth.service-account-enabled` | `true` | service account credential 허용 |
 | `auth.internal-token-enabled` | `true` | internal token 허용 |
 | `auth.dev-fallback.enabled` | `false` | local/test용 fallback resolver opt-in |
-| `auth.jwt-secret` | dev default | 플랫폼 기본 `TokenService`가 쓸 JWT secret |
+| `auth.jwt-secret` | dev default | local/test fallback `JwtTokenService`가 쓸 JWT secret |
 | `auth.access-token-ttl` | `30m` | access token TTL |
 | `auth.refresh-token-ttl` | `14d` | refresh token TTL |
 
@@ -93,10 +89,17 @@ OIDC token 검증은 2계층 책임이 아니다. 3계층이 `OidcTokenVerifier`
 | --- | --- | --- |
 | `ip-guard.enabled` | `true` | IP guard를 켠다. |
 | `ip-guard.trust-proxy` | `true` | proxy header 기반 client IP 해석을 허용한다. |
-| `ip-guard.admin-allow-cidrs` | `[]` | admin boundary allow CIDR |
-| `ip-guard.internal-allow-cidrs` | `[]` | internal boundary allow CIDR |
+| `ip-guard.trusted-proxy-cidrs` | `[]` | `X-Forwarded-For`를 신뢰할 proxy CIDR |
+| `ip-guard.admin.source` | `INLINE` | admin boundary IP rule source |
+| `ip-guard.admin.rules` | `[]` | `INLINE` source admin boundary allow CIDR |
+| `ip-guard.admin.location` | `""` | `FILE` source location |
+| `ip-guard.admin.policy-key` | `""` | `POLICY_CONFIG` source key |
+| `ip-guard.internal.source` | `INLINE` | internal boundary IP rule source |
+| `ip-guard.internal.rules` | `[]` | `INLINE` source internal boundary allow CIDR |
+| `ip-guard.internal.location` | `""` | `FILE` source location |
+| `ip-guard.internal.policy-key` | `""` | `POLICY_CONFIG` source key |
 
-운영정책이 켜진 운영 환경에서는 admin/internal CIDR가 비어 있으면 기동 실패한다.
+운영정책이 켜진 운영 환경에서는 admin/internal IP rule이 비어 있으면 기동 실패한다. `trust-proxy=true`이면 `trusted-proxy-cidrs`도 필요하다.
 
 ## Rate Limit
 
@@ -135,7 +138,7 @@ platform:
 
 운영정책은 다음 중 하나면 실행된다.
 
-- active profile이 `prod`, `production`, `live`
+- active profile이 `prod`
 - `platform.security.operational-policy.production=true`
 
 운영정책 위반 조건:
@@ -144,12 +147,17 @@ platform:
 - `auth.default-mode=NONE`
 - `auth.dev-fallback.enabled=true`
 - `SecurityContextResolver` bean 없음
-- 플랫폼 기본 `TokenService`를 쓰면서 dev JWT secret 사용
+- 플랫폼 기본 `TokenService` 사용
+- 플랫폼 기본 `SimpleSessionStore` 사용
+- 플랫폼 기본 internal token allow-all validator 사용
+- dev JWT secret 사용
 - `ip-guard.enabled=false`
-- `ip-guard.admin-allow-cidrs` 비어 있음
-- `ip-guard.internal-allow-cidrs` 비어 있음
+- `ip-guard.trust-proxy=true`이면서 `trusted-proxy-cidrs` 비어 있음
+- admin/internal IP rule 비어 있음
 - `rate-limit.enabled=false`
-- anonymous/authenticated/internal quota가 0 이하
+- in-memory `RateLimiter` 사용
+- anonymous/authenticated/internal/route quota가 0 이하
+- route rate limit pattern 비어 있음
 
 ## 최소 운영 예시
 
@@ -181,10 +189,16 @@ platform:
     ip-guard:
       enabled: true
       trust-proxy: true
-      admin-allow-cidrs:
+      trusted-proxy-cidrs:
         - 10.0.0.0/8
-      internal-allow-cidrs:
-        - 172.16.0.0/12
+      admin:
+        source: INLINE
+        rules:
+          - 10.0.0.0/8
+      internal:
+        source: INLINE
+        rules:
+          - 172.16.0.0/12
 
     rate-limit:
       enabled: true

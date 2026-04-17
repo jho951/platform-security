@@ -1,0 +1,14 @@
+dependencies {
+    api project(':platform-security-autoconfigure')
+    api project(':platform-security-ip')
+    api "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
+    compileOnly "org.springframework:spring-context:${rootProject.springFrameworkVersion}"
+    compileOnly "io.github.jho951.platform:platform-governance-api:${rootProject.ext.platformReleaseVersion}"
+
+    testImplementation "io.github.jho951.platform:platform-governance-api:${rootProject.ext.platformReleaseVersion}"
+    testImplementation "org.springframework.boot:spring-boot-test:${rootProject.springBootVersion}"
+    testImplementation "org.springframework.boot:spring-boot-test-autoconfigure:${rootProject.springBootVersion}"
+    testImplementation "org.assertj:assertj-core:3.27.7"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitVersion}"
+}

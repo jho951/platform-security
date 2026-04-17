@@ -5,7 +5,16 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * inbound header에서 downstream identity header와 불필요한 auth header를 제거한다.
+ */
 public final class SecurityIdentityScrubber {
+    /**
+     * 보안 평가에 넘겨도 되는 header만 남긴다.
+     *
+     * @param headers 원본 header map
+     * @return scrub된 header map
+     */
     public Map<String, String> scrub(Map<String, String> headers) {
         if (headers == null || headers.isEmpty()) {
             return Map.of();

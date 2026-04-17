@@ -5,6 +5,9 @@ import io.github.jho951.platform.security.api.SecurityRequest;
 import java.util.Locale;
 import java.util.Objects;
 
+/**
+ * boundary와 credential hint를 사용해 기본 client type을 추론한다.
+ */
 public final class DefaultClientTypeResolver implements ClientTypeResolver {
     @Override
     public ClientType resolve(SecurityRequest request) {

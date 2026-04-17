@@ -13,15 +13,25 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * servlet 또는 WebFlux 요청을 {@link SecurityRequest}로 변환한다.
+ */
 public final class SecurityIngressRequestFactory {
     private final ClientIpResolver clientIpResolver;
     private final SecurityIdentityScrubber securityIdentityScrubber;
 
+    /**
+     * @param clientIpResolver client IP resolver
+     * @param securityIdentityScrubber header scrubber
+     */
     public SecurityIngressRequestFactory(ClientIpResolver clientIpResolver, SecurityIdentityScrubber securityIdentityScrubber) {
         this.clientIpResolver = Objects.requireNonNull(clientIpResolver, "clientIpResolver");
         this.securityIdentityScrubber = Objects.requireNonNull(securityIdentityScrubber, "securityIdentityScrubber");
     }
 
+    /**
+     * servlet 요청을 security request로 변환한다.
+     */
     public SecurityRequest fromServlet(HttpServletRequest request, Clock clock) {
         Map<String, String> headers = scrubbedHeaders(requestHeaders(request));
         return new SecurityRequest(
@@ -34,6 +44,9 @@ public final class SecurityIngressRequestFactory {
         );
     }
 
+    /**
+     * WebFlux exchange를 security request로 변환한다.
+     */
     public SecurityRequest fromWebFlux(ServerWebExchange exchange, String principal, Clock clock) {
         Map<String, String> headers = scrubbedHeaders(exchange.getRequest().getHeaders().toSingleValueMap());
         return new SecurityRequest(

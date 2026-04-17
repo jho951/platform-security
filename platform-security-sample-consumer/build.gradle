@@ -1,15 +1,12 @@
 dependencies {
-    implementation project(':platform-security-api')
-    implementation project(':platform-security-policy')
-    implementation project(':platform-security-core')
-    implementation project(':platform-security-auth')
-    implementation project(':platform-security-ip')
-    implementation project(':platform-security-rate-limit')
-    implementation project(':platform-security-web')
-    implementation project(':platform-security-autoconfigure')
-    implementation project(':platform-security-starter')
+    implementation project(':platform-security-resource-server-starter')
 
-    testImplementation project(':platform-security-test-support')
+    testImplementation "org.springframework.boot:spring-boot-test:${rootProject.springBootVersion}"
+    testImplementation "org.springframework.boot:spring-boot-test-autoconfigure:${rootProject.springBootVersion}"
+    testImplementation "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
+    testImplementation "io.projectreactor:reactor-core:3.7.11"
+    testImplementation "jakarta.servlet:jakarta.servlet-api:${rootProject.jakartaServletVersion}"
+    testImplementation "org.assertj:assertj-core:3.27.7"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitVersion}"
 }

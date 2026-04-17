@@ -35,8 +35,16 @@ export GITHUB_TOKEN=<read:packages 권한이 있는 PAT>
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:1.0.4")
+    implementation platform("io.github.jho951.platform:platform-security-bom:1.0.5")
     implementation "io.github.jho951.platform:platform-security-resource-server-starter"
+}
+```
+
+governance audit까지 같은 체계로 남기는 서비스는 bridge를 추가한다.
+
+```gradle
+dependencies {
+    implementation "io.github.jho951.platform:platform-security-governance-bridge"
 }
 ```
 
@@ -85,10 +93,17 @@ platform:
 
     ip-guard:
       enabled: true
-      admin-allow-cidrs:
+      trust-proxy: true
+      trusted-proxy-cidrs:
         - 10.0.0.0/8
-      internal-allow-cidrs:
-        - 172.16.0.0/12
+      admin:
+        source: INLINE
+        rules:
+          - 10.0.0.0/8
+      internal:
+        source: INLINE
+        rules:
+          - 172.16.0.0/12
 
     rate-limit:
       enabled: true
@@ -118,25 +133,26 @@ platform:
           window-seconds: 60
 ```
 
+운영에서 `trust-proxy=true`이면 `trusted-proxy-cidrs`가 필요하다. 이 값에 포함된 proxy에서 온 요청의 `X-Forwarded-For`만 client IP로 신뢰한다.
+
 ## 4. 운영용 resolver 등록
 
 `auth.enabled=true`이면 운영 서비스는 `SecurityContextResolver`를 직접 제공해야 한다.
+기본 경로에서는 auth 1계층 `TokenService`, `SessionStore`, provider 타입을 직접 조립하지 않는다.
 
 ```java
 @Configuration
 class PlatformSecurityConfig {
 
     @Bean
-    SecurityContextResolver securityContextResolver(
-            TokenService tokenService,
-            SessionStore sessionStore,
-            SessionPrincipalMapper sessionPrincipalMapper
-    ) {
-        return PlatformSecurityContextResolvers.hybrid(
-                tokenService,
-                sessionStore,
-                sessionPrincipalMapper
-        );
+    SecurityContextResolver securityContextResolver(CurrentUserResolver currentUserResolver) {
+        return request -> {
+            CurrentUser user = currentUserResolver.resolve(request);
+            if (user == null) {
+                return new SecurityContext(false, null, Set.of(), request.attributes());
+            }
+            return new SecurityContext(true, user.id(), user.roles(), request.attributes());
+        };
     }
 }
 ```
@@ -176,6 +192,17 @@ RateLimitKeyResolver rateLimitKeyResolver() {
 }
 ```
 
+운영용 공유 rate limiter:
+
+```java
+@Bean
+RateLimiter rateLimiter(RedisClient redisClient) {
+    return new RedisBackedRateLimiter(redisClient);
+}
+```
+
+`platform-security`가 제공하는 기본 token service, session store, internal token validator, in-memory rate limiter는 local/test용이다. 운영 profile에서는 서비스가 운영용 bean을 제공하지 않으면 fail-fast 된다.
+
 Audit event 발행:
 
 ```java
@@ -189,6 +216,8 @@ SecurityAuditPublisher securityAuditPublisher() {
     );
 }
 ```
+
+`platform-security-governance-bridge`를 사용하면 `AuditLogRecorder` bean이 있을 때 `SecurityAuditPublisher`가 자동 등록된다. 직접 `SecurityAuditPublisher` bean을 등록하면 bridge 기본 bean을 대체한다.
 
 ## 6. 확인
 

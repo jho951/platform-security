@@ -8,6 +8,9 @@ import io.github.jho951.platform.security.core.policy.FixedWindowRateLimitPolicy
 import java.time.Duration;
 import java.util.Objects;
 
+/**
+ * 독립 실행 코드에서 rate limit policy를 직접 호출하기 위한 작은 facade다.
+ */
 public final class PlatformRateLimitFacade {
     private final FixedWindowRateLimitPolicy policy;
 
