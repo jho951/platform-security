@@ -9,9 +9,9 @@
 | --- | --- | --- |
 | `enabled` | `true` | 이 서비스에서 `platform-security`를 사용할지 정한다. |
 | `service-role-preset` | `GENERAL` | 일반 starter를 쓸 때 이 서비스를 edge/issuer/resource-server/internal-service 중 무엇으로 볼지 정한다. 역할별 starter를 쓰면 보통 직접 설정하지 않는다. |
-| `operational-policy.enabled` | `true` | 위험한 운영 설정을 애플리케이션 시작 시점에 막는 검사를 켠다. |
-| `operational-policy.production` | `false` | 현재 Spring profile과 상관없이 이 서비스를 운영처럼 검사한다. CI나 staging에서 운영 수준 검사를 강제로 걸 때 쓴다. |
-| `operational-policy.production-profiles` | `prod`, `production`, `live` | 이 Spring profile로 뜨면 운영으로 보고 강하게 검사한다. |
+| `operational.enabled` | `true` | 위험한 운영 설정을 애플리케이션 시작 시점에 막는 검사를 켠다. 기존 `operational-policy.enabled`도 계속 동작한다. |
+| `operational.production` | `false` | 현재 Spring profile과 상관없이 이 서비스를 운영처럼 검사한다. CI나 staging에서 운영 수준 검사를 강제로 걸 때 쓴다. 기존 `operational-policy.production`도 계속 동작한다. |
+| `operational.production-profiles` | `prod` | 이 Spring profile로 뜨면 운영으로 보고 강하게 검사한다. 기존 `operational-policy.production-profiles`도 계속 동작한다. |
 | `local-support.enabled` | `false` | local/test용 기본 token/session/rate-limit bean을 명시적으로 켠다. 운영에서는 쓰지 않는다. |
 
 

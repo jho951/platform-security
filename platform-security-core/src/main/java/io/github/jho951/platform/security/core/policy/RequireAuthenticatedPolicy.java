@@ -25,7 +25,9 @@ public final class RequireAuthenticatedPolicy implements SecurityPolicy {
         if ("NONE".equalsIgnoreCase(authMode)) {
             return SecurityVerdict.allow(name(), "authentication disabled");
         }
-        if (context.authenticated()) return SecurityVerdict.allow(name(), "authenticated");
+        if (context.authenticated()){
+			return SecurityVerdict.allow(name(), "authenticated");
+		}
         return SecurityVerdict.deny(name(), "authentication required");
     }
 }

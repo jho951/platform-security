@@ -503,7 +503,7 @@ public class PlatformSecurityAutoConfiguration {
             SecurityContextResolver securityContextResolver,
             SecurityIngressRequestFactory securityIngressRequestFactory,
             SecurityDownstreamIdentityPropagator downstreamIdentityPropagator,
-            SecurityAuditPublisher securityAuditPublisher,
+            ObjectProvider<SecurityAuditPublisher> securityAuditPublishers,
             SecurityFailureResponseWriter failureResponseWriter
     ) {
         return new PlatformSecurityServletFilter(
@@ -512,7 +512,7 @@ public class PlatformSecurityAutoConfiguration {
                 Clock.systemUTC(),
                 securityIngressRequestFactory,
                 downstreamIdentityPropagator,
-                securityAuditPublisher,
+                compositeSecurityAuditPublisher(securityAuditPublishers.orderedStream().toList()),
                 failureResponseWriter
         );
     }
@@ -526,7 +526,7 @@ public class PlatformSecurityAutoConfiguration {
             SecurityContextResolver securityContextResolver,
             SecurityIngressRequestFactory securityIngressRequestFactory,
             SecurityDownstreamIdentityPropagator downstreamIdentityPropagator,
-            SecurityAuditPublisher securityAuditPublisher,
+            ObjectProvider<SecurityAuditPublisher> securityAuditPublishers,
             ReactiveSecurityFailureResponseWriter failureResponseWriter
     ) {
         return new PlatformSecurityWebFilter(
@@ -535,9 +535,25 @@ public class PlatformSecurityAutoConfiguration {
                 Clock.systemUTC(),
                 securityIngressRequestFactory,
                 downstreamIdentityPropagator,
-                securityAuditPublisher,
+                compositeSecurityAuditPublisher(securityAuditPublishers.orderedStream().toList()),
                 failureResponseWriter
         );
+    }
+
+    private static SecurityAuditPublisher compositeSecurityAuditPublisher(
+            List<SecurityAuditPublisher> auditPublishers
+    ) {
+        if (auditPublishers.isEmpty()) {
+            return SecurityAuditPublisher.noop();
+        }
+        if (auditPublishers.size() == 1) {
+            return auditPublishers.get(0);
+        }
+        return event -> {
+            for (SecurityAuditPublisher publisher : auditPublishers) {
+                publisher.publish(event);
+            }
+        };
     }
 
     @Bean

@@ -37,11 +37,16 @@ public final class BoundaryAwareIpPolicy implements SecurityPolicy {
     @Override
     public SecurityVerdict evaluate(SecurityRequest request, SecurityContext context) {
         Objects.requireNonNull(request, "request");
-        if (!properties.isEnabled() || boundary.type() == SecurityBoundaryType.PUBLIC) {
+        if (!properties.isEnabled()) {
             return SecurityVerdict.allow(name(), "ip policy disabled");
         }
+		if (boundary.type() == SecurityBoundaryType.PUBLIC) {
+			return SecurityVerdict.allow(name(), "ip policy disabled");
+		}
         Decision decision = evaluator.decide(request.clientIp());
-        if (decision.allowed()) return SecurityVerdict.allow(name(), decision.reason());
+        if (decision.allowed()){
+			return SecurityVerdict.allow(name(), decision.reason());
+		}
         return SecurityVerdict.deny(name(), decision.reason());
     }
 }

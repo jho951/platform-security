@@ -21,8 +21,8 @@ import org.springframework.context.annotation.Bean;
 public class PlatformSecurityGovernanceBridgeAutoConfiguration {
     @Bean
     @ConditionalOnBean(AuditLogRecorder.class)
-    @ConditionalOnMissingBean(SecurityAuditPublisher.class)
-    public SecurityAuditPublisher governanceSecurityAuditPublisher(
+    @ConditionalOnMissingBean(GovernanceSecurityAuditPublisher.class)
+    public GovernanceSecurityAuditPublisher governanceSecurityAuditPublisher(
             AuditLogRecorder auditLogRecorder,
             PlatformSecurityProperties properties
     ) {

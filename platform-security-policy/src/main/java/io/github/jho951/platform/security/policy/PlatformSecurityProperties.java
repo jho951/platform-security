@@ -49,6 +49,14 @@ public class PlatformSecurityProperties {
         this.operationalPolicy = operationalPolicy == null ? new OperationalPolicyProperties() : operationalPolicy;
     }
 
+    public OperationalPolicyProperties getOperational() {
+        return operationalPolicy;
+    }
+
+    public void setOperational(OperationalPolicyProperties operational) {
+        this.operationalPolicy = operational == null ? new OperationalPolicyProperties() : operational;
+    }
+
     public BoundaryPolicyProperties getBoundary() {
         return boundary;
     }
@@ -339,7 +347,7 @@ public class PlatformSecurityProperties {
     public static class OperationalPolicyProperties {
         private boolean enabled = true;
         private boolean production = false;
-        private List<String> productionProfiles = new ArrayList<>(List.of("prod", "production", "live"));
+        private List<String> productionProfiles = new ArrayList<>(List.of("prod"));
 
         public boolean isEnabled() {
             return enabled;

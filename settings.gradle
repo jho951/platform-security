@@ -23,3 +23,12 @@ include 'platform-security-local-support'
 include 'platform-security-client'
 include 'platform-security-test-support'
 include 'platform-security-sample-consumer'
+
+def platformGovernanceRoot = file('../platform-governance')
+if (platformGovernanceRoot.exists()) {
+    includeBuild(platformGovernanceRoot) {
+        dependencySubstitution {
+            substitute module('io.github.jho951.platform:platform-governance-api') using project(':platform-governance-api')
+        }
+    }
+}

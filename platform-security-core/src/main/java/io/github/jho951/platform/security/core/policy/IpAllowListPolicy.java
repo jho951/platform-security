@@ -15,8 +15,9 @@ import java.util.stream.Collectors;
 
 /**
  * IP allow-list를 평가하는 기본 보안 policy다.
- *
- * <p>단순 문자열 목록이나 rule 문자열을 받아 요청 client IP를 평가한다.</p>
+ *<p>
+ * 단순 문자열 목록이나 rule 문자열을 받아 요청 client IP를 평가한다.
+ *</p>
  */
 public final class IpAllowListPolicy implements SecurityPolicy {
     private final List<String> allowedIps;

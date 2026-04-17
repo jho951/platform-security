@@ -16,8 +16,9 @@ import java.util.Objects;
 
 /**
  * 고정 window quota를 적용하는 단순 rate limit policy다.
- *
- * <p>운영과 local/test 모두 호출자가 명시적으로 {@link RateLimiter}를 주입해야 한다.</p>
+ *<p>
+ * 운영과 local/test 모두 호출자가 명시적으로 {@link RateLimiter}를 주입해야 한다.
+ *</p>
  */
 final class FixedWindowRateLimitPolicy implements SecurityPolicy {
     private final int limit;
@@ -37,8 +38,9 @@ final class FixedWindowRateLimitPolicy implements SecurityPolicy {
 
     @Override
     public SecurityVerdict evaluate(SecurityRequest request, SecurityContext context) {
-        if (limit <= 0) return SecurityVerdict.allow(name(), "rate limit disabled");
-
+        if (limit <= 0){
+			return SecurityVerdict.allow(name(), "rate limit disabled");
+		}
         String value = request.subject() != null ? request.subject() : request.clientIp();
         RateLimitKeyType keyType = request.subject() != null ? RateLimitKeyType.USER_ID : RateLimitKeyType.IP;
         String boundary = request.attributes().getOrDefault(SecurityAttributes.BOUNDARY, "UNKNOWN");
@@ -47,7 +49,9 @@ final class FixedWindowRateLimitPolicy implements SecurityPolicy {
         double refillPerSecond = (double) limit / (double) windowSeconds;
         RateLimitPlan plan = RateLimitPlan.perSecond(limit, refillPerSecond);
         RateLimitDecision decision = rateLimiter.tryAcquire(key, 1L, plan);
-        if (!decision.isAllowed()) return SecurityVerdict.deny(name(), "rate limit exceeded for " + key.asString());
+        if (!decision.isAllowed()){
+			return SecurityVerdict.deny(name(), "rate limit exceeded for " + key.asString());
+		}
         return SecurityVerdict.allow(name(), "within rate limit");
     }
 }

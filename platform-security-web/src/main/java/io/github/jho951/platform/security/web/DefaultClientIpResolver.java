@@ -17,9 +17,7 @@ import java.util.Map;
 public final class DefaultClientIpResolver implements ClientIpResolver {
     private final PlatformSecurityProperties.IpGuardProperties properties;
 
-    /**
-     * @param properties IP guard와 trusted proxy 설정
-     */
+    /** @param properties IP guard와 trusted proxy 설정 */
     public DefaultClientIpResolver(PlatformSecurityProperties.IpGuardProperties properties) {
         this.properties = properties == null ? new PlatformSecurityProperties.IpGuardProperties() : properties;
     }

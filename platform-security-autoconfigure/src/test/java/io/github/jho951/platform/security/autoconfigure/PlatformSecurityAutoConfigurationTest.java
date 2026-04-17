@@ -2,6 +2,7 @@ package io.github.jho951.platform.security.autoconfigure;
 
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
+import io.github.jho951.platform.security.api.SecurityAuditPublisher;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.policy.ClientIpResolver;
 import io.github.jho951.platform.security.policy.AuthMode;
@@ -11,10 +12,15 @@ import io.github.jho951.platform.security.policy.ServiceRolePreset;
 import io.github.jho951.platform.security.policy.ServiceRolePresetProvider;
 import io.github.jho951.platform.security.policy.SecurityBoundary;
 import io.github.jho951.platform.security.policy.SecurityBoundaryResolver;
+import io.github.jho951.platform.security.web.PlatformSecurityServletFilter;
+import io.github.jho951.platform.security.web.SecurityDownstreamIdentityPropagator;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.mock.web.MockFilterChain;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import com.auth.api.model.Principal;
 import com.auth.session.SessionStore;
 import com.auth.spi.TokenService;
@@ -29,6 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -98,6 +105,17 @@ class PlatformSecurityAutoConfigurationTest {
                     assertTrue(context.getStartupFailure().getMessage().contains("operational policy violation"));
                     assertTrue(context.getStartupFailure().getMessage().contains("dev-fallback.enabled must be false"));
                 });
+    }
+
+    @Test
+    void productionProfileNameIsNotTreatedAsProductionByDefault() {
+        localContextRunner
+                .withPropertyValues(
+                        "platform.security.local-support.enabled=true",
+                        "spring.profiles.active=production",
+                        "platform.security.auth.dev-fallback.enabled=true"
+                )
+                .run(context -> assertEquals(null, context.getStartupFailure()));
     }
 
     @Test
@@ -255,6 +273,31 @@ class PlatformSecurityAutoConfigurationTest {
                     SecurityContextResolver resolver = context.getBean(SecurityContextResolver.class);
                     assertEquals("override", resolver.resolve(request).principal());
                     assertEquals(io.github.jho951.platform.security.policy.SecurityBoundaryType.ADMIN, context.getBean(SecurityBoundaryResolver.class).resolve(request).type());
+                });
+    }
+
+    @Test
+    void servletFilterPublishesToAllAuditPublishers() {
+        List<String> auditPublishers = new java.util.ArrayList<>();
+
+        contextRunner
+                .withBean(SecurityContextResolver.class, () -> request -> new SecurityContext(true, "resource", Set.of("USER"), Map.of()))
+                .withBean("firstAuditPublisher", SecurityAuditPublisher.class, () -> event -> auditPublishers.add("first"))
+                .withBean("secondAuditPublisher", SecurityAuditPublisher.class, () -> event -> auditPublishers.add("second"))
+                .run(context -> {
+                    assertEquals(null, context.getStartupFailure());
+
+                    PlatformSecurityServletFilter filter = context.getBean(PlatformSecurityServletFilter.class);
+                    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/users");
+                    request.setRemoteAddr("127.0.0.1");
+                    MockHttpServletResponse response = new MockHttpServletResponse();
+
+                    filter.doFilter(request, response, new MockFilterChain());
+
+                    assertEquals(200, response.getStatus());
+                    assertThat(auditPublishers)
+                            .containsExactlyInAnyOrder("first", "second");
+                    assertNotNull(request.getAttribute(SecurityDownstreamIdentityPropagator.ATTR_DOWNSTREAM_HEADERS));
                 });
     }
 
