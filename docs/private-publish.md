@@ -17,7 +17,6 @@ platform-security-starter
 platform-security-client
 platform-security-local-support
 platform-security-test-support
-platform-security-governance-bridge
 platform-security-policyconfig-bridge
 
 platform-security-policy

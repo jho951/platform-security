@@ -38,7 +38,7 @@ local/test 전용 구현
 | --- | --- |
 | `platform-security-client` | 다른 서비스로 호출할 때 표준 사용자 header를 자동으로 붙이고 싶을 때 |
 | `platform-security-local-support` | local/test에서만 기본 token/session/rate-limit 구현을 쓰고 싶을 때. 운영 `implementation` 금지 |
-| `platform-security-governance-bridge` | 보안 차단 기록을 governance audit에 같이 남기고 싶을 때 |
+| `platform-security-governance-bridge` | 보안 차단 기록을 governance audit에 같이 남기고 싶을 때. 별도 bridge artifact로 추가 |
 | `platform-security-policyconfig-bridge` | IP rule 같은 정책 읽기를 공통 policy config에서 하고 싶을 때 |
 | `platform-security-test-support` | 테스트 fixture가 필요할 때 |
 

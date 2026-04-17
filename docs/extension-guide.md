@@ -127,7 +127,7 @@ SecurityAuditPublisher securityAuditPublisher() {
 }
 ```
 
-governance audit과 연결하려면 `platform-security-governance-bridge`를 추가한다. 직접 `SecurityAuditPublisher` bean을 등록하면 bridge의 기본 bean보다 우선한다.
+governance audit과 연결하려면 별도 artifact인 `platform-security-governance-bridge`를 추가한다. 직접 `SecurityAuditPublisher` bean을 등록하면 bridge의 기본 bean보다 우선한다.
 
 ## Failure Response
 
