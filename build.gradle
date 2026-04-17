@@ -83,15 +83,22 @@ project(':platform-security-core') {
 
 project(':platform-security-governance-bridge') {
     repositories {
-        def githubPackagesUsername = rootProject.findProperty('githubPackagesUsername') ?: System.getenv('GITHUB_ACTOR')
-        def githubPackagesToken = rootProject.findProperty('githubPackagesToken') ?: System.getenv('GITHUB_TOKEN')
-        if (githubPackagesUsername && githubPackagesToken) {
+        def githubGovernancePackagesUsername =
+                rootProject.findProperty('githubGovernancePackagesUsername')
+                        ?: rootProject.findProperty('githubPackagesUsername')
+                        ?: System.getenv('GITHUB_ACTOR')
+        def githubGovernancePackagesToken =
+                rootProject.findProperty('githubGovernancePackagesToken')
+                        ?: System.getenv('GITHUB_GOVERNANCE_TOKEN')
+                        ?: rootProject.findProperty('githubPackagesToken')
+                        ?: System.getenv('GITHUB_TOKEN')
+        if (githubGovernancePackagesUsername && githubGovernancePackagesToken) {
             maven {
                 name = 'GitHubPlatformGovernance'
                 url = uri(rootProject.findProperty('githubGovernancePackagesUrl') ?: 'https://maven.pkg.github.com/jho951/platform-governance')
                 credentials {
-                    username = githubPackagesUsername
-                    password = githubPackagesToken
+                    username = githubGovernancePackagesUsername
+                    password = githubGovernancePackagesToken
                 }
             }
         }
