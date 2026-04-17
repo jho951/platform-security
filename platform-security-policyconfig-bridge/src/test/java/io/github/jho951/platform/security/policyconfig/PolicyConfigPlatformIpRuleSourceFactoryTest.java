@@ -1,6 +1,6 @@
 package io.github.jho951.platform.security.policyconfig;
 
-import io.github.jho951.platform.governance.api.PolicyConfigSource;
+import io.github.jho951.platform.policy.api.PolicyConfigSource;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties.IpRuleSourceType;
 import org.junit.jupiter.api.Test;
@@ -48,11 +48,6 @@ class PolicyConfigPlatformIpRuleSourceFactoryTest {
         @Override
         public Optional<String> resolve(String key) {
             return Optional.ofNullable(values.get(key));
-        }
-
-        @Override
-        public Map<String, String> snapshot() {
-            return values;
         }
     }
 }

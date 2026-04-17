@@ -6,12 +6,8 @@ import io.github.jho951.platform.security.policy.BoundaryRateLimitPolicyProvider
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import io.github.jho951.platform.security.policy.RateLimitKeyResolver;
 import io.github.jho951.platform.security.policy.SecurityBoundary;
-import io.github.jho951.platform.security.core.policy.FixedWindowRateLimitPolicy;
-
-import io.github.jho951.platform.security.core.limiter.InMemoryRateLimiter;
 import io.github.jho951.ratelimiter.spi.RateLimiter;
 
-import java.time.Clock;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,13 +20,6 @@ public final class DefaultBoundaryRateLimitPolicyProvider implements BoundaryRat
     private final RateLimitKeyResolver keyResolver;
     private final RateLimiter rateLimiter;
     private final Map<String, SecurityPolicy> cache = new ConcurrentHashMap<>();
-
-    public DefaultBoundaryRateLimitPolicyProvider(
-            PlatformSecurityProperties.RateLimitProperties properties,
-            RateLimitKeyResolver keyResolver
-    ) {
-        this(properties, keyResolver, new InMemoryRateLimiter(Clock.systemUTC()));
-    }
 
     public DefaultBoundaryRateLimitPolicyProvider(
             PlatformSecurityProperties.RateLimitProperties properties,
@@ -51,7 +40,7 @@ public final class DefaultBoundaryRateLimitPolicyProvider implements BoundaryRat
     public synchronized SecurityPolicy resolve(SecurityBoundary boundary, ResolvedSecurityProfile profile) {
         Objects.requireNonNull(boundary, "boundary");
         if (!properties.isEnabled()) {
-            return new FixedWindowRateLimitPolicy(0, java.time.Duration.ofSeconds(1));
+            return disabledPolicy();
         }
         String cacheKey = cacheKey(boundary, profile);
         return cache.computeIfAbsent(cacheKey, type -> new BoundaryAwareRateLimitPolicy(
@@ -73,5 +62,22 @@ public final class DefaultBoundaryRateLimitPolicyProvider implements BoundaryRat
                 + profile.clientType()
                 + ":"
                 + profile.authMode();
+    }
+
+    private SecurityPolicy disabledPolicy() {
+        return new SecurityPolicy() {
+            @Override
+            public String name() {
+                return "rate-limiter";
+            }
+
+            @Override
+            public io.github.jho951.platform.security.api.SecurityVerdict evaluate(
+                    io.github.jho951.platform.security.api.SecurityRequest request,
+                    io.github.jho951.platform.security.api.SecurityContext context
+            ) {
+                return io.github.jho951.platform.security.api.SecurityVerdict.allow(name(), "rate limit disabled");
+            }
+        };
     }
 }

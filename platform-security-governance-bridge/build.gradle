@@ -1,9 +1,10 @@
 dependencies {
-    api project(':platform-security-web')
-    compileOnly "io.github.jho951.platform:platform-governance-api:${rootProject.ext.platformReleaseVersion}"
-    api "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
+    implementation project(':platform-security-api')
+    implementation project(':platform-security-policy')
+    compileOnly "io.github.jho951.platform:platform-governance-api:${rootProject.governanceVersion}"
+    implementation "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
 
-    testImplementation "io.github.jho951.platform:platform-governance-api:${rootProject.ext.platformReleaseVersion}"
+    testImplementation "io.github.jho951.platform:platform-governance-api:${rootProject.governanceVersion}"
     testImplementation "org.springframework.boot:spring-boot-test:${rootProject.springBootVersion}"
     testImplementation "org.springframework.boot:spring-boot-test-autoconfigure:${rootProject.springBootVersion}"
     testImplementation "org.assertj:assertj-core:3.27.7"

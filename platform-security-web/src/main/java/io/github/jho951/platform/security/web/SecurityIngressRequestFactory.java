@@ -62,6 +62,7 @@ public final class SecurityIngressRequestFactory {
     private Map<String, String> requestAttributes(HttpServletRequest request, Map<String, String> headers) {
         Map<String, String> attributes = new LinkedHashMap<>();
         putIfPresent(attributes, "auth.accessToken", extractBearerToken(header(headers, "Authorization")));
+        putIfPresent(attributes, "auth.internalToken", header(headers, "X-Auth-Internal-Token"));
         putIfPresent(attributes, "auth.sessionId", header(headers, "X-Auth-Session-Id"));
         putCredentialAttributes(attributes, headers);
         putHmacSignedHeaders(attributes, headers);
@@ -73,6 +74,7 @@ public final class SecurityIngressRequestFactory {
     private Map<String, String> requestAttributes(ServerWebExchange exchange, String principal, Map<String, String> headers) {
         Map<String, String> attributes = new LinkedHashMap<>();
         putIfPresent(attributes, "auth.accessToken", extractBearerToken(header(headers, "Authorization")));
+        putIfPresent(attributes, "auth.internalToken", header(headers, "X-Auth-Internal-Token"));
         putIfPresent(attributes, "auth.sessionId", header(headers, "X-Auth-Session-Id"));
         putCredentialAttributes(attributes, headers);
         putHmacSignedHeaders(attributes, headers);
@@ -134,7 +136,7 @@ public final class SecurityIngressRequestFactory {
         if (trimmed.regionMatches(true, 0, "Bearer ", 0, 7)) {
             return trimToNull(trimmed.substring(7));
         }
-        return trimToNull(trimmed);
+        return null;
     }
 
     private void putIfPresent(Map<String, String> attributes, String key, String value) {

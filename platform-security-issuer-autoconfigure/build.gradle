@@ -1,0 +1,10 @@
+dependencies {
+    api project(':platform-security-api')
+    api project(':platform-security-policy')
+    implementation project(':platform-security-auth')
+    implementation "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
+    implementation "io.github.jho951:auth-core:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-jwt:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-session:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-hybrid:${rootProject.authVersion}"
+}

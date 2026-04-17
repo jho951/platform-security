@@ -3,6 +3,7 @@ package io.github.jho951.platform.security.autoconfigure;
 import io.github.jho951.platform.security.api.SecurityPolicyService;
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
+import io.github.jho951.platform.security.api.SecurityAuditPublisher;
 import io.github.jho951.platform.security.auth.AuthenticationCapability;
 import io.github.jho951.platform.security.auth.AuthenticationCapabilityResolver;
 import io.github.jho951.platform.security.auth.DefaultApiKeyAuthenticationCapability;
@@ -15,14 +16,9 @@ import io.github.jho951.platform.security.auth.DefaultOAuth2PrincipalBridge;
 import io.github.jho951.platform.security.auth.DefaultOidcPrincipalMapper;
 import io.github.jho951.platform.security.auth.DefaultOidcAuthenticationCapability;
 import io.github.jho951.platform.security.auth.DefaultServiceAccountAuthenticationCapability;
-import io.github.jho951.platform.security.auth.DefaultSessionIssuanceCapability;
 import io.github.jho951.platform.security.auth.DefaultSessionAuthenticationCapability;
-import io.github.jho951.platform.security.auth.DefaultTokenIssuanceCapability;
-import io.github.jho951.platform.security.auth.PlatformSecurityContextResolvers;
 import io.github.jho951.platform.security.auth.InternalTokenClaimsValidator;
 import io.github.jho951.platform.security.auth.OAuth2PrincipalBridge;
-import io.github.jho951.platform.security.auth.SessionIssuanceCapability;
-import io.github.jho951.platform.security.auth.TokenIssuanceCapability;
 import io.github.jho951.platform.security.core.DefaultSecurityPolicyService;
 import io.github.jho951.platform.security.core.limiter.InMemoryRateLimiter;
 import io.github.jho951.platform.security.policy.ClientIpResolver;
@@ -50,8 +46,9 @@ import io.github.jho951.platform.security.web.PathPatternSecurityBoundaryResolve
 import io.github.jho951.platform.security.web.SecurityIngressAdapter;
 import io.github.jho951.platform.security.web.SecurityIngressRequestFactory;
 import io.github.jho951.platform.security.web.SecurityIdentityScrubber;
-import io.github.jho951.platform.security.web.SecurityAuditPublisher;
 import io.github.jho951.platform.security.web.SecurityDownstreamIdentityPropagator;
+import io.github.jho951.platform.security.web.SecurityFailureResponseWriter;
+import io.github.jho951.platform.security.web.ReactiveSecurityFailureResponseWriter;
 import io.github.jho951.platform.security.ratelimit.DefaultBoundaryRateLimitPolicyProvider;
 import io.github.jho951.platform.security.ratelimit.DefaultRateLimitKeyResolver;
 import io.github.jho951.ratelimiter.spi.RateLimiter;
@@ -69,13 +66,10 @@ import com.auth.oidc.OidcTokenVerifier;
 import com.auth.serviceaccount.ServiceAccountAuthenticationProvider;
 import com.auth.serviceaccount.ServiceAccountVerifier;
 import com.auth.session.DefaultSessionAuthenticationProvider;
-import com.auth.session.IdentitySessionPrincipalMapper;
 import com.auth.session.SessionPrincipalMapper;
 import com.auth.session.SessionStore;
-import com.auth.session.SimpleSessionStore;
 import com.auth.spi.OAuth2PrincipalResolver;
 import com.auth.spi.TokenService;
-import com.auth.support.jwt.JwtTokenService;
 import jakarta.servlet.Filter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationContext;
@@ -232,12 +226,7 @@ public class PlatformSecurityAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean(RateLimiter.class)
-    public RateLimiter platformSecurityRateLimiter() {
-        return new InMemoryRateLimiter(Clock.systemUTC());
-    }
-
-    @Bean
+    @ConditionalOnBean(RateLimiter.class)
     @ConditionalOnMissingBean
     public BoundaryRateLimitPolicyProvider boundaryRateLimitPolicyProvider(
             PlatformSecurityProperties properties,
@@ -245,6 +234,44 @@ public class PlatformSecurityAutoConfiguration {
             RateLimiter rateLimiter
     ) {
         return new DefaultBoundaryRateLimitPolicyProvider(properties.getRateLimit(), rateLimitKeyResolver, rateLimiter);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(BoundaryRateLimitPolicyProvider.class)
+    public BoundaryRateLimitPolicyProvider disabledBoundaryRateLimitPolicyProvider() {
+        return new BoundaryRateLimitPolicyProvider() {
+            @Override
+            public io.github.jho951.platform.security.api.SecurityPolicy resolve(
+                    io.github.jho951.platform.security.policy.SecurityBoundary boundary
+            ) {
+                return disabledPolicy();
+            }
+
+            @Override
+            public io.github.jho951.platform.security.api.SecurityPolicy resolve(
+                    io.github.jho951.platform.security.policy.SecurityBoundary boundary,
+                    io.github.jho951.platform.security.api.ResolvedSecurityProfile profile
+            ) {
+                return disabledPolicy();
+            }
+
+            private io.github.jho951.platform.security.api.SecurityPolicy disabledPolicy() {
+                return new io.github.jho951.platform.security.api.SecurityPolicy() {
+                    @Override
+                    public String name() {
+                        return "rate-limiter";
+                    }
+
+                    @Override
+                    public io.github.jho951.platform.security.api.SecurityVerdict evaluate(
+                            io.github.jho951.platform.security.api.SecurityRequest request,
+                            SecurityContext context
+                    ) {
+                        return io.github.jho951.platform.security.api.SecurityVerdict.allow(name(), "rate limit disabled; no RateLimiter bean");
+                    }
+                };
+            }
+        };
     }
 
     @Bean
@@ -270,6 +297,7 @@ public class PlatformSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(HybridAuthenticationProvider.class)
+    @ConditionalOnBean({TokenService.class, SessionStore.class, SessionPrincipalMapper.class})
     public HybridAuthenticationProvider authHybridAuthenticationProvider(
             TokenService tokenService,
             SessionStore sessionStore,
@@ -282,54 +310,29 @@ public class PlatformSecurityAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean(TokenService.class)
-    public TokenService platformSecurityTokenService(PlatformSecurityProperties properties) {
-        PlatformSecurityProperties.AuthProperties auth = properties.getAuth();
-        return new JwtTokenService(
-                auth.getJwtSecret(),
-                auth.getAccessTokenTtl().toSeconds(),
-                auth.getRefreshTokenTtl().toSeconds()
-        );
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(SessionStore.class)
-    public SessionStore platformSecuritySessionStore() {
-        return new SimpleSessionStore();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(SessionPrincipalMapper.class)
-    public SessionPrincipalMapper platformSecuritySessionPrincipalMapper() {
-        return new IdentitySessionPrincipalMapper();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(InternalTokenClaimsValidator.class)
-    public InternalTokenClaimsValidator internalTokenClaimsValidator() {
-        return InternalTokenClaimsValidator.allowAll();
-    }
-
-    @Bean
     @ConditionalOnMissingBean(name = "jwtAuthenticationCapability")
+    @ConditionalOnBean(HybridAuthenticationProvider.class)
     public AuthenticationCapability jwtAuthenticationCapability(HybridAuthenticationProvider authHybridAuthenticationProvider) {
         return new DefaultJwtAuthenticationCapability(authHybridAuthenticationProvider);
     }
 
     @Bean
     @ConditionalOnMissingBean(name = "sessionAuthenticationCapability")
+    @ConditionalOnBean(HybridAuthenticationProvider.class)
     public AuthenticationCapability sessionAuthenticationCapability(HybridAuthenticationProvider authHybridAuthenticationProvider) {
         return new DefaultSessionAuthenticationCapability(authHybridAuthenticationProvider);
     }
 
     @Bean
     @ConditionalOnMissingBean(name = "hybridAuthenticationCapability")
+    @ConditionalOnBean(HybridAuthenticationProvider.class)
     public AuthenticationCapability hybridAuthenticationCapability(HybridAuthenticationProvider authHybridAuthenticationProvider) {
         return new DefaultHybridAuthenticationCapability(authHybridAuthenticationProvider);
     }
 
     @Bean
     @ConditionalOnMissingBean(name = "internalAuthenticationCapability")
+    @ConditionalOnBean({HybridAuthenticationProvider.class, InternalTokenClaimsValidator.class})
     public AuthenticationCapability internalAuthenticationCapability(
             HybridAuthenticationProvider authHybridAuthenticationProvider,
             InternalTokenClaimsValidator internalTokenClaimsValidator
@@ -416,47 +419,27 @@ public class PlatformSecurityAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean(TokenIssuanceCapability.class)
-    public TokenIssuanceCapability tokenIssuanceCapability(TokenService tokenService) {
-        return new DefaultTokenIssuanceCapability(tokenService);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(SessionIssuanceCapability.class)
-    public SessionIssuanceCapability sessionIssuanceCapability(SessionStore sessionStore) {
-        return new DefaultSessionIssuanceCapability(sessionStore);
-    }
-
-    @Bean
     @ConditionalOnMissingBean(AuthenticationCapabilityResolver.class)
     public AuthenticationCapabilityResolver authenticationCapabilityResolver(
-            @org.springframework.beans.factory.annotation.Qualifier("jwtAuthenticationCapability") AuthenticationCapability jwtAuthenticationCapability,
-            @org.springframework.beans.factory.annotation.Qualifier("sessionAuthenticationCapability") AuthenticationCapability sessionAuthenticationCapability,
-            @org.springframework.beans.factory.annotation.Qualifier("hybridAuthenticationCapability") AuthenticationCapability hybridAuthenticationCapability,
-            @org.springframework.beans.factory.annotation.Qualifier("internalAuthenticationCapability") AuthenticationCapability internalAuthenticationCapability,
+            @org.springframework.beans.factory.annotation.Qualifier("jwtAuthenticationCapability") ObjectProvider<AuthenticationCapability> jwtAuthenticationCapability,
+            @org.springframework.beans.factory.annotation.Qualifier("sessionAuthenticationCapability") ObjectProvider<AuthenticationCapability> sessionAuthenticationCapability,
+            @org.springframework.beans.factory.annotation.Qualifier("hybridAuthenticationCapability") ObjectProvider<AuthenticationCapability> hybridAuthenticationCapability,
+            @org.springframework.beans.factory.annotation.Qualifier("internalAuthenticationCapability") ObjectProvider<AuthenticationCapability> internalAuthenticationCapability,
             @org.springframework.beans.factory.annotation.Qualifier("apiKeyAuthenticationCapability") ObjectProvider<AuthenticationCapability> apiKeyAuthenticationCapability,
             @org.springframework.beans.factory.annotation.Qualifier("hmacAuthenticationCapability") ObjectProvider<AuthenticationCapability> hmacAuthenticationCapability,
             @org.springframework.beans.factory.annotation.Qualifier("oidcAuthenticationCapability") ObjectProvider<AuthenticationCapability> oidcAuthenticationCapability,
             @org.springframework.beans.factory.annotation.Qualifier("serviceAccountAuthenticationCapability") ObjectProvider<AuthenticationCapability> serviceAccountAuthenticationCapability
     ) {
         return new DefaultAuthenticationCapabilityResolver(
-                jwtAuthenticationCapability,
-                sessionAuthenticationCapability,
-                hybridAuthenticationCapability,
-                internalAuthenticationCapability,
+                jwtAuthenticationCapability.getIfAvailable(),
+                sessionAuthenticationCapability.getIfAvailable(),
+                hybridAuthenticationCapability.getIfAvailable(),
+                internalAuthenticationCapability.getIfAvailable(),
                 apiKeyAuthenticationCapability.getIfAvailable(),
                 hmacAuthenticationCapability.getIfAvailable(),
                 oidcAuthenticationCapability.getIfAvailable(),
                 serviceAccountAuthenticationCapability.getIfAvailable()
         );
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(SecurityContextResolver.class)
-    @ConditionalOnProperty(prefix = "platform.security.auth", name = "enabled", havingValue = "true", matchIfMissing = true)
-    @ConditionalOnProperty(prefix = "platform.security.auth.dev-fallback", name = "enabled", havingValue = "true")
-    public SecurityContextResolver devFallbackSecurityContextResolver() {
-        return PlatformSecurityContextResolvers.devFallback();
     }
 
     @Bean
@@ -483,10 +466,13 @@ public class PlatformSecurityAutoConfiguration {
             enforcer.enforce(
                     properties,
                     resolverProvider.getIfAvailable() != null,
-                    applicationContext.containsBean("platformSecurityTokenService"),
-                    applicationContext.containsBean("platformSecuritySessionStore"),
+                    applicationContext.containsBean("platformSecurityLocalTokenService"),
+                    applicationContext.containsBean("platformSecurityLocalSessionStore"),
+                    !applicationContext.getBeansOfType(RateLimiter.class).isEmpty(),
+                    !applicationContext.getBeansOfType(com.auth.spi.TokenService.class).isEmpty(),
+                    !applicationContext.getBeansOfType(com.auth.session.SessionStore.class).isEmpty(),
                     hasBeanOfType(applicationContext, RateLimiter.class, InMemoryRateLimiter.class),
-                    hasAllowAllInternalTokenClaimsValidator(applicationContext),
+                    applicationContext.containsBean("platformSecurityLocalInternalTokenClaimsValidator"),
                     environment.getActiveProfiles()
             );
             if (resolverProvider.getIfAvailable() == null) {
@@ -497,11 +483,6 @@ public class PlatformSecurityAutoConfiguration {
                 );
             }
         };
-    }
-
-    private static boolean hasAllowAllInternalTokenClaimsValidator(ApplicationContext applicationContext) {
-        return applicationContext.getBeansOfType(InternalTokenClaimsValidator.class).values().stream()
-                .anyMatch(InternalTokenClaimsValidator::isAllowAll);
     }
 
     private static <T> boolean hasBeanOfType(
@@ -522,7 +503,8 @@ public class PlatformSecurityAutoConfiguration {
             SecurityContextResolver securityContextResolver,
             SecurityIngressRequestFactory securityIngressRequestFactory,
             SecurityDownstreamIdentityPropagator downstreamIdentityPropagator,
-            SecurityAuditPublisher securityAuditPublisher
+            SecurityAuditPublisher securityAuditPublisher,
+            SecurityFailureResponseWriter failureResponseWriter
     ) {
         return new PlatformSecurityServletFilter(
                 securityIngressAdapter,
@@ -530,7 +512,8 @@ public class PlatformSecurityAutoConfiguration {
                 Clock.systemUTC(),
                 securityIngressRequestFactory,
                 downstreamIdentityPropagator,
-                securityAuditPublisher
+                securityAuditPublisher,
+                failureResponseWriter
         );
     }
 
@@ -543,7 +526,8 @@ public class PlatformSecurityAutoConfiguration {
             SecurityContextResolver securityContextResolver,
             SecurityIngressRequestFactory securityIngressRequestFactory,
             SecurityDownstreamIdentityPropagator downstreamIdentityPropagator,
-            SecurityAuditPublisher securityAuditPublisher
+            SecurityAuditPublisher securityAuditPublisher,
+            ReactiveSecurityFailureResponseWriter failureResponseWriter
     ) {
         return new PlatformSecurityWebFilter(
                 securityIngressAdapter,
@@ -551,7 +535,8 @@ public class PlatformSecurityAutoConfiguration {
                 Clock.systemUTC(),
                 securityIngressRequestFactory,
                 downstreamIdentityPropagator,
-                securityAuditPublisher
+                securityAuditPublisher,
+                failureResponseWriter
         );
     }
 
@@ -565,6 +550,20 @@ public class PlatformSecurityAutoConfiguration {
     @ConditionalOnMissingBean
     public SecurityAuditPublisher securityAuditPublisher() {
         return SecurityAuditPublisher.noop();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnClass(name = "jakarta.servlet.http.HttpServletResponse")
+    public SecurityFailureResponseWriter securityFailureResponseWriter() {
+        return SecurityFailureResponseWriter.json();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnClass(name = "org.springframework.web.server.ServerWebExchange")
+    public ReactiveSecurityFailureResponseWriter reactiveSecurityFailureResponseWriter() {
+        return ReactiveSecurityFailureResponseWriter.json();
     }
 
     @Bean

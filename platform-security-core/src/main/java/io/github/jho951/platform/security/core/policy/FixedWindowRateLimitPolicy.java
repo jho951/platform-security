@@ -4,7 +4,6 @@ import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityPolicy;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.api.SecurityVerdict;
-import io.github.jho951.platform.security.core.limiter.InMemoryRateLimiter;
 import io.github.jho951.platform.security.policy.SecurityAttributes;
 import io.github.jho951.ratelimiter.core.RateLimitDecision;
 import io.github.jho951.ratelimiter.core.RateLimitKey;
@@ -12,26 +11,20 @@ import io.github.jho951.ratelimiter.core.RateLimitKeyType;
 import io.github.jho951.ratelimiter.core.RateLimitPlan;
 import io.github.jho951.ratelimiter.spi.RateLimiter;
 
-import java.time.Clock;
 import java.time.Duration;
 import java.util.Objects;
 
 /**
  * 고정 window quota를 적용하는 단순 rate limit policy다.
  *
- * <p>운영에서는 auto-configuration이 공유 {@link RateLimiter} bean을 주입해야 한다.
- * 기본 생성자의 in-memory limiter는 local/test 또는 단독 unit test 용도다.</p>
+ * <p>운영과 local/test 모두 호출자가 명시적으로 {@link RateLimiter}를 주입해야 한다.</p>
  */
-public final class FixedWindowRateLimitPolicy implements SecurityPolicy {
+final class FixedWindowRateLimitPolicy implements SecurityPolicy {
     private final int limit;
     private final Duration window;
     private final RateLimiter rateLimiter;
 
-    public FixedWindowRateLimitPolicy(int limit, Duration window) {
-        this(limit, window, new InMemoryRateLimiter(Clock.systemUTC()));
-    }
-
-    public FixedWindowRateLimitPolicy(int limit, Duration window, RateLimiter rateLimiter) {
+    FixedWindowRateLimitPolicy(int limit, Duration window, RateLimiter rateLimiter) {
         this.limit = limit;
         this.window = Objects.requireNonNull(window, "window");
         this.rateLimiter = Objects.requireNonNull(rateLimiter, "rateLimiter");

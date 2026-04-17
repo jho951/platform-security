@@ -1,16 +1,7 @@
 package io.github.jho951.platform.security.auth;
 
 import com.auth.api.model.Principal;
-import com.auth.hybrid.DefaultHybridAuthenticationProvider;
-import com.auth.hybrid.HybridAuthenticationContext;
 import com.auth.hybrid.HybridAuthenticationProvider;
-import com.auth.session.DefaultSessionAuthenticationProvider;
-import com.auth.session.IdentitySessionPrincipalMapper;
-import com.auth.session.SessionPrincipalMapper;
-import com.auth.session.SessionStore;
-import com.auth.session.SimpleSessionStore;
-import com.auth.spi.TokenService;
-import com.auth.support.jwt.JwtTokenService;
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
 import io.github.jho951.platform.security.api.SecurityRequest;
@@ -68,26 +59,6 @@ public final class PlatformAuthenticationFacade implements SecurityContextResolv
     private final AuthenticationCapabilityResolver capabilityResolver;
 
     /**
-     * local/dev fallback 설정으로 facade를 만든다.
-     *
-     * <p>운영 서비스는 명시적으로 provider나 resolver를 주입해야 한다.</p>
-     */
-    public PlatformAuthenticationFacade() {
-        this("platform-security-dev-secret-platform-security-dev-secret", 1800L, 1209600L);
-    }
-
-    /**
-     * JWT 기반 local fallback resolver를 포함한 facade를 만든다.
-     *
-     * @param jwtSecret local fallback JWT secret
-     * @param accessTokenTtlSeconds access token TTL 초 단위
-     * @param refreshTokenTtlSeconds refresh token TTL 초 단위
-     */
-    public PlatformAuthenticationFacade(String jwtSecret, long accessTokenTtlSeconds, long refreshTokenTtlSeconds) {
-        this(createDefaultResolver(jwtSecret, accessTokenTtlSeconds, refreshTokenTtlSeconds));
-    }
-
-    /**
      * 서비스가 구성한 capability resolver로 facade를 만든다.
      *
      * @param capabilityResolver auth mode를 capability로 연결하는 resolver
@@ -97,16 +68,20 @@ public final class PlatformAuthenticationFacade implements SecurityContextResolv
     }
 
     /**
-     * hybrid provider 하나로 JWT/session/hybrid/internal capability를 구성한다.
+     * hybrid provider와 internal claim validator로 JWT/session/hybrid/internal capability를 구성한다.
      *
      * @param hybridAuthenticationProvider token/session 검증 provider
+     * @param internalTokenClaimsValidator internal token claim 추가 검증 hook
      */
-    public PlatformAuthenticationFacade(HybridAuthenticationProvider hybridAuthenticationProvider) {
+    public PlatformAuthenticationFacade(
+            HybridAuthenticationProvider hybridAuthenticationProvider,
+            InternalTokenClaimsValidator internalTokenClaimsValidator
+    ) {
         this(new DefaultAuthenticationCapabilityResolver(
                 new DefaultJwtAuthenticationCapability(hybridAuthenticationProvider),
                 new DefaultSessionAuthenticationCapability(hybridAuthenticationProvider),
                 new DefaultHybridAuthenticationCapability(hybridAuthenticationProvider),
-                new DefaultInternalServiceAuthenticationCapability(hybridAuthenticationProvider)
+                new DefaultInternalServiceAuthenticationCapability(hybridAuthenticationProvider, internalTokenClaimsValidator)
         ));
     }
 
@@ -130,26 +105,6 @@ public final class PlatformAuthenticationFacade implements SecurityContextResolv
         attributes.remove(ROLES_ATTRIBUTE);
         removeCredentialAttributes(attributes);
         return new SecurityContext(authenticated, subject, roles, attributes);
-    }
-
-    private static AuthenticationCapabilityResolver createDefaultResolver(
-            String jwtSecret,
-            long accessTokenTtlSeconds,
-            long refreshTokenTtlSeconds
-    ) {
-        TokenService tokenService = new JwtTokenService(jwtSecret, accessTokenTtlSeconds, refreshTokenTtlSeconds);
-        SessionStore sessionStore = new SimpleSessionStore();
-        SessionPrincipalMapper mapper = new IdentitySessionPrincipalMapper();
-        HybridAuthenticationProvider hybridAuthenticationProvider = new DefaultHybridAuthenticationProvider(
-                tokenService,
-                new DefaultSessionAuthenticationProvider(sessionStore, mapper)
-        );
-        return new DefaultAuthenticationCapabilityResolver(
-                new DefaultJwtAuthenticationCapability(hybridAuthenticationProvider),
-                new DefaultSessionAuthenticationCapability(hybridAuthenticationProvider),
-                new DefaultHybridAuthenticationCapability(hybridAuthenticationProvider),
-                new DefaultInternalServiceAuthenticationCapability(hybridAuthenticationProvider)
-        );
     }
 
     private AuthMode resolveAuthMode(Map<String, String> attributes) {
@@ -185,7 +140,7 @@ public final class PlatformAuthenticationFacade implements SecurityContextResolv
         if (trimToNull(attributes.get(OIDC_ID_TOKEN_ATTRIBUTE)) != null) {
             return AuthMode.OIDC;
         }
-        if (Boolean.parseBoolean(attributes.getOrDefault(INTERNAL_TOKEN_ATTRIBUTE, "false"))) {
+        if (trimToNull(attributes.get(INTERNAL_TOKEN_ATTRIBUTE)) != null) {
             return AuthMode.HYBRID;
         }
         return AuthMode.NONE;
@@ -202,7 +157,7 @@ public final class PlatformAuthenticationFacade implements SecurityContextResolv
         if (boundary != null && "INTERNAL".equalsIgnoreCase(boundary)) {
             return true;
         }
-        if (Boolean.parseBoolean(attributes.getOrDefault(INTERNAL_TOKEN_ATTRIBUTE, "false"))) {
+        if (trimToNull(attributes.get(INTERNAL_TOKEN_ATTRIBUTE)) != null) {
             return true;
         }
         return authMode == AuthMode.HYBRID && "true".equalsIgnoreCase(attributes.getOrDefault("auth.internal", "false"));

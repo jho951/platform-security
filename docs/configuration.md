@@ -1,27 +1,32 @@
 # Configuration
 
-## 최상위 설정
+## 기본 설정
 
-| Property | 기본값 | 설명 |
+이 설정은 3계층 서비스의 `application.yml`에 넣는다.  
+`platform-security`를 사용할지, 그리고 운영 안전검사를 언제 적용할지 정한다.
+
+| 설정 | 기본값 | 쉬운 설명 |
 | --- | --- | --- |
-| `enabled` | `true` | platform-security 자동 구성을 켠다. |
-| `service-role-preset` | `GENERAL` | 일반 starter를 쓸 때 역할 preset을 직접 지정한다. |
-| `operational-policy.enabled` | `true` | 운영정책 검사를 켠다. |
-| `operational-policy.production` | `false` | profile과 무관하게 운영정책 검사를 강제한다. |
-| `operational-policy.production-profiles` | `prod` | 운영 profile 이름 목록이다. |
+| `enabled` | `true` | 이 서비스에서 `platform-security`를 사용할지 정한다. |
+| `service-role-preset` | `GENERAL` | 일반 starter를 쓸 때 이 서비스를 edge/issuer/resource-server/internal-service 중 무엇으로 볼지 정한다. 역할별 starter를 쓰면 보통 직접 설정하지 않는다. |
+| `operational-policy.enabled` | `true` | 위험한 운영 설정을 애플리케이션 시작 시점에 막는 검사를 켠다. |
+| `operational-policy.production` | `false` | 현재 Spring profile과 상관없이 이 서비스를 운영처럼 검사한다. CI나 staging에서 운영 수준 검사를 강제로 걸 때 쓴다. |
+| `operational-policy.production-profiles` | `prod`, `production`, `live` | 이 Spring profile로 뜨면 운영으로 보고 강하게 검사한다. |
+| `local-support.enabled` | `false` | local/test용 기본 token/session/rate-limit bean을 명시적으로 켠다. 운영에서는 쓰지 않는다. |
 
-## 서비스 역할 preset
 
-역할별 starter를 쓰면 preset이 자동 선택된다. 이 preset은 서비스의 주 역할(primary role)을 의미한다.
+## 서비스 역할
 
-| Starter | Preset |
+보통은 starter 하나를 고르면 역할이 자동으로 정해진다.
+
+| Starter | 역할 |
 | --- | --- |
-| `platform-security-edge-starter` | `EDGE` |
-| `platform-security-issuer-starter` | `ISSUER` |
-| `platform-security-resource-server-starter` | `RESOURCE_SERVER` |
-| `platform-security-internal-service-starter` | `INTERNAL_SERVICE` |
+| `platform-security-edge-starter` | 외부 요청이 처음 들어오는 서비스 |
+| `platform-security-issuer-starter` | token/session을 발급하는 서비스 |
+| `platform-security-resource-server-starter` | 일반 API를 제공하는 서비스 |
+| `platform-security-internal-service-starter` | 내부 호출 전용 서비스 |
 
-일반 starter를 쓰는 경우:
+일반 starter를 쓰면 역할을 직접 적는다.
 
 ```yaml
 platform:
@@ -29,20 +34,39 @@ platform:
     service-role-preset: resource-server
 ```
 
-Preset은 공통 boundary 골격과 auth mode 기본값만 제공한다. public path, route limit, 서비스별 boundary refinement는 3계층 설정이나 `PlatformSecurityCustomizer`가 제공한다.
+한 서비스에는 starter를 하나만 쓴다.  
+예를 들어 issuer 역할 서비스에 internal API가 있어도 `issuer-starter` 하나만 쓰고, internal API는 `boundary.internal-paths`에 추가한다.
 
-서비스가 여러 endpoint 성격을 동시에 가져도 preset은 하나만 선택한다. 예를 들어 token/session issuer인 auth-server가 internal API도 제공하면 preset은 `ISSUER`로 두고, internal API는 `boundary.internal-paths`에 추가한다.
+issuer 역할의 운영 서비스는 `TokenService`와 `SessionStore`를 직접 제공해야 한다.  
+`platform-security`는 발급 흐름만 연결하고, 운영 token/session 저장소는 3계층이 소유한다.
 
 ## Boundary
 
-| Property | 기본값 | 설명 |
-| --- | --- | --- |
-| `boundary.public-paths` | `[]` | 인증 없이 접근 가능한 path pattern |
-| `boundary.protected-paths` | `[]` | 일반 보호 path pattern |
-| `boundary.admin-paths` | `[]` | admin path pattern |
-| `boundary.internal-paths` | `[]` | internal path pattern |
+boundary는 URL path별 보안 구역이다.  
+예를 들어 `/health`는 로그인 없이 열고, `/api/**`는 로그인 확인을 하고, `/admin/**`는 관리자 요청으로 보고, `/internal/**`는 내부 서비스 요청으로 본다.
 
-기본 resolver는 설정값 외에도 다음 fallback pattern을 안다.
+```text
+PUBLIC
+-> 로그인 없이 접근 가능
+
+PROTECTED
+-> 로그인 필요
+
+ADMIN
+-> 관리자 요청
+
+INTERNAL
+-> 내부 서비스 요청
+```
+
+| 설정 | 기본값 | 쉬운 설명 |
+| --- | --- | --- |
+| `boundary.public-paths` | `[]` | 로그인 없이 열어둘 path |
+| `boundary.protected-paths` | `[]` | 일반 로그인 보호 path |
+| `boundary.admin-paths` | `[]` | 관리자 path |
+| `boundary.internal-paths` | `[]` | 내부 서비스 path |
+
+기본으로 알고 있는 path:
 
 | Pattern | Boundary |
 | --- | --- |
@@ -54,72 +78,81 @@ Preset은 공통 boundary 골격과 auth mode 기본값만 제공한다. public 
 
 ## Auth
 
-| Property | 기본값 | 설명 |
-| --- | --- | --- |
-| `auth.enabled` | `true` | 인증 정책을 켠다. |
-| `auth.default-mode` | `HYBRID` | credential이 명확하지 않을 때 기본 auth mode |
-| `auth.allow-session-for-browser` | `true` | browser client의 session 허용 |
-| `auth.allow-bearer-for-api` | `true` | API client의 bearer/JWT 허용 |
-| `auth.allow-api-key-for-api` | `true` | API key credential 허용 |
-| `auth.allow-hmac-for-api` | `true` | HMAC credential 허용 |
-| `auth.allow-oidc-for-api` | `true` | OIDC ID token credential 허용 |
-| `auth.service-account-enabled` | `true` | service account credential 허용 |
-| `auth.internal-token-enabled` | `true` | internal token 허용 |
-| `auth.dev-fallback.enabled` | `false` | local/test용 fallback resolver opt-in |
-| `auth.jwt-secret` | dev default | local/test fallback `JwtTokenService`가 쓸 JWT secret |
-| `auth.access-token-ttl` | `30m` | access token TTL |
-| `auth.refresh-token-ttl` | `14d` | refresh token TTL |
+인증 관련 설정이다.
 
-운영에서 `auth.enabled=true`이면 `SecurityContextResolver` bean이 반드시 필요하다.
+| 설정 | 기본값 | 쉬운 설명 |
+| --- | --- | --- |
+| `auth.enabled` | `true` | 인증 검사를 켠다. |
+| `auth.default-mode` | `HYBRID` | token/session이 섞여 있을 때 기본 처리 방식 |
+| `auth.allow-session-for-browser` | `true` | 브라우저 요청에서 session 허용 |
+| `auth.allow-bearer-for-api` | `true` | API 요청에서 Bearer/JWT 허용 |
+| `auth.allow-api-key-for-api` | `true` | API key 허용 |
+| `auth.allow-hmac-for-api` | `true` | HMAC 서명 허용 |
+| `auth.allow-oidc-for-api` | `true` | OIDC ID token 허용 |
+| `auth.service-account-enabled` | `true` | service account 허용 |
+| `auth.internal-token-enabled` | `true` | internal token 허용 |
+| `auth.dev-fallback.enabled` | `false` | local/test용 임시 사용자 확인 기능 사용 |
+| `auth.jwt-secret` | dev default | local/test용 JWT secret |
+| `auth.access-token-ttl` | `30m` | access token 유효 시간 |
+| `auth.refresh-token-ttl` | `14d` | refresh token 유효 시간 |
+
+`dev-fallback`은 테스트용 기본 사용자 확인 기능이다. 운영에서는 쓰지 않는다.
+
+운영에서 `auth.enabled=true`이면 `SecurityContextResolver` bean이 반드시 필요하다.  
+쉽게 말하면 “현재 요청의 사용자가 누구인지 찾는 코드”를 서비스가 제공해야 한다.
 
 ## OIDC
 
-OIDC token 검증은 2계층 책임이 아니다. 3계층이 `OidcTokenVerifier` bean을 제공하면 2계층이 capability를 연결한다.
+OIDC token 자체 검증은 3계층이 `OidcTokenVerifier` bean으로 제공한다.  
+`platform-security`는 그 verifier를 공통 인증 흐름에 연결한다.
 
-| Property | 기본값 | 설명 |
+| 설정 | 기본값 | 쉬운 설명 |
 | --- | --- | --- |
-| `auth.oidc.principal-claim` | `sub` | principal claim |
-| `auth.oidc.authorities-claim` | `roles` | authority claim |
-| `auth.oidc.authority-prefix` | `""` | authority prefix |
-| `auth.oidc.default-authorities` | `[]` | claim이 없을 때 기본 authority |
+| `auth.oidc.principal-claim` | `sub` | 사용자 id로 볼 claim |
+| `auth.oidc.authorities-claim` | `roles` | 권한 목록으로 볼 claim |
+| `auth.oidc.authority-prefix` | `""` | 권한 앞에 붙일 prefix |
+| `auth.oidc.default-authorities` | `[]` | claim이 없을 때 기본 권한 |
 
 ## IP Guard
 
-| Property | 기본값 | 설명 |
-| --- | --- | --- |
-| `ip-guard.enabled` | `true` | IP guard를 켠다. |
-| `ip-guard.trust-proxy` | `true` | proxy header 기반 client IP 해석을 허용한다. |
-| `ip-guard.trusted-proxy-cidrs` | `[]` | `X-Forwarded-For`를 신뢰할 proxy CIDR |
-| `ip-guard.admin.source` | `INLINE` | admin boundary IP rule source |
-| `ip-guard.admin.rules` | `[]` | `INLINE` source admin boundary allow CIDR |
-| `ip-guard.admin.location` | `""` | `FILE` source location |
-| `ip-guard.admin.policy-key` | `""` | `POLICY_CONFIG` source key |
-| `ip-guard.internal.source` | `INLINE` | internal boundary IP rule source |
-| `ip-guard.internal.rules` | `[]` | `INLINE` source internal boundary allow CIDR |
-| `ip-guard.internal.location` | `""` | `FILE` source location |
-| `ip-guard.internal.policy-key` | `""` | `POLICY_CONFIG` source key |
+IP guard는 admin/internal 요청을 허용된 IP에서만 받도록 제한하는 기능이다.
 
-운영정책이 켜진 운영 환경에서는 admin/internal IP rule이 비어 있으면 기동 실패한다. `trust-proxy=true`이면 `trusted-proxy-cidrs`도 필요하다.
+| 설정 | 기본값 | 쉬운 설명 |
+| --- | --- | --- |
+| `ip-guard.enabled` | `true` | IP 제한을 켠다. |
+| `ip-guard.trust-proxy` | `true` | proxy가 넘긴 client IP를 사용할지 여부 |
+| `ip-guard.trusted-proxy-cidrs` | `[]` | 믿을 수 있는 proxy IP 대역 |
+| `ip-guard.admin.source` | `INLINE` | admin IP rule을 어디서 읽을지 |
+| `ip-guard.admin.rules` | `[]` | admin 허용 CIDR 목록 |
+| `ip-guard.admin.location` | `""` | 파일에서 읽을 때 위치 |
+| `ip-guard.admin.policy-key` | `""` | 정책 config에서 읽을 때 key |
+| `ip-guard.internal.source` | `INLINE` | internal IP rule을 어디서 읽을지 |
+| `ip-guard.internal.rules` | `[]` | internal 허용 CIDR 목록 |
+| `ip-guard.internal.location` | `""` | 파일에서 읽을 때 위치 |
+| `ip-guard.internal.policy-key` | `""` | 정책 config에서 읽을 때 key |
+
+운영에서는 admin/internal IP rule이 비어 있으면 시작하지 않는다.  
+`trust-proxy=true`이면 `trusted-proxy-cidrs`도 운영에서 필요하다.
 
 ## Rate Limit
 
-| Property | 기본값 | 설명 |
+rate limit은 요청 횟수를 제한하는 기능이다.
+
+| 설정 | 기본값 | 쉬운 설명 |
 | --- | --- | --- |
-| `rate-limit.enabled` | `true` | rate limit을 켠다. |
-| `rate-limit.anonymous.requests` | `100` | anonymous quota |
-| `rate-limit.anonymous.window-seconds` | `60` | anonymous window |
-| `rate-limit.authenticated.requests` | `100` | authenticated quota |
-| `rate-limit.authenticated.window-seconds` | `60` | authenticated window |
-| `rate-limit.internal.requests` | `100` | internal quota |
-| `rate-limit.internal.window-seconds` | `60` | internal window |
-| `rate-limit.routes[].name` | `route` | route profile 이름 |
-| `rate-limit.routes[].patterns` | `[]` | route path pattern |
-| `rate-limit.routes[].requests` | `100` | route quota |
-| `rate-limit.routes[].window-seconds` | `60` | route window |
+| `rate-limit.enabled` | `true` | 요청 제한을 켠다. |
+| `rate-limit.anonymous.requests` | `100` | 로그인 안 한 사용자 제한 횟수 |
+| `rate-limit.anonymous.window-seconds` | `60` | 제한 시간 구간 |
+| `rate-limit.authenticated.requests` | `100` | 로그인 사용자 제한 횟수 |
+| `rate-limit.authenticated.window-seconds` | `60` | 제한 시간 구간 |
+| `rate-limit.internal.requests` | `100` | 내부 서비스 요청 제한 횟수 |
+| `rate-limit.internal.window-seconds` | `60` | 제한 시간 구간 |
+| `rate-limit.routes[].name` | `route` | route별 제한 이름 |
+| `rate-limit.routes[].patterns` | `[]` | 적용할 path |
+| `rate-limit.routes[].requests` | `100` | route별 제한 횟수 |
+| `rate-limit.routes[].window-seconds` | `60` | 제한 시간 구간 |
 
-Route profile은 boundary profile보다 먼저 선택된다. 따라서 `PUBLIC` endpoint도 `rate-limit.routes[]`에 매칭되면 rate limit이 적용된다.
-
-예:
+로그인처럼 public이지만 제한이 필요한 endpoint는 route limit을 추가한다.
 
 ```yaml
 platform:
@@ -134,30 +167,34 @@ platform:
           window-seconds: 60
 ```
 
-## 운영정책
+## 운영 안전검사
 
-운영정책은 다음 중 하나면 실행된다.
+아래 중 하나면 운영으로 보고 강하게 검사한다.
 
-- active profile이 `prod`
-- `platform.security.operational-policy.production=true`
+```text
+active Spring profile이 prod / production / live
+platform.security.operational-policy.production=true
+```
 
-운영정책 위반 조건:
+운영에서 막는 것:
 
-- `auth.enabled=false`
-- `auth.default-mode=NONE`
-- `auth.dev-fallback.enabled=true`
-- `SecurityContextResolver` bean 없음
-- 플랫폼 기본 `TokenService` 사용
-- 플랫폼 기본 `SimpleSessionStore` 사용
-- 플랫폼 기본 internal token allow-all validator 사용
+```text
+- 인증 꺼짐
+- 인증 기본 모드가 NONE
+- local/test용 기본 사용자 확인 기능 켜짐
+- 현재 사용자 확인 코드 없음
+- 개발용 TokenService 사용
+- 개발용 SessionStore 사용
+- local InternalTokenClaimsValidator 사용
 - dev JWT secret 사용
-- `ip-guard.enabled=false`
-- `ip-guard.trust-proxy=true`이면서 `trusted-proxy-cidrs` 비어 있음
-- admin/internal IP rule 비어 있음
-- `rate-limit.enabled=false`
-- in-memory `RateLimiter` 사용
-- anonymous/authenticated/internal/route quota가 0 이하
-- route rate limit pattern 비어 있음
+- IP guard 꺼짐
+- trusted proxy CIDR 없음
+- admin/internal IP rule 없음
+- rate limit 꺼짐
+- 메모리 기반 RateLimiter 사용
+- quota가 0 이하
+- route limit에 path 없음
+```
 
 ## 최소 운영 예시
 

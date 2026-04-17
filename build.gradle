@@ -6,6 +6,7 @@ ext {
     authVersion = findProperty('auth_version')
     ipGuardVersion = findProperty('ipGuard_version')
     rateLimiterVersion = findProperty('rateLimiter_version')
+    governanceVersion = findProperty('governance_version')
     platformReleaseVersion = findProperty('release_version')
 }
 
@@ -15,6 +16,18 @@ allprojects {
 
     repositories {
         mavenCentral()
+        def githubPackagesUsername = rootProject.findProperty('githubPackagesUsername') ?: System.getenv('GITHUB_ACTOR')
+        def githubPackagesToken = rootProject.findProperty('githubPackagesToken') ?: System.getenv('GITHUB_TOKEN')
+        if (githubPackagesUsername && githubPackagesToken) {
+            maven {
+                name = 'GitHubPlatformGovernance'
+                url = uri(rootProject.findProperty('githubGovernancePackagesUrl') ?: 'https://maven.pkg.github.com/jho951/platform-governance')
+                credentials {
+                    username = githubPackagesUsername
+                    password = githubPackagesToken
+                }
+            }
+        }
     }
 }
 

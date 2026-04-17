@@ -3,13 +3,10 @@ package io.github.jho951.platform.security.auth;
 import com.auth.hybrid.DefaultHybridAuthenticationProvider;
 import com.auth.hybrid.HybridAuthenticationProvider;
 import com.auth.session.DefaultSessionAuthenticationProvider;
-import com.auth.session.IdentitySessionPrincipalMapper;
 import com.auth.session.SessionPrincipalMapper;
 import com.auth.session.SessionStore;
-import com.auth.session.SimpleSessionStore;
 import com.auth.spi.OAuth2PrincipalResolver;
 import com.auth.spi.TokenService;
-import com.auth.support.jwt.JwtTokenService;
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
 import io.github.jho951.platform.security.api.SecurityRequest;
@@ -21,24 +18,12 @@ import java.util.Set;
 /**
  * 공통 authentication resolver와 issuance capability를 만드는 factory다.
  *
- * <p>소비 서비스가 auth 1계층 provider를 직접 조립하지 않도록 돕는다. 단, 이
+ * <p>소비 서비스가 auth 1계층 OSS를 platform 흐름으로 연결하도록 돕는다. 단, 이
  * 클래스는 조립 helper일 뿐이다. 서비스별 로그인 성공 조건, OAuth2 provider flow,
  * 도메인 권한 판단은 소비 서비스에 남는다.</p>
  */
 public final class PlatformSecurityContextResolvers {
     private PlatformSecurityContextResolvers() {
-    }
-
-    /**
-     * local/dev fallback facade를 반환한다.
-     *
-     * <p>운영에서는 서비스가 구성한 token service, session store, provider를 명시적으로
-     * 주입해야 한다.</p>
-     *
-     * @return local/dev fallback security context resolver
-     */
-    public static SecurityContextResolver devFallback() {
-        return new PlatformAuthenticationFacade();
     }
 
     /**
@@ -54,7 +39,7 @@ public final class PlatformSecurityContextResolvers {
     }
 
     /**
-     * auth 1계층 service로 hybrid JWT/session context resolver를 만든다.
+     * auth 1계층 service로 JWT/session context resolver를 만든다.
      *
      * @param tokenService access token 검증을 담당하는 1계층 token service
      * @param sessionStore session 조회를 담당하는 1계층 session store
@@ -76,13 +61,33 @@ public final class PlatformSecurityContextResolvers {
     }
 
     /**
-     * hybrid provider를 platform authentication facade로 감싼다.
+     * hybrid provider를 JWT/session/hybrid 전용 platform authentication facade로 감싼다.
      *
      * @param hybridAuthenticationProvider 서비스가 구성한 hybrid provider
      * @return platform authentication facade
      */
     public static SecurityContextResolver from(HybridAuthenticationProvider hybridAuthenticationProvider) {
-        return new PlatformAuthenticationFacade(hybridAuthenticationProvider);
+        Objects.requireNonNull(hybridAuthenticationProvider, "hybridAuthenticationProvider");
+        return new PlatformAuthenticationFacade(new DefaultAuthenticationCapabilityResolver(
+                new DefaultJwtAuthenticationCapability(hybridAuthenticationProvider),
+                new DefaultSessionAuthenticationCapability(hybridAuthenticationProvider),
+                new DefaultHybridAuthenticationCapability(hybridAuthenticationProvider),
+                null
+        ));
+    }
+
+    /**
+     * hybrid provider와 internal claim validator를 platform authentication facade로 감싼다.
+     *
+     * @param hybridAuthenticationProvider 서비스가 구성한 hybrid provider
+     * @param internalTokenClaimsValidator internal token claim 추가 검증 hook
+     * @return internal capability까지 포함한 platform authentication facade
+     */
+    public static SecurityContextResolver from(
+            HybridAuthenticationProvider hybridAuthenticationProvider,
+            InternalTokenClaimsValidator internalTokenClaimsValidator
+    ) {
+        return new PlatformAuthenticationFacade(hybridAuthenticationProvider, internalTokenClaimsValidator);
     }
 
     /**
@@ -105,23 +110,6 @@ public final class PlatformSecurityContextResolvers {
                 tokenService,
                 new DefaultSessionAuthenticationProvider(sessionStore, sessionPrincipalMapper)
         );
-    }
-
-    /**
-     * in-memory session storage를 쓰는 local fallback hybrid provider를 만든다.
-     * local/test 경로에서만 사용한다.
-     *
-     * @param jwtSecret local fallback JWT secret
-     * @param accessTokenTtlSeconds access token TTL 초 단위
-     * @param refreshTokenTtlSeconds refresh token TTL 초 단위
-     * @return local/test 용도 hybrid provider
-     */
-    public static HybridAuthenticationProvider defaultHybridAuthenticationProvider(String jwtSecret, long accessTokenTtlSeconds, long refreshTokenTtlSeconds) {
-        Objects.requireNonNull(jwtSecret, "jwtSecret");
-        TokenService tokenService = new JwtTokenService(jwtSecret, accessTokenTtlSeconds, refreshTokenTtlSeconds);
-        SessionStore sessionStore = new SimpleSessionStore();
-        SessionPrincipalMapper sessionPrincipalMapper = new IdentitySessionPrincipalMapper();
-        return hybridAuthenticationProvider(tokenService, sessionStore, sessionPrincipalMapper);
     }
 
     /**

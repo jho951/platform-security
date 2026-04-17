@@ -1,47 +1,71 @@
 # Private Publish And Consumption
 
 `platform-security`는 private GitHub Packages로 배포한다.
-1계층 OSS는 공개 Maven Central artifact이고, 2계층 `platform-security`는 내부 서비스용 private package다.
-
-## Publish 대상
-
-배포 대상:
-
-- `platform-security-bom`
-- `platform-security-policy`
-- `platform-security-auth`
-- `platform-security-ip`
-- `platform-security-rate-limit`
-- `platform-security-web`
-- `platform-security-autoconfigure`
-- `platform-security-starter`
-- `platform-security-edge-starter`
-- `platform-security-issuer-starter`
-- `platform-security-resource-server-starter`
-- `platform-security-internal-service-starter`
-- `platform-security-test-support`
-- 내부 지원 모듈: `platform-security-api`, `platform-security-core`
-
-배포 제외:
-
-- `platform-security-sample-consumer`
-
-## GitHub Actions publish
-
-publish workflow는 `v*` tag push 또는 수동 dispatch로 실행된다.
-
-```bash
-git tag v1.0.5
-git push origin v1.0.5
-```
-
-workflow는 tag에서 version을 계산한다.
 
 ```text
-v1.0.5 -> release_version=1.0.5
+1계층 auth/ip/rate-limiter OSS
+-> 공개 Maven Central artifact
+
+2계층 platform-security
+-> 1계층 OSS를 소비해서 조립한 내부 서비스용 private GitHub Packages
 ```
 
-필수 workflow 권한:
+## 배포하는 것
+
+3계층 서비스가 소비하거나 starter가 내부에서 쓰는 모듈을 배포한다.
+
+```text
+platform-security-bom
+platform-security-starter
+platform-security-edge-starter
+platform-security-issuer-starter
+platform-security-resource-server-starter
+platform-security-internal-service-starter
+platform-security-client
+platform-security-local-support
+platform-security-test-support
+platform-security-governance-bridge
+platform-security-policyconfig-bridge
+
+platform-security-policy
+platform-security-api
+platform-security-core
+platform-security-auth
+platform-security-ip
+platform-security-rate-limit
+platform-security-web
+platform-security-autoconfigure
+platform-security-issuer-autoconfigure
+platform-security-internal-autoconfigure
+platform-policy-api
+```
+
+`platform-security-policyconfig-bridge`는 `platform-policy-api`의 `PolicyConfigSource`만 소비한다.  
+governance가 정책을 관리하더라도 security bridge가 governance 관리 API를 직접 보지 않는다.
+
+배포하지 않는 것:
+
+```text
+platform-security-sample-consumer
+```
+
+## GitHub Actions 배포
+
+tag를 push하면 publish workflow가 돈다.
+
+```bash
+git tag v1.0.6
+git push origin v1.0.6
+```
+
+version은 tag에서 계산한다.
+
+```text
+v1.0.6
+-> release_version=1.0.6
+```
+
+workflow 권한:
 
 ```yaml
 permissions:
@@ -49,14 +73,7 @@ permissions:
   packages: write
 ```
 
-현재 publish workflow는 repository 기본 `GITHUB_TOKEN`을 사용한다.
-
-```text
-GITHUB_ACTOR=${{ github.actor }}
-GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-```
-
-현재 publish command 형태:
+publish command:
 
 ```bash
 ./gradlew clean test publish \
@@ -66,16 +83,16 @@ GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
   -PgithubPackagesToken="${GITHUB_TOKEN}"
 ```
 
-## 로컬 publish
+## 로컬 배포
 
-로컬에서 publish해야 하면 PAT가 필요하다.
+로컬에서 배포하려면 `write:packages` 권한이 있는 PAT가 필요하다.
 
 ```bash
 export GITHUB_ACTOR=jho951
 export GITHUB_TOKEN=<write:packages 권한이 있는 PAT>
 
 ./gradlew clean test publish \
-  -Prelease_version=1.0.5 \
+  -Prelease_version=1.0.6 \
   -PgithubPackagesUrl=https://maven.pkg.github.com/jho951/platform-security \
   -PgithubPackagesUsername="$GITHUB_ACTOR" \
   -PgithubPackagesToken="$GITHUB_TOKEN"
@@ -83,13 +100,15 @@ export GITHUB_TOKEN=<write:packages 권한이 있는 PAT>
 
 권장 PAT 권한:
 
-- `write:packages`
-- `read:packages`
-- private repo 접근이 필요한 경우 `repo`
+```text
+write:packages
+read:packages
+repo          # private repo 접근이 필요할 때
+```
 
-## Consumer 설정
+## 소비 서비스 설정
 
-private package를 소비하는 서비스는 GitHub Packages repository와 credential이 필요하다.
+3계층 서비스는 GitHub Packages repository와 credential을 설정한다.
 
 ```gradle
 repositories {
@@ -108,31 +127,23 @@ dependency:
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:1.0.5")
+    implementation platform("io.github.jho951.platform:platform-security-bom:1.0.6")
     implementation "io.github.jho951.platform:platform-security-resource-server-starter"
 }
 ```
 
-## Consumer CI secrets
+## 소비 서비스 CI
 
-소비 서비스 repo에는 PAT secret을 두는 편이 안전하다.
+다른 repo에서 private package를 읽을 때 기본 `secrets.GITHUB_TOKEN`으로 실패할 수 있다.  
+그 경우 `read:packages`와 repo 접근 권한이 있는 PAT를 secret으로 둔다.
 
-Repository settings:
-
-```text
-Settings
--> Secrets and variables
--> Actions
--> New repository secret
-```
-
-권장 이름:
+권장 secret 이름:
 
 ```text
 GH_PACKAGES_TOKEN
 ```
 
-workflow:
+workflow 예:
 
 ```yaml
 env:
@@ -140,43 +151,18 @@ env:
   GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 ```
 
-cross-repo private package consumption은 기본 `secrets.GITHUB_TOKEN`으로 실패할 수 있다.
-그 경우 `read:packages`와 repo 접근 권한이 있는 PAT를 사용한다.
-
 ## 자주 나는 오류
 
-### 401 Unauthorized
+| 오류 | 확인할 것 |
+| --- | --- |
+| `401 Unauthorized` | token이 비었는지, `read:packages` 권한이 있는지 |
+| `403 Forbidden` | package 또는 private repo 접근 권한이 있는지 |
+| `Could not find artifact` | version이 publish됐는지, repository URL이 맞는지 |
 
-원인:
-
-- `GITHUB_TOKEN`이 비어 있음
-- PAT에 `read:packages`가 없음
-- private repo/package 접근 권한이 없음
-
-확인:
+확인 명령:
 
 ```bash
 echo "$GITHUB_ACTOR"
 test -n "$GITHUB_TOKEN" && echo "token exists"
-```
-
-### 403 Forbidden
-
-원인:
-
-- token은 있지만 package 권한이 부족함
-- 다른 repo에서 private package를 읽는데 PAT에 `repo` 권한이 없음
-
-### Could not find artifact
-
-원인:
-
-- version이 publish되지 않음
-- GitHub Packages repository URL이 틀림
-- BOM version이 publish되지 않았거나 starter artifact가 같은 version으로 publish되지 않음
-
-확인:
-
-```bash
 ./gradlew dependencyInsight --dependency platform-security-resource-server-starter
 ```

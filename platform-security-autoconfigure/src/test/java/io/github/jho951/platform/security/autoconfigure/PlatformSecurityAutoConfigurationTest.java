@@ -19,6 +19,7 @@ import com.auth.api.model.Principal;
 import com.auth.session.SessionStore;
 import com.auth.spi.TokenService;
 import io.github.jho951.platform.security.auth.InternalTokenClaimsValidator;
+import io.github.jho951.platform.security.local.PlatformSecurityLocalSupportAutoConfiguration;
 import io.github.jho951.ratelimiter.core.RateLimitDecision;
 import io.github.jho951.ratelimiter.spi.RateLimiter;
 
@@ -38,12 +39,19 @@ class PlatformSecurityAutoConfigurationTest {
                     ConfigurationPropertiesAutoConfiguration.class,
                     PlatformSecurityAutoConfiguration.class
             ));
+    private final ApplicationContextRunner localContextRunner = new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(
+                    ConfigurationPropertiesAutoConfiguration.class,
+                    PlatformSecurityLocalSupportAutoConfiguration.class,
+                    PlatformSecurityAutoConfiguration.class
+            ));
 
     @Test
     void registersBeansAndBindsPropertiesWithDevFallbackEnabled() {
-        contextRunner
+        localContextRunner
                 .withPropertyValues(
                         "platform.security.enabled=true",
+                        "platform.security.local-support.enabled=true",
                         "platform.security.auth.dev-fallback.enabled=true",
                         "platform.security.ip-guard.trust-proxy=false",
                         "platform.security.auth.allow-session-for-browser=false",
@@ -69,7 +77,7 @@ class PlatformSecurityAutoConfigurationTest {
 
     @Test
     void failsFastWhenSecurityContextResolverIsMissing() {
-        contextRunner
+        localContextRunner
                 .withPropertyValues("platform.security.enabled=true")
                 .run(context -> {
                     assertNotNull(context.getStartupFailure());
@@ -79,8 +87,9 @@ class PlatformSecurityAutoConfigurationTest {
 
     @Test
     void failsFastWhenProductionPolicyIsViolated() {
-        contextRunner
+        localContextRunner
                 .withPropertyValues(
+                        "platform.security.local-support.enabled=true",
                         "spring.profiles.active=prod",
                         "platform.security.auth.dev-fallback.enabled=true"
                 )
@@ -93,9 +102,10 @@ class PlatformSecurityAutoConfigurationTest {
 
     @Test
     void failsFastWhenProductionUsesPlatformLocalFallbackBeans() {
-        contextRunner
+        localContextRunner
                 .withBean(SecurityContextResolver.class, () -> request -> new SecurityContext(true, "prod-user", Set.of("USER"), Map.of()))
                 .withPropertyValues(
+                        "platform.security.local-support.enabled=true",
                         "spring.profiles.active=prod",
                         "platform.security.auth.jwt-secret=prod-secret-prod-secret-prod-secret-prod-secret",
                         "platform.security.ip-guard.trusted-proxy-cidrs[0]=10.0.0.0/8",
@@ -113,8 +123,30 @@ class PlatformSecurityAutoConfigurationTest {
     }
 
     @Test
-    void acceptsProductionPolicyWhenRequiredInputsAreProvided() {
+    void failsFastWhenProductionIssuerDoesNotProvideTokenOrSessionStores() {
         contextRunner
+                .withBean(SecurityContextResolver.class, () -> request -> new SecurityContext(true, "issuer", Set.of("USER"), Map.of()))
+                .withBean(RateLimiter.class, () -> (key, permits, plan) -> RateLimitDecision.allow(plan.getCapacity()))
+                .withBean(InternalTokenClaimsValidator.class, () -> (principal, request) -> principal != null)
+                .withPropertyValues(
+                        "spring.profiles.active=prod",
+                        "platform.security.service-role-preset=issuer",
+                        "platform.security.auth.jwt-secret=prod-secret-prod-secret-prod-secret-prod-secret",
+                        "platform.security.ip-guard.trusted-proxy-cidrs[0]=10.0.0.0/8",
+                        "platform.security.ip-guard.admin.rules[0]=10.0.0.0/8",
+                        "platform.security.ip-guard.internal.rules[0]=10.0.0.0/8"
+                )
+                .run(context -> {
+                    assertNotNull(context.getStartupFailure());
+                    String message = context.getStartupFailure().getMessage();
+                    assertTrue(message.contains("issuer services must provide a production TokenService bean"));
+                    assertTrue(message.contains("issuer services with browser session support must provide a production SessionStore bean"));
+                });
+    }
+
+    @Test
+    void acceptsProductionPolicyWhenRequiredInputsAreProvided() {
+        localContextRunner
                 .withBean(SecurityContextResolver.class, () -> request -> new SecurityContext(true, "prod-user", Set.of("USER"), Map.of()))
                 .withBean(RateLimiter.class, () -> (key, permits, plan) -> RateLimitDecision.allow(plan.getCapacity()))
                 .withBean(SessionStore.class, InMemorySessionStore::new)
@@ -228,8 +260,9 @@ class PlatformSecurityAutoConfigurationTest {
 
     @Test
     void customizerAppliesToBoundProperties() {
-        contextRunner
+        localContextRunner
                 .withBean(PlatformSecurityCustomizer.class, () -> properties -> properties.getIpGuard().setTrustProxy(false))
+                .withPropertyValues("platform.security.local-support.enabled=true")
                 .withPropertyValues("platform.security.auth.dev-fallback.enabled=true")
                 .withPropertyValues("platform.security.ip-guard.trust-proxy=true")
                 .run(context -> {

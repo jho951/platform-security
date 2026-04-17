@@ -2,6 +2,8 @@ package io.github.jho951.platform.security.web;
 
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
+import io.github.jho951.platform.security.api.SecurityAuditEvent;
+import io.github.jho951.platform.security.api.SecurityAuditPublisher;
 import io.github.jho951.platform.security.api.SecurityEvaluationResult;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
@@ -32,6 +34,7 @@ public final class PlatformSecurityServletFilter implements Filter {
     private final SecurityIngressRequestFactory requestFactory;
     private final SecurityDownstreamIdentityPropagator downstreamIdentityPropagator;
     private final SecurityAuditPublisher auditPublisher;
+    private final SecurityFailureResponseWriter failureResponseWriter;
 
     public PlatformSecurityServletFilter(
             SecurityIngressAdapter securityIngressAdapter,
@@ -63,6 +66,7 @@ public final class PlatformSecurityServletFilter implements Filter {
         this.requestFactory = Objects.requireNonNull(requestFactory, "requestFactory");
         this.downstreamIdentityPropagator = new SecurityDownstreamIdentityPropagator();
         this.auditPublisher = SecurityAuditPublisher.noop();
+        this.failureResponseWriter = SecurityFailureResponseWriter.json();
     }
 
     public PlatformSecurityServletFilter(
@@ -73,12 +77,33 @@ public final class PlatformSecurityServletFilter implements Filter {
             SecurityDownstreamIdentityPropagator downstreamIdentityPropagator,
             SecurityAuditPublisher auditPublisher
     ) {
+        this(
+                securityIngressAdapter,
+                securityContextResolver,
+                clock,
+                requestFactory,
+                downstreamIdentityPropagator,
+                auditPublisher,
+                SecurityFailureResponseWriter.json()
+        );
+    }
+
+    public PlatformSecurityServletFilter(
+            SecurityIngressAdapter securityIngressAdapter,
+            SecurityContextResolver securityContextResolver,
+            Clock clock,
+            SecurityIngressRequestFactory requestFactory,
+            SecurityDownstreamIdentityPropagator downstreamIdentityPropagator,
+            SecurityAuditPublisher auditPublisher,
+            SecurityFailureResponseWriter failureResponseWriter
+    ) {
         this.securityIngressAdapter = Objects.requireNonNull(securityIngressAdapter, "securityIngressAdapter");
         this.securityContextResolver = Objects.requireNonNull(securityContextResolver, "securityContextResolver");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.requestFactory = Objects.requireNonNull(requestFactory, "requestFactory");
         this.downstreamIdentityPropagator = Objects.requireNonNull(downstreamIdentityPropagator, "downstreamIdentityPropagator");
         this.auditPublisher = Objects.requireNonNull(auditPublisher, "auditPublisher");
+        this.failureResponseWriter = Objects.requireNonNull(failureResponseWriter, "failureResponseWriter");
     }
 
     @Override
@@ -94,15 +119,13 @@ public final class PlatformSecurityServletFilter implements Filter {
             return;
         }
 
-        SecurityRequest securityRequest = requestFactory.fromServlet(httpRequest, clock);
+        SecurityRequest securityRequest = securityIngressAdapter.withResolvedBoundary(requestFactory.fromServlet(httpRequest, clock));
         SecurityContext securityContext = securityContextResolver.resolve(securityRequest);
         SecurityEvaluationResult evaluationResult = securityIngressAdapter.evaluateResult(securityRequest, securityContext);
-        auditPublisher.publish(evaluationResult);
+        auditPublisher.publish(SecurityAuditEvent.from(evaluationResult));
         SecurityFailureResponse failure = SecurityFailureResponse.from(evaluationResult.verdict());
         if (failure.status() != 200) {
-            httpResponse.setStatus(failure.status());
-            httpResponse.setContentType("application/json");
-            httpResponse.getWriter().write("{\"code\":\"" + failure.code() + "\",\"message\":\"" + Objects.toString(failure.message(), "") + "\"}");
+            failureResponseWriter.write(httpRequest, httpResponse, failure);
             return;
         }
         httpRequest.setAttribute(

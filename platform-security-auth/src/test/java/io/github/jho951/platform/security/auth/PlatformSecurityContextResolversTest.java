@@ -20,11 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PlatformSecurityContextResolversTest {
     @Test
-    void devFallbackResolverIsAvailable() {
-        assertNotNull(PlatformSecurityContextResolvers.devFallback());
-    }
-
-    @Test
     void anonymousResolverProducesAnonymousContext() {
         var resolver = PlatformSecurityContextResolvers.anonymous();
         var context = resolver.resolve(new SecurityRequest(

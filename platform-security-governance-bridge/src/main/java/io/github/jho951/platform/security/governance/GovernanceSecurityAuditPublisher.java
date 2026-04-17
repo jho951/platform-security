@@ -2,13 +2,10 @@ package io.github.jho951.platform.security.governance;
 
 import io.github.jho951.platform.governance.api.AuditEntry;
 import io.github.jho951.platform.governance.api.AuditLogRecorder;
-import io.github.jho951.platform.security.api.ResolvedSecurityProfile;
-import io.github.jho951.platform.security.api.SecurityEvaluationResult;
-import io.github.jho951.platform.security.api.SecurityRequest;
-import io.github.jho951.platform.security.web.SecurityAuditPublisher;
+import io.github.jho951.platform.security.api.SecurityAuditEvent;
+import io.github.jho951.platform.security.api.SecurityAuditMode;
+import io.github.jho951.platform.security.api.SecurityAuditPublisher;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -19,37 +16,28 @@ import java.util.Objects;
  */
 public final class GovernanceSecurityAuditPublisher implements SecurityAuditPublisher {
     private final AuditLogRecorder auditLogRecorder;
+    private final SecurityAuditMode auditMode;
 
     public GovernanceSecurityAuditPublisher(AuditLogRecorder auditLogRecorder) {
+        this(auditLogRecorder, SecurityAuditMode.DENY_AND_ADMIN);
+    }
+
+    public GovernanceSecurityAuditPublisher(AuditLogRecorder auditLogRecorder, SecurityAuditMode auditMode) {
         this.auditLogRecorder = Objects.requireNonNull(auditLogRecorder, "auditLogRecorder");
+        this.auditMode = auditMode == null ? SecurityAuditMode.DENY_AND_ADMIN : auditMode;
     }
 
     @Override
-    public void publish(SecurityEvaluationResult evaluationResult) {
-        Objects.requireNonNull(evaluationResult, "evaluationResult");
-        SecurityRequest request = evaluationResult.evaluationContext().request();
-        ResolvedSecurityProfile profile = evaluationResult.evaluationContext().profile();
-        Map<String, String> attributes = new LinkedHashMap<>();
-        attributes.put("security.allowed", Boolean.toString(evaluationResult.verdict().allowed()));
-        attributes.put("security.policy", evaluationResult.verdict().policy());
-        if (evaluationResult.verdict().reason() != null) {
-            attributes.put("security.reason", evaluationResult.verdict().reason());
-        }
-        attributes.put("security.boundary", profile.boundaryType());
-        attributes.put("security.client-type", profile.clientType());
-        attributes.put("security.auth-mode", profile.authMode());
-        attributes.put("security.path", request.path());
-        attributes.put("security.action", request.action());
-        attributes.put("security.client-ip", request.clientIp());
-        String principal = evaluationResult.evaluationContext().securityContext().principal();
-        if (principal != null && !principal.isBlank()) {
-            attributes.put("security.principal", principal);
+    public void publish(SecurityAuditEvent event) {
+        Objects.requireNonNull(event, "event");
+        if (!auditMode.shouldPublish(event)) {
+            return;
         }
         auditLogRecorder.record(new AuditEntry(
                 "security",
                 "security evaluated",
-                attributes,
-                request.occurredAt()
+                event.attributes(),
+                event.occurredAt()
         ));
     }
 }

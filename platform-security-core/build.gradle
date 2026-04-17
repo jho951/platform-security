@@ -1,10 +1,10 @@
 dependencies {
     api project(':platform-security-api')
     api project(':platform-security-policy')
-    api "io.github.jho951:ip-guard-core:${rootProject.ipGuardVersion}"
-    api "io.github.jho951:ip-guard-spi:${rootProject.ipGuardVersion}"
-    api "io.github.jho951:rate-limiter-core:${rootProject.rateLimiterVersion}"
-    api "io.github.jho951:rate-limiter-spi:${rootProject.rateLimiterVersion}"
+    implementation "io.github.jho951:ip-guard-core:${rootProject.ipGuardVersion}"
+    implementation "io.github.jho951:ip-guard-spi:${rootProject.ipGuardVersion}"
+    implementation "io.github.jho951:rate-limiter-core:${rootProject.rateLimiterVersion}"
+    implementation "io.github.jho951:rate-limiter-spi:${rootProject.rateLimiterVersion}"
 
     testImplementation project(':platform-security-web')
     testImplementation project(':platform-security-ip')

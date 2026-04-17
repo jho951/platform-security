@@ -16,11 +16,13 @@ class SecurityIdentityScrubberTest {
                 "x-security-token", "secret",
                 "X-Auth-User", "user-1",
                 "X-Auth-Session-Id", "session-1",
+                "X-Auth-Internal-Token", "internal-token-1",
                 "x-request-id", "req-1"
         ));
 
         assertNull(sanitized.get("X-Auth-User"));
         assertEquals("session-1", sanitized.get("X-Auth-Session-Id"));
+        assertEquals("internal-token-1", sanitized.get("X-Auth-Internal-Token"));
         assertEquals("req-1", sanitized.get("x-request-id"));
     }
 }

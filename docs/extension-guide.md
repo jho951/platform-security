@@ -1,82 +1,121 @@
 # Extension Guide
 
-## 추가 가능
+이 문서는 3계층 서비스가 `platform-security`에 자기 서비스 차이를 연결하는 방법을 설명한다.
 
-- 새로운 boundary rule
-- 새로운 security profile
-- 새로운 auth policy / ip policy / rate-limit policy
-- 새로운 identity propagation strategy
-- 새로운 audit publisher
-- 새로운 failure response writer
-- 새로운 HTTP / Servlet adapter
-- OAuth2 principal bridge
-- token/session issuance capability
-- internal token claims validator
-- boundary/clientType/authMode profile-aware resolver/provider override
-- `properties`, `customizer`, `override bean` 기반 확장
+핵심은 간단하다.
 
-## 서비스가 공급하는 것
+```text
+2계층은 공통 흐름을 제공한다.
+3계층은 서비스마다 다른 판단을 bean이나 설정으로 제공한다.
+```
 
-- boundary pattern
-- profile 값
-- trusted proxy 목록
-- rate-limit key 전략
-- downstream 전달 방식
-- 운영용 `SecurityContextResolver`
-- 운영용 `TokenService`, `SessionStore`, `SessionPrincipalMapper`
+## 가장 자주 바꾸는 것
 
-## 운영용 인증 확장
+| 바꾸는 것 | 언제 필요한가 |
+| --- | --- |
+| `SecurityContextResolver` | 현재 요청의 사용자를 우리 서비스 방식으로 찾아야 할 때 |
+| `InternalTokenClaimsValidator` | internal token의 issuer/audience/service id를 검증해야 할 때 |
+| `RateLimiter` | 운영에서 Redis 같은 공유 저장소로 요청 횟수를 세야 할 때 |
+| `RateLimitKeyResolver` | rate limit 기준을 IP가 아니라 user id 등으로 바꾸고 싶을 때 |
+| `ClientIpResolver` | 특수한 proxy 환경에서 client IP 계산을 바꾸고 싶을 때 |
+| `SecurityAuditPublisher` | 보안 판단 기록을 별도 저장소에 남기고 싶을 때 |
+| `SecurityFailureResponseWriter` | Servlet 실패 응답 body를 서비스 표준에 맞추고 싶을 때 |
+| `ReactiveSecurityFailureResponseWriter` | WebFlux 실패 응답 body를 서비스 표준에 맞추고 싶을 때 |
 
-운영 서비스는 dev fallback을 사용하지 않고 `SecurityContextResolver`를 명시적으로 제공한다.
+## 현재 사용자 연결
+
+운영 서비스는 `SecurityContextResolver`를 제공한다.  
+쉽게 말하면 “이 요청의 사용자가 누구인지 2계층에 알려주는 코드”다.
 
 ```java
 @Bean
-SecurityContextResolver securityContextResolver(
-        TokenService tokenService,
-        SessionStore sessionStore,
-        SessionPrincipalMapper sessionPrincipalMapper
-) {
-    return PlatformSecurityContextResolvers.hybrid(tokenService, sessionStore, sessionPrincipalMapper);
+SecurityContextResolver securityContextResolver(CurrentUserResolver currentUserResolver) {
+    return request -> {
+        CurrentUser user = currentUserResolver.resolve(request);
+        if (user == null) {
+            return new SecurityContext(false, null, Set.of(), request.attributes());
+        }
+        return new SecurityContext(true, user.id(), user.roles(), request.attributes());
+    };
 }
 ```
 
-JWT-only 서비스는 `SecurityContextResolver`를 직접 구현하거나, `AuthenticationCapabilityResolver`를 mode별로 교체한다.
-세션/HYBRID 서비스는 공유 세션 저장소를 `com.auth.session.SessionStore`로 어댑팅한다.
+local/test에서만 기본 사용자 확인 코드를 쓸 수 있다. 운영에서는 직접 제공해야 한다.
 
-## 주요 override point
+## 1계층 OSS Bean 제공 기준
 
-- `SecurityContextResolver`
-- `SecurityBoundaryResolver`
-- `ClientTypeResolver`
-- `AuthenticationModeResolver`
-- `ClientIpResolver`
-- `BoundaryIpPolicyProvider`
-- `BoundaryRateLimitPolicyProvider`
-- `RateLimitKeyResolver`
-- `PlatformPrincipalFactory`
-- `PlatformSecurityCustomizer`
-- `OAuth2PrincipalBridge`
-- `TokenIssuanceCapability`
-- `SessionIssuanceCapability`
-- `InternalTokenClaimsValidator`
-- `SecurityDownstreamIdentityPropagator`
-- `SecurityAuditPublisher`
-- `ApiKeyPrincipalResolver`
-- `HmacSecretResolver`
-- `HmacSignatureVerifier`
-- `HmacPrincipalResolver`
-- `OidcTokenVerifier`
-- `OidcPrincipalMapper`
-- `ServiceAccountVerifier`
+3계층이 1계층 OSS 구현 bean을 제공하는 것은 허용한다.
 
-## Auth 3.0.1 capability
+```text
+허용:
+- TokenService
+- SessionStore
+- OidcTokenVerifier
+- ApiKeyPrincipalResolver
+- HmacSecretResolver
+- HmacSignatureVerifier
+- ServiceAccountVerifier
+- RateLimiter
+```
 
-API key, HMAC, OIDC, service account 인증은 1계층 auth provider를 감싸는 capability로 제공한다.
-2계층은 credential 위치, mode 선택, provider 조립, 기본 OIDC principal mapping만 표준화한다.
-실제 key 조회, signature 검증, ID token 검증, service account 검증은 1계층 구현 또는 3계층 서비스가 bean으로 공급한다.
+하지만 `platform-security` 내부 실행 흐름을 직접 조립하면 안 된다.
 
-OIDC를 API 인증 수단으로 소비하는 3계층은 최소 `OidcTokenVerifier`만 제공하면 된다.
-`OidcPrincipalMapper`는 기본 bean이 등록되며, 도메인 권한/tenant 매핑이 필요할 때만 override한다.
+```text
+금지:
+- PlatformAuthenticationFacade 직접 new
+- DefaultAuthenticationCapabilityResolver 직접 new
+- filter 순서 직접 재구성
+- auth/ip/rate-limit 흐름을 서비스마다 제각각 구성
+```
+
+## Internal Token 검증
+
+내부 호출용 token은 “서명 검증”만으로 끝내면 부족할 수 있다.  
+서비스마다 issuer, audience, service id, environment 조건이 다르기 때문이다.
+
+그 차이는 `InternalTokenClaimsValidator`로 제공한다.
+
+```java
+@Bean
+InternalTokenClaimsValidator internalTokenClaimsValidator() {
+    return (principal, request) ->
+            "billing-service".equals(principal.getAttribute("aud"));
+}
+```
+
+## Rate Limit Key 변경
+
+기본 요청 제한 기준을 바꾸고 싶으면 `RateLimitKeyResolver`를 제공한다.
+
+```java
+@Bean
+RateLimitKeyResolver rateLimitKeyResolver() {
+    return (request, context, profile) -> {
+        if (context.authenticated()) {
+            return "user:" + context.principal();
+        }
+        return "ip:" + request.clientIp();
+    };
+}
+```
+
+운영에서는 여러 서버가 같은 횟수를 보도록 공유 `RateLimiter`를 제공한다.
+
+```java
+@Bean
+RateLimiter rateLimiter(RedisClient redisClient) {
+    return new RedisBackedRateLimiter(redisClient);
+}
+```
+
+`RedisBackedRateLimiter`는 예시 이름이다. 실제 Redis 기반 구현은 3계층이나 별도 공통 모듈에서 제공한다.
+
+## OIDC / API Key / HMAC / Service Account
+
+2계층은 인증값을 어디서 읽고 어떤 흐름에 연결할지 표준화한다.  
+실제 key 조회, signature 검증, OIDC token 검증은 서비스나 1계층 구현이 제공한다.
+
+예:
 
 ```java
 @Bean
@@ -85,52 +124,28 @@ OidcTokenVerifier oidcTokenVerifier(ServiceOidcVerifier verifier) {
 }
 ```
 
-## OAuth2 bridge
+## Token / Session 발급
 
-OAuth2 login flow는 3계층 서비스가 가진다.
-2계층은 OAuth2 결과를 표준 auth principal로 변환하는 bridge만 제공한다.
+issuer 역할 서비스는 token/session 발급 기능을 사용할 수 있다.
 
-```java
-@Bean
-OAuth2PrincipalBridge oauth2PrincipalBridge(OAuth2PrincipalResolver resolver) {
-    return PlatformSecurityContextResolvers.oauth2Bridge(resolver);
-}
+하지만 로그인 성공 판단은 3계층 책임이다.
+
+```text
+3계층:
+password / MFA / OAuth2 callback / 계정 상태 확인
+운영 TokenService / SessionStore 제공
+
+2계층:
+발급 흐름을 표준 기능으로 연결
+
+1계층:
+실제 JWT/session 생성
 ```
 
-GitHub token exchange, user provisioning, redirect, cookie 발급은 `auth-server` 책임이다.
+## Public Endpoint Rate Limit
 
-## Token / Session issuance
-
-2계층은 1계층 `TokenService`와 `SessionStore`를 조합하는 capability를 제공한다.
-
-```java
-@Bean
-TokenIssuanceCapability tokenIssuanceCapability(TokenService tokenService) {
-    return PlatformSecurityContextResolvers.tokenIssuer(tokenService);
-}
-
-@Bean
-SessionIssuanceCapability sessionIssuanceCapability(SessionStore sessionStore) {
-    return PlatformSecurityContextResolvers.sessionIssuer(sessionStore);
-}
-```
-
-로그인 성공 조건, 계정 상태 판단, refresh rotation 같은 비즈니스는 서비스가 담당한다.
-
-## Internal token 검증
-
-내부 서비스 토큰의 audience, issuer, service-id 같은 조직별 검증은 `InternalTokenClaimsValidator`로 교체한다.
-
-```java
-@Bean
-InternalTokenClaimsValidator internalTokenClaimsValidator() {
-    return (principal, request) -> "billing-service".equals(principal.getAttribute("aud"));
-}
-```
-
-## Route rate limit
-
-PUBLIC boundary라도 로그인, refresh, OAuth2 시작점은 route profile로 별도 제한한다.
+`PUBLIC` path는 로그인 없이 열려 있다.  
+그래도 로그인, refresh, OAuth2 시작점은 공격 대상이므로 route limit을 둔다.
 
 ```yaml
 platform:
@@ -145,24 +160,87 @@ platform:
           window-seconds: 60
 ```
 
-## 추가 순서
+## 보안 판단 기록
 
-1. 내부 공통 계약과 공통 모델이 필요하면 `platform-security-policy`에 먼저 추가한다.
-2. capability 조립이 필요하면 `platform-security-auth`, `platform-security-ip`, `platform-security-rate-limit`에 넣는다.
-3. HTTP / Servlet 적응이 필요하면 `platform-security-web`에 넣는다.
-4. Spring 노출이 필요하면 `platform-security-autoconfigure`에서 조건부 빈으로 등록한다.
-5. `docs/security-model.md`와 `docs/modules.md`를 함께 갱신한다.
+보안 판단 결과를 저장하고 싶으면 `SecurityAuditPublisher`를 제공한다.
 
-## 주의점
+```java
+@Bean
+SecurityAuditPublisher securityAuditPublisher() {
+    return event -> auditStore.save(event);
+}
+```
 
-- policy와 capability 모듈에 Spring 의존성을 넣지 않는다.
-- engine은 Servlet / Spring 타입을 몰라야 한다.
-- policy는 결정 이유를 설명할 수 있어야 한다.
-- rate limit은 시간 의존성을 주입 가능하게 유지한다.
-- provider는 boundary만 보지 말고 profile-aware overload를 제공할 수 있어야 한다.
-- 서비스별 URL, Redis key, role 이름은 추가하지 않는다.
-- 1계층 OSS의 내부 구현을 여기서 다시 정의하지 않는다.
-- 2계층은 공개 라이브러리보다 내부 플랫폼이라는 기준으로 설계한다.
-- 서비스별 비즈니스 로직과 도메인 권한 판단은 추가하지 않는다.
-- dev fallback resolver를 운영 기본값으로 쓰지 않는다.
-- `SecurityContextResolver`를 등록하지 않은 운영 서비스가 뜨도록 만들지 않는다.
+governance audit과 연결하려면 `platform-security-governance-bridge`를 추가한다.  
+직접 `SecurityAuditPublisher` bean을 등록하면 bridge의 기본 저장 방식보다 우선한다.
+
+## 실패 응답 형식 변경
+
+기본 실패 응답은 아래 JSON이다.
+
+```json
+{"code":"security.auth.required","message":"..."}
+```
+
+Servlet 서비스에서 응답 포맷을 바꾸고 싶으면 `SecurityFailureResponseWriter`를 제공한다.
+
+```java
+@Bean
+SecurityFailureResponseWriter securityFailureResponseWriter(ObjectMapper objectMapper) {
+    return (request, response, failure) -> {
+        GlobalResponse<Object> body = GlobalResponse.fail(
+                failure.status(),
+                failure.message(),
+                failure.code()
+        );
+
+        response.setStatus(failure.status());
+        response.setContentType("application/json");
+        objectMapper.writeValue(response.getWriter(), body);
+    };
+}
+```
+
+WebFlux 서비스는 `ReactiveSecurityFailureResponseWriter`를 제공한다.
+
+```java
+@Bean
+ReactiveSecurityFailureResponseWriter reactiveSecurityFailureResponseWriter(ObjectMapper objectMapper) {
+    return (exchange, failure) -> {
+        GlobalResponse<Object> body = GlobalResponse.fail(
+                failure.status(),
+                failure.message(),
+                failure.code()
+        );
+
+        exchange.getResponse().setStatusCode(HttpStatus.valueOf(failure.status()));
+        byte[] bytes = objectMapper.writeValueAsBytes(body);
+        return exchange.getResponse()
+                .writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(bytes)));
+    };
+}
+```
+
+## 추가 개발 기준
+
+새 기능을 `platform-security`에 넣을 때는 아래 순서로 판단한다.
+
+```text
+1. 여러 서비스가 똑같이 써야 하는가?
+   -> 2계층 후보
+
+2. 특정 서비스의 업무 의미를 알아야 하는가?
+   -> 3계층에 둔다
+
+3. JWT 검증, IP rule 평가처럼 작은 기본 기능인가?
+   -> 1계층에 둔다
+```
+
+주의할 점:
+
+```text
+- 2계층에 특정 서비스 이름별 if문을 넣지 않는다.
+- 2계층에 password 검증, 문서 소유자 판단 같은 업무 로직을 넣지 않는다.
+- 운영에서 local/test용 기본 구현을 자동으로 쓰게 만들지 않는다.
+- Spring/Servlet 타입을 core 평가 엔진 안으로 밀어 넣지 않는다.
+```

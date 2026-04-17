@@ -12,6 +12,7 @@ javaPlatform {
 
 dependencies {
     constraints {
+        api project(':platform-policy-api')
         api project(':platform-security-api')
         api project(':platform-security-policy')
         api project(':platform-security-auth')
@@ -19,6 +20,8 @@ dependencies {
         api project(':platform-security-rate-limit')
         api project(':platform-security-web')
         api project(':platform-security-autoconfigure')
+        api project(':platform-security-issuer-autoconfigure')
+        api project(':platform-security-internal-autoconfigure')
         api project(':platform-security-policyconfig-bridge')
         api project(':platform-security-governance-bridge')
         api project(':platform-security-starter')
@@ -26,6 +29,8 @@ dependencies {
         api project(':platform-security-issuer-starter')
         api project(':platform-security-resource-server-starter')
         api project(':platform-security-internal-service-starter')
+        api project(':platform-security-local-support')
+        api project(':platform-security-client')
         api project(':platform-security-test-support')
     }
 }

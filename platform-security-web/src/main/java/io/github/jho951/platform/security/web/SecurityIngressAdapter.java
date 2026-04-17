@@ -12,6 +12,7 @@ import io.github.jho951.platform.security.api.ResolvedSecurityProfile;
 import io.github.jho951.platform.security.policy.AuthMode;
 import io.github.jho951.platform.security.policy.ClientType;
 import io.github.jho951.platform.security.policy.SecurityBoundary;
+import io.github.jho951.platform.security.policy.SecurityAttributes;
 import io.github.jho951.platform.security.policy.SecurityBoundaryResolver;
 
 import java.util.LinkedHashMap;
@@ -42,24 +43,21 @@ public final class SecurityIngressAdapter {
     }
 
     /**
+     * 인증 context 해석 전에 boundary 정보를 request attribute에 반영한다.
+     */
+    public SecurityRequest withResolvedBoundary(SecurityRequest request) {
+        Objects.requireNonNull(request, "request");
+        return withResolvedBoundary(request, boundaryResolver.resolve(request));
+    }
+
+    /**
      * 요청을 평가하고 감사에 필요한 전체 결과를 반환한다.
      */
     public SecurityEvaluationResult evaluateResult(SecurityRequest request, SecurityContext context) {
         Objects.requireNonNull(request, "request");
         Objects.requireNonNull(context, "context");
         SecurityBoundary boundary = boundaryResolver.resolve(request);
-        String resolvedPath = normalizePath(request.path());
-        Map<String, String> attributes = new LinkedHashMap<>(request.attributes());
-        attributes.put("security.boundary", boundary.type().name());
-        attributes.put("security.boundary.patterns", String.join(",", boundary.patterns()));
-        SecurityRequest normalizedRequest = new SecurityRequest(
-                request.subject(),
-                request.clientIp(),
-                resolvedPath,
-                request.action(),
-                attributes,
-                request.occurredAt()
-        );
+        SecurityRequest normalizedRequest = withResolvedBoundary(request, boundary);
         if (securityPolicyService instanceof SecurityEvaluationService evaluationService) {
             return evaluationService.evaluateResult(normalizedRequest, context);
         }
@@ -76,7 +74,8 @@ public final class SecurityIngressAdapter {
 
     public SecurityVerdict evaluate(SecurityRequest request, SecurityContextResolver contextResolver) {
         Objects.requireNonNull(contextResolver, "contextResolver");
-        return evaluate(request, contextResolver.resolve(request));
+        SecurityRequest normalizedRequest = withResolvedBoundary(request);
+        return evaluate(normalizedRequest, contextResolver.resolve(normalizedRequest));
     }
 
     public SecurityFailureResponse evaluateFailureResponse(
@@ -84,7 +83,23 @@ public final class SecurityIngressAdapter {
             SecurityContextResolver contextResolver
     ) {
         Objects.requireNonNull(contextResolver, "contextResolver");
-        return evaluateFailureResponse(request, contextResolver.resolve(request));
+        SecurityRequest normalizedRequest = withResolvedBoundary(request);
+        return evaluateFailureResponse(normalizedRequest, contextResolver.resolve(normalizedRequest));
+    }
+
+    private SecurityRequest withResolvedBoundary(SecurityRequest request, SecurityBoundary boundary) {
+        String resolvedPath = normalizePath(request.path());
+        Map<String, String> attributes = new LinkedHashMap<>(request.attributes());
+        attributes.put(SecurityAttributes.BOUNDARY, boundary.type().name());
+        attributes.put(SecurityAttributes.BOUNDARY_PATTERNS, String.join(",", boundary.patterns()));
+        return new SecurityRequest(
+                request.subject(),
+                request.clientIp(),
+                resolvedPath,
+                request.action(),
+                attributes,
+                request.occurredAt()
+        );
     }
 
     private String normalizePath(String requestPath) {

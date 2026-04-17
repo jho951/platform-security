@@ -1,88 +1,174 @@
 # Security Model
 
-`platform-security`는 요청 단위로 boundary와 profile을 해석하고, 그 결과에 따라 authentication, ip-guard, rate limit을 조립해 평가한다.
+이 문서는 요청 하나가 들어왔을 때 `platform-security`가 무엇을 확인하는지 설명한다.
 
-## 런타임 모델
+## 핵심 용어
 
-- `SecurityRequest`: path, method, client IP, 인증 입력, 요청 시각을 담는다.
-- `SecurityContext`: 인증 결과와 principal, roles, attributes를 담는다.
-- `ResolvedSecurityProfile`: boundary, client type, auth mode를 담는다.
-- `SecurityEvaluationResult`: profile과 최종 verdict를 함께 반환한다.
+| 이름 | 쉬운 뜻 |
+| --- | --- |
+| `SecurityRequest` | HTTP 요청을 보안 검사용 형태로 바꾼 값 |
+| `SecurityContext` | 현재 요청의 사용자가 누구인지 담은 값 |
+| `Boundary` | 이 요청이 public/protected/admin/internal 중 어디에 속하는지 |
+| `ClientType` | 브라우저 요청인지, API 요청인지, 내부 서비스 요청인지 |
+| `AuthMode` | JWT, session, API key 같은 인증 방식 |
+| `SecurityEvaluationResult` | 최종 허용/거부 결과 |
 
-## 평가 순서
+## 요청 평가 순서
 
-1. header scrub과 client IP 해석
-2. boundary 결정
-3. client type 결정
-4. auth mode 결정
-5. profile에 따른 auth 실행
-6. profile에 따른 ip-guard 실행
-7. profile에 따른 rate limit 실행
-8. downstream identity propagation
-9. 모두 통과하면 allow
+```text
+1. HTTP 요청을 SecurityRequest로 바꾼다.
+2. 외부에서 보내면 안 되는 X-Security-* header를 제거한다.
+3. client IP를 계산한다.
+4. path를 보고 boundary를 정한다.
+5. 3계층이 제공한 SecurityContextResolver로 현재 사용자를 찾는다.
+6. 인증을 확인한다.
+7. admin/internal이면 IP rule을 확인한다.
+8. 요청 횟수 제한을 확인한다.
+9. 실패하면 401/403/429 중 하나로 응답한다.
+10. 성공하면 controller로 넘긴다.
+```
 
-## 결과
+중요한 순서:
 
-- `ALLOW`
-- `DENY`
+```text
+boundary 계산
+-> 현재 사용자 찾기
+-> 인증 / IP 제한 / 요청 횟수 제한
+```
+
+internal 요청은 boundary를 먼저 알아야 어떤 내부 인증을 쓸지 고를 수 있다.
 
 ## Boundary
 
-- `PUBLIC`: 인증 없이 접근 가능한 경계다. 기본 rate limit은 건너뛴다.
-- `PROTECTED`: 인증된 사용자 중심 경계다.
-- `ADMIN`: 관리자 경계다. IP allow CIDR 적용 대상이다.
-- `INTERNAL`: 내부 서비스 경계다. internal quota와 internal token 정책 적용 대상이다.
+boundary는 “이 path를 어떤 문으로 볼 것인가”다.
 
-## Client Type
+| Boundary | 뜻 |
+| --- | --- |
+| `PUBLIC` | 로그인 없이 열어둔 path |
+| `PROTECTED` | 로그인한 사용자만 접근하는 path |
+| `ADMIN` | 관리자용 path |
+| `INTERNAL` | 서비스끼리 호출하는 내부 path |
 
-- `BROWSER`: 세션 또는 hybrid 인증을 주로 사용한다.
-- `EXTERNAL_API`: bearer/JWT 인증을 주로 사용한다.
-- `INTERNAL_SERVICE`: 내부 서비스 인증과 internal rate limit profile을 사용한다.
-- `ADMIN_CONSOLE`: admin boundary와 함께 IP 정책을 받는다.
+예:
 
-## Auth Mode
+```yaml
+platform:
+  security:
+    boundary:
+      public-paths:
+        - /health
+      protected-paths:
+        - /api/**
+      admin-paths:
+        - /admin/**
+      internal-paths:
+        - /internal/**
+```
 
-- `NONE`: 인증 capability를 실행하지 않는다.
-- `JWT`: bearer/access token을 검증한다.
-- `SESSION`: session id를 검증한다.
-- `HYBRID`: JWT와 session을 함께 받아 조합한다.
-- `API_KEY`: API key credential을 검증한다.
-- `HMAC`: 요청 서명 credential을 검증한다.
-- `OIDC`: 3계층이 제공한 `OidcTokenVerifier`로 OIDC ID token을 검증한다.
-- `SERVICE_ACCOUNT`: service account credential을 검증한다.
+## 인증값 분류
 
-`allowSessionForBrowser`, `allowBearerForApi`, `allowApiKeyForApi`, `allowHmacForApi`, `allowOidcForApi`, `serviceAccountEnabled`, `internalTokenEnabled` 값은 auth mode 선택에 반영된다.
+2계층은 인증값을 막는 것이 아니라 정확히 분류한다.
 
-## Header Contract
+```text
+Authorization: Bearer xxx
+-> access token으로 사용
 
-`trust-proxy=true`이면 remote address가 `ip-guard.trusted-proxy-cidrs`에 포함될 때만 `X-Forwarded-For`를 client IP로 사용한다. 운영에서는 trusted proxy CIDR를 비워 두지 않는다.
+Authorization: Basic xxx
+-> access token으로 사용하지 않음
 
-인증 입력으로 허용하는 값:
+Authorization: Digest xxx
+-> access token으로 사용하지 않음
 
-- `Authorization`
-- cookie 기반 access token
-- cookie 기반 session id
-- `X-Auth-Session-Id` 같은 명시적 session 입력
-- `X-Auth-Api-Key-Id`, `X-Auth-Api-Key-Secret`
-- `X-Auth-Hmac-Key-Id`, `X-Auth-Hmac-Signature`, `X-Auth-Hmac-Timestamp`, `X-Auth-Hmac-Signed-Headers`
-- `X-Auth-Oidc-Id-Token`, `X-Auth-Oidc-Nonce`
-- `X-Auth-Service-Account-Id`, `X-Auth-Service-Account-Secret`
+X-Auth-Internal-Token: xxx
+-> internal token으로 사용
 
-ingress에서 신뢰하지 않는 downstream propagation 값:
+Session cookie
+-> session id로 사용
+```
 
-- `X-Security-*`
-- `X-Auth-Roles`
-- `X-Security-Principal`
-- `X-Security-Client-Type`
-- `X-Security-Auth-Mode`
+Basic이나 Digest를 금지한다는 뜻이 아니다.  
+Bearer token이 아닌 값을 Bearer token처럼 착각하지 않겠다는 뜻이다.
 
-## 기준
+Basic 인증을 지원해야 하는 서비스는 gateway/edge나 별도 인증 처리에서 표준 token으로 바꾼 뒤 넘기는 방식이 좋다.
 
-- 정책 실패는 401, 403, 429 중 하나로 표준화한다.
-- boundary/profile은 3계층 application이 공급한다.
-- 서비스별 URL, Redis key, role 이름은 여기서 정의하지 않는다.
-- 운영에서는 서비스가 `SecurityContextResolver`를 직접 제공한다.
-- dev fallback resolver는 local/test opt-in이다.
-- OIDC provider별 login flow와 ID token verifier 구현은 3계층 또는 1계층 구현 책임이다.
-- 운영 rate limit은 공유 `RateLimiter` bean으로 적용한다. 기본 in-memory 구현은 local/test용이며 production에서는 fail-fast 된다.
-- governance bridge를 쓰면 최종 security verdict가 governance audit entry로 기록된다.
+## Client IP
+
+proxy 뒤에 있으면 실제 client IP는 `X-Forwarded-For` 같은 header에 들어올 수 있다.
+
+하지만 아무 요청의 proxy header나 믿으면 안 된다.  
+그래서 운영에서는 `trusted-proxy-cidrs`를 설정한다.
+
+```yaml
+platform:
+  security:
+    ip-guard:
+      trust-proxy: true
+      trusted-proxy-cidrs:
+        - 10.0.0.0/8
+```
+
+뜻:
+
+```text
+10.0.0.0/8 안에 있는 proxy가 보낸 X-Forwarded-For만 믿는다.
+```
+
+## 실패 응답
+
+기본 실패 응답은 아래처럼 맞춘다.
+
+| 상황 | 응답 |
+| --- | --- |
+| 인증 실패 | `401` |
+| 권한/IP 제한 실패 | `403` |
+| 요청 횟수 초과 | `429` |
+
+이 값은 모든 서비스가 같은 방식으로 실패하도록 하는 기본값이다.  
+필요하면 3계층에서 response writer를 교체할 수 있다.
+
+```text
+Servlet
+-> SecurityFailureResponseWriter
+
+WebFlux
+-> ReactiveSecurityFailureResponseWriter
+```
+
+## 보안 판단 기록
+
+`platform-security`는 보안 판단 결과를 정리해서 `SecurityAuditEvent`로 만든다.
+
+```text
+SecurityEvaluationResult
+-> SecurityAuditEvent
+-> SecurityAuditPublisher
+```
+
+감사 기록을 어디에 저장할지는 3계층이 정한다.  
+governance와 연결하고 싶으면 bridge 모듈을 붙인다.
+
+## 내부 호출 사용자 정보
+
+요청이 허용되면 다음 서비스로 넘길 사용자 정보를 만들 수 있다.
+
+```text
+SecurityContext
+-> X-Security-* header
+-> 다음 서비스
+```
+
+3계층은 header 이름을 직접 만들지 말고 `platform-security-client`를 사용한다.
+
+신뢰 기준:
+
+```text
+외부 요청이 보낸 X-Security-* header
+-> 신뢰하지 않음
+-> platform-security filter가 제거
+
+platform-security filter가 만든 X-Security-* header
+-> 내부 호출에서만 신뢰
+
+서비스가 임의로 만든 X-Security-* header
+-> 신뢰하지 않는 것이 원칙
+```

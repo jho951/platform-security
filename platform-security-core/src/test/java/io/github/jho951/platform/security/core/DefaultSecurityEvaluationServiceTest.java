@@ -3,6 +3,7 @@ package io.github.jho951.platform.security.core;
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityEvaluationResult;
 import io.github.jho951.platform.security.api.SecurityRequest;
+import io.github.jho951.platform.security.core.limiter.InMemoryRateLimiter;
 import io.github.jho951.platform.security.policy.DefaultAuthenticationModeResolver;
 import io.github.jho951.platform.security.policy.DefaultClientTypeResolver;
 import io.github.jho951.platform.security.policy.DefaultPlatformPrincipalFactory;
@@ -15,6 +16,7 @@ import io.github.jho951.platform.security.ratelimit.DefaultRateLimitKeyResolver;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,7 +44,7 @@ class DefaultSecurityEvaluationServiceTest {
                 new DefaultClientTypeResolver(),
                 new DefaultAuthenticationModeResolver(properties.getAuth()),
                 new DefaultBoundaryIpPolicyProvider(properties.getIpGuard()),
-                new DefaultBoundaryRateLimitPolicyProvider(properties.getRateLimit(), new DefaultRateLimitKeyResolver()),
+                new DefaultBoundaryRateLimitPolicyProvider(properties.getRateLimit(), new DefaultRateLimitKeyResolver(), new InMemoryRateLimiter(Clock.systemUTC())),
                 new DefaultPlatformPrincipalFactory()
         );
 

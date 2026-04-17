@@ -42,11 +42,11 @@ public final class DefaultAuthenticationCapabilityResolver implements Authentica
             AuthenticationCapability hybridCapability,
             AuthenticationCapability internalCapability
     ) {
-        capabilities.put(AuthMode.JWT, Objects.requireNonNull(jwtCapability, "jwtCapability"));
-        capabilities.put(AuthMode.SESSION, Objects.requireNonNull(sessionCapability, "sessionCapability"));
-        capabilities.put(AuthMode.HYBRID, Objects.requireNonNull(hybridCapability, "hybridCapability"));
+        capabilities.put(AuthMode.JWT, capabilityOrNoop(jwtCapability));
+        capabilities.put(AuthMode.SESSION, capabilityOrNoop(sessionCapability));
+        capabilities.put(AuthMode.HYBRID, capabilityOrNoop(hybridCapability));
         capabilities.put(AuthMode.NONE, NO_OP_CAPABILITY);
-        this.internalCapability = Objects.requireNonNull(internalCapability, "internalCapability");
+        this.internalCapability = capabilityOrNoop(internalCapability);
     }
 
     /**
@@ -95,5 +95,9 @@ public final class DefaultAuthenticationCapabilityResolver implements Authentica
         if (capability != null) {
             capabilities.put(authMode, capability);
         }
+    }
+
+    private AuthenticationCapability capabilityOrNoop(AuthenticationCapability capability) {
+        return capability == null ? NO_OP_CAPABILITY : Objects.requireNonNull(capability, "capability");
     }
 }

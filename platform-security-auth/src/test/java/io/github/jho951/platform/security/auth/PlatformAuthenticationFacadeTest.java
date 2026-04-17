@@ -62,6 +62,25 @@ class PlatformAuthenticationFacadeTest {
     }
 
     @Test
+    void selectsInternalCapabilityForInternalTokenCredential() {
+        AtomicReference<String> selected = new AtomicReference<>();
+        PlatformAuthenticationFacade facade = new PlatformAuthenticationFacade(new RecordingResolver(selected));
+
+        SecurityContext context = facade.resolve(new SecurityRequest(
+                null,
+                "10.0.0.10",
+                "/internal/sync",
+                "POST",
+                Map.of(PlatformAuthenticationFacade.INTERNAL_TOKEN_ATTRIBUTE, "internal-token-1"),
+                Instant.parse("2026-01-01T00:00:00Z")
+        ));
+
+        assertEquals("internal", selected.get());
+        assertTrue(context.authenticated());
+        assertEquals("internal-user", context.principal());
+    }
+
+    @Test
     void selectsApiKeyCapabilityForApiKeyCredentials() {
         AtomicReference<String> selected = new AtomicReference<>();
         PlatformAuthenticationFacade facade = new PlatformAuthenticationFacade(new RecordingResolver(selected));

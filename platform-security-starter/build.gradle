@@ -2,4 +2,5 @@ dependencies {
     api project(':platform-security-api')
     api project(':platform-security-policy')
     implementation project(':platform-security-autoconfigure')
+    implementation project(':platform-security-client')
 }

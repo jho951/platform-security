@@ -1,6 +1,6 @@
 package io.github.jho951.platform.security.policyconfig;
 
-import io.github.jho951.platform.governance.api.PolicyConfigSource;
+import io.github.jho951.platform.policy.api.PolicyConfigSource;
 import io.github.jho951.platform.security.autoconfigure.SpringPlatformIpRuleSourceFactory;
 import io.github.jho951.platform.security.ip.PlatformIpRuleSource;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;

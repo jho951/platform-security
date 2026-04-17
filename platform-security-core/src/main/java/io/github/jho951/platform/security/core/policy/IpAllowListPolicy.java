@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 /**
  * IP allow-list를 평가하는 기본 보안 policy다.
  *
- * <p>단순 문자열 목록 또는 1계층 {@link IpGuardEngine}을 받아 요청 client IP를 평가한다.</p>
+ * <p>단순 문자열 목록이나 rule 문자열을 받아 요청 client IP를 평가한다.</p>
  */
 public final class IpAllowListPolicy implements SecurityPolicy {
     private final List<String> allowedIps;
@@ -37,7 +37,7 @@ public final class IpAllowListPolicy implements SecurityPolicy {
         this.engine = null;
     }
 
-    public IpAllowListPolicy(IpGuardEngine engine) {
+    IpAllowListPolicy(IpGuardEngine engine) {
         this.allowedIps = List.of();
         this.engine = Objects.requireNonNull(engine, "engine");
     }

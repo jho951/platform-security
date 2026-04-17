@@ -1,7 +1,8 @@
 package io.github.jho951.platform.security.governance;
 
 import io.github.jho951.platform.governance.api.AuditLogRecorder;
-import io.github.jho951.platform.security.web.SecurityAuditPublisher;
+import io.github.jho951.platform.security.api.SecurityAuditPublisher;
+import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
@@ -21,7 +22,10 @@ public class PlatformSecurityGovernanceBridgeAutoConfiguration {
     @Bean
     @ConditionalOnBean(AuditLogRecorder.class)
     @ConditionalOnMissingBean(SecurityAuditPublisher.class)
-    public SecurityAuditPublisher governanceSecurityAuditPublisher(AuditLogRecorder auditLogRecorder) {
-        return new GovernanceSecurityAuditPublisher(auditLogRecorder);
+    public SecurityAuditPublisher governanceSecurityAuditPublisher(
+            AuditLogRecorder auditLogRecorder,
+            PlatformSecurityProperties properties
+    ) {
+        return new GovernanceSecurityAuditPublisher(auditLogRecorder, properties.getAudit().getMode());
     }
 }

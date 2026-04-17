@@ -38,6 +38,7 @@ public final class SecurityIdentityScrubber {
 
     private boolean isInboundCredentialHeader(String normalized) {
         return "x-auth-session-id".equals(normalized)
+                || "x-auth-internal-token".equals(normalized)
                 || "x-auth-api-key-id".equals(normalized)
                 || "x-auth-api-key-secret".equals(normalized)
                 || "x-auth-hmac-key-id".equals(normalized)

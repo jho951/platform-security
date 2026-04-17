@@ -2,6 +2,8 @@ package io.github.jho951.platform.security.governance;
 
 import io.github.jho951.platform.governance.api.AuditEntry;
 import io.github.jho951.platform.security.api.ResolvedSecurityProfile;
+import io.github.jho951.platform.security.api.SecurityAuditEvent;
+import io.github.jho951.platform.security.api.SecurityAuditMode;
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityEvaluationContext;
 import io.github.jho951.platform.security.api.SecurityEvaluationResult;
@@ -21,16 +23,16 @@ class GovernanceSecurityAuditPublisherTest {
     @Test
     void recordsSecurityEvaluationAsGovernanceAuditEntry() {
         List<AuditEntry> entries = new ArrayList<>();
-        GovernanceSecurityAuditPublisher publisher = new GovernanceSecurityAuditPublisher(entries::add);
+        GovernanceSecurityAuditPublisher publisher = new GovernanceSecurityAuditPublisher(entries::add, SecurityAuditMode.ALL);
 
-        publisher.publish(new SecurityEvaluationResult(
+        publisher.publish(SecurityAuditEvent.from(new SecurityEvaluationResult(
                 new SecurityEvaluationContext(
                         new SecurityRequest(null, "10.0.0.10", "/api/orders", "GET", Map.of(), Instant.parse("2026-01-01T00:00:00Z")),
                         new SecurityContext(true, "user-1", Set.of("USER"), Map.of()),
                         new ResolvedSecurityProfile("PROTECTED", List.of("/api/**"), "EXTERNAL_API", "JWT")
                 ),
                 SecurityVerdict.allow("auth", "authenticated")
-        ));
+        )));
 
         assertThat(entries).hasSize(1);
         AuditEntry entry = entries.get(0);

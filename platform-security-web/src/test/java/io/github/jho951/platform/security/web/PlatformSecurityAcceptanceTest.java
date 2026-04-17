@@ -4,6 +4,7 @@ import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.api.SecurityVerdict;
 import io.github.jho951.platform.security.core.DefaultSecurityPolicyService;
+import io.github.jho951.platform.security.core.limiter.InMemoryRateLimiter;
 import io.github.jho951.platform.security.ip.DefaultBoundaryIpPolicyProvider;
 import io.github.jho951.platform.security.policy.DefaultAuthenticationModeResolver;
 import io.github.jho951.platform.security.policy.DefaultClientTypeResolver;
@@ -14,6 +15,7 @@ import io.github.jho951.platform.security.ratelimit.DefaultRateLimitKeyResolver;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -122,6 +124,37 @@ class PlatformSecurityAcceptanceTest {
     }
 
     @Test
+    void authorizationHeaderOnlyAcceptsBearerScheme() {
+        PlatformSecurityProperties properties = baseProperties();
+        SecurityIngressRequestFactory factory = requestFactory(properties);
+
+        SecurityRequest basic = factory.fromServlet(
+                mockRequest("/api/orders", "127.0.0.1", Map.of("Authorization", "Basic abc123")),
+                java.time.Clock.systemUTC()
+        );
+        SecurityRequest bearer = factory.fromServlet(
+                mockRequest("/api/orders", "127.0.0.1", Map.of("Authorization", "Bearer token-1")),
+                java.time.Clock.systemUTC()
+        );
+
+        assertNull(basic.attributes().get("auth.accessToken"));
+        assertEquals("token-1", bearer.attributes().get("auth.accessToken"));
+    }
+
+    @Test
+    void internalTokenHeaderBecomesCredentialAttribute() {
+        PlatformSecurityProperties properties = baseProperties();
+        SecurityIngressRequestFactory factory = requestFactory(properties);
+
+        SecurityRequest request = factory.fromServlet(
+                mockRequest("/internal/sync", "127.0.0.1", Map.of("X-Auth-Internal-Token", "internal-token-1")),
+                java.time.Clock.systemUTC()
+        );
+
+        assertEquals("internal-token-1", request.attributes().get("auth.internalToken"));
+    }
+
+    @Test
     void browserSessionIsRejectedWhenDisabled() {
         PlatformSecurityProperties properties = baseProperties();
         properties.getAuth().setAllowSessionForBrowser(false);
@@ -219,7 +252,7 @@ class PlatformSecurityAcceptanceTest {
                 new DefaultClientTypeResolver(),
                 new DefaultAuthenticationModeResolver(properties.getAuth()),
                 new DefaultBoundaryIpPolicyProvider(properties.getIpGuard()),
-                new DefaultBoundaryRateLimitPolicyProvider(properties.getRateLimit(), new DefaultRateLimitKeyResolver()),
+                new DefaultBoundaryRateLimitPolicyProvider(properties.getRateLimit(), new DefaultRateLimitKeyResolver(), new InMemoryRateLimiter(Clock.systemUTC())),
                 new DefaultPlatformPrincipalFactory()
         );
         return new SecurityIngressAdapter(service, boundaryResolver);

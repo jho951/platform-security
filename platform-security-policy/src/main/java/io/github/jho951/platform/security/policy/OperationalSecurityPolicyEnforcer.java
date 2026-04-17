@@ -18,7 +18,18 @@ public final class OperationalSecurityPolicyEnforcer {
             boolean platformDefaultTokenServicePresent,
             String... activeProfiles
     ) {
-        enforce(properties, securityContextResolverPresent, platformDefaultTokenServicePresent, false, false, false, activeProfiles);
+        enforce(
+                properties,
+                securityContextResolverPresent,
+                platformDefaultTokenServicePresent,
+                false,
+                true,
+                platformDefaultTokenServicePresent,
+                false,
+                false,
+                false,
+                activeProfiles
+        );
     }
 
     public void enforce(
@@ -33,6 +44,9 @@ public final class OperationalSecurityPolicyEnforcer {
                 securityContextResolverPresent,
                 platformDefaultTokenServicePresent,
                 false,
+                true,
+                platformDefaultTokenServicePresent,
+                false,
                 platformDefaultRateLimiterPresent,
                 false,
                 activeProfiles
@@ -44,6 +58,33 @@ public final class OperationalSecurityPolicyEnforcer {
             boolean securityContextResolverPresent,
             boolean platformDefaultTokenServicePresent,
             boolean platformDefaultSessionStorePresent,
+            boolean rateLimiterPresent,
+            boolean inMemoryRateLimiterPresent,
+            boolean platformDefaultInternalTokenClaimsValidatorPresent,
+            String... activeProfiles
+    ) {
+        enforce(
+                properties,
+                securityContextResolverPresent,
+                platformDefaultTokenServicePresent,
+                platformDefaultSessionStorePresent,
+                rateLimiterPresent,
+                platformDefaultTokenServicePresent,
+                platformDefaultSessionStorePresent,
+                inMemoryRateLimiterPresent,
+                platformDefaultInternalTokenClaimsValidatorPresent,
+                activeProfiles
+        );
+    }
+
+    public void enforce(
+            PlatformSecurityProperties properties,
+            boolean securityContextResolverPresent,
+            boolean platformDefaultTokenServicePresent,
+            boolean platformDefaultSessionStorePresent,
+            boolean rateLimiterPresent,
+            boolean tokenServicePresent,
+            boolean sessionStorePresent,
             boolean inMemoryRateLimiterPresent,
             boolean platformDefaultInternalTokenClaimsValidatorPresent,
             String... activeProfiles
@@ -65,10 +106,28 @@ public final class OperationalSecurityPolicyEnforcer {
                 platformDefaultInternalTokenClaimsValidatorPresent,
                 violations
         );
+        validateIssuer(properties, tokenServicePresent, sessionStorePresent, violations);
         validateIpGuard(properties, violations);
-        validateRateLimit(properties, inMemoryRateLimiterPresent, violations);
+        validateRateLimit(properties, rateLimiterPresent, inMemoryRateLimiterPresent, violations);
         if (!violations.isEmpty()) {
             throw new IllegalStateException("Platform security operational policy violation: " + String.join("; ", violations));
+        }
+    }
+
+    private void validateIssuer(
+            PlatformSecurityProperties properties,
+            boolean tokenServicePresent,
+            boolean sessionStorePresent,
+            List<String> violations
+    ) {
+        if (properties.getServiceRolePreset() != ServiceRolePreset.ISSUER) {
+            return;
+        }
+        if (!tokenServicePresent) {
+            violations.add("issuer services must provide a production TokenService bean");
+        }
+        if (properties.getAuth().isAllowSessionForBrowser() && !sessionStorePresent) {
+            violations.add("issuer services with browser session support must provide a production SessionStore bean");
         }
     }
 
@@ -112,7 +171,7 @@ public final class OperationalSecurityPolicyEnforcer {
             violations.add("production SessionStore bean must be provided; platform SimpleSessionStore is local/test only");
         }
         if (auth.isInternalTokenEnabled() && platformDefaultInternalTokenClaimsValidatorPresent) {
-            violations.add("production InternalTokenClaimsValidator bean must be provided; platform allowAll validator is local/test only");
+            violations.add("production InternalTokenClaimsValidator bean must be provided; platform local validator is local/test only");
         }
     }
 
@@ -130,6 +189,7 @@ public final class OperationalSecurityPolicyEnforcer {
 
     private void validateRateLimit(
             PlatformSecurityProperties properties,
+            boolean rateLimiterPresent,
             boolean inMemoryRateLimiterPresent,
             List<String> violations
     ) {
@@ -137,6 +197,9 @@ public final class OperationalSecurityPolicyEnforcer {
         if (!rateLimit.isEnabled()) {
             violations.add("platform.security.rate-limit.enabled must be true in production");
             return;
+        }
+        if (!rateLimiterPresent) {
+            violations.add("production RateLimiter bean is required");
         }
         if (inMemoryRateLimiterPresent) {
             violations.add("production RateLimiter bean must be distributed; in-memory rate limiter is local/test only");

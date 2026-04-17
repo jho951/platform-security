@@ -24,6 +24,7 @@ dependencies {
 
     testImplementation "org.springframework.boot:spring-boot-test:${rootProject.springBootVersion}"
     testImplementation "org.springframework.boot:spring-boot-test-autoconfigure:${rootProject.springBootVersion}"
+    testImplementation project(':platform-security-local-support')
     testImplementation "org.springframework:spring-test:${rootProject.springFrameworkVersion}"
     testImplementation "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
     testImplementation "io.projectreactor:reactor-core:3.7.11"

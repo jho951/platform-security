@@ -1,5 +1,7 @@
 package io.github.jho951.platform.security.policy;
 
+import io.github.jho951.platform.security.api.SecurityAuditMode;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +21,7 @@ public class PlatformSecurityProperties {
     private OperationalPolicyProperties operationalPolicy = new OperationalPolicyProperties();
     private BoundaryPolicyProperties boundary = new BoundaryPolicyProperties();
     private AuthProperties auth = new AuthProperties();
+    private AuditProperties audit = new AuditProperties();
     private IpGuardProperties ipGuard = new IpGuardProperties();
     private RateLimitProperties rateLimit = new RateLimitProperties();
 
@@ -60,6 +63,14 @@ public class PlatformSecurityProperties {
 
     public void setAuth(AuthProperties auth) {
         this.auth = auth == null ? new AuthProperties() : auth;
+    }
+
+    public AuditProperties getAudit() {
+        return audit;
+    }
+
+    public void setAudit(AuditProperties audit) {
+        this.audit = audit == null ? new AuditProperties() : audit;
     }
 
     public IpGuardProperties getIpGuard() {
@@ -328,7 +339,7 @@ public class PlatformSecurityProperties {
     public static class OperationalPolicyProperties {
         private boolean enabled = true;
         private boolean production = false;
-        private List<String> productionProfiles = new ArrayList<>(List.of("prod"));
+        private List<String> productionProfiles = new ArrayList<>(List.of("prod", "production", "live"));
 
         public boolean isEnabled() {
             return enabled;
@@ -428,6 +439,21 @@ public class PlatformSecurityProperties {
 
         public void setDefaultAuthorities(List<String> defaultAuthorities) {
             this.defaultAuthorities = defaultAuthorities == null ? new ArrayList<>() : defaultAuthorities;
+        }
+    }
+
+    /**
+     * security audit event 발행 정책이다.
+     */
+    public static class AuditProperties {
+        private SecurityAuditMode mode = SecurityAuditMode.DENY_AND_ADMIN;
+
+        public SecurityAuditMode getMode() {
+            return mode;
+        }
+
+        public void setMode(SecurityAuditMode mode) {
+            this.mode = mode == null ? SecurityAuditMode.DENY_AND_ADMIN : mode;
         }
     }
 

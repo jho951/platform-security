@@ -1,36 +1,13 @@
 # platform-security
 
-## 빠른 사용
+1계층 auth/ip-guard/rate-limiter OSS를 소비해서 3계층 서비스가 같은 방식으로 쓰도록 조립하는 2계층 보안 플랫폼이다.
 
-```gradle
-dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:1.0.5")
-    implementation "io.github.jho951.platform:platform-security-*-starter"
-}
-```
-### starter 종류:
+## Documentation
 
-- `platform-security-edge-starter`
-- `platform-security-issuer-starter`
-- `platform-security-resource-server-starter`
-- `platform-security-internal-service-starter`
+- [문서 인덱스](docs/README.md)
 
-```java
-@Bean
-SecurityContextResolver securityContextResolver(CurrentUserResolver currentUserResolver) {
-    return request -> {
-        CurrentUser user = currentUserResolver.resolve(request);
-        if (user == null) {
-            return new SecurityContext(false, null, Set.of(), request.attributes());
-        }
-        return new SecurityContext(true, user.id(), user.roles(), request.attributes());
-    };
-}
-```
-## 검증
+## Verification
 
 ```bash
 ./gradlew test
 ```
-
-## [문서](docs/README.md)

@@ -1,0 +1,15 @@
+dependencies {
+    api project(':platform-security-api')
+    api project(':platform-security-web')
+    compileOnly "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
+    compileOnly "org.springframework:spring-webflux:${rootProject.springFrameworkVersion}"
+    compileOnly "jakarta.servlet:jakarta.servlet-api:${rootProject.jakartaServletVersion}"
+    implementation "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
+
+    testImplementation "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
+    testImplementation "org.springframework:spring-webflux:${rootProject.springFrameworkVersion}"
+    testImplementation "org.springframework:spring-test:${rootProject.springFrameworkVersion}"
+    testImplementation "jakarta.servlet:jakarta.servlet-api:${rootProject.jakartaServletVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitVersion}"
+}

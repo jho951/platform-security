@@ -23,15 +23,6 @@ public final class DefaultInternalServiceAuthenticationCapability implements Aut
     private final InternalTokenClaimsValidator claimsValidator;
 
     /**
-     * claim 추가 검증 없이 internal token capability를 만든다.
-     *
-     * @param hybridAuthenticationProvider token/session 검증 provider
-     */
-    public DefaultInternalServiceAuthenticationCapability(HybridAuthenticationProvider hybridAuthenticationProvider) {
-        this(hybridAuthenticationProvider, InternalTokenClaimsValidator.allowAll());
-    }
-
-    /**
      * service-specific claim validator를 포함한 internal token capability를 만든다.
      *
      * @param hybridAuthenticationProvider token/session 검증 provider
@@ -58,6 +49,9 @@ public final class DefaultInternalServiceAuthenticationCapability implements Aut
     Optional<Principal> doAuthenticate(SecurityRequest request) {
         Map<String, String> attributes = request.attributes();
         String internalToken = DefaultJwtAuthenticationCapability.trimToNull(attributes.get(INTERNAL_TOKEN_ATTRIBUTE));
+        if (internalToken == null) {
+            internalToken = DefaultJwtAuthenticationCapability.trimToNull(attributes.get(PlatformAuthenticationFacade.ACCESS_TOKEN_ATTRIBUTE));
+        }
         String sessionId = DefaultJwtAuthenticationCapability.trimToNull(attributes.get(PlatformAuthenticationFacade.SESSION_ID_ATTRIBUTE));
         if (internalToken == null && sessionId == null) {
             return Optional.empty();

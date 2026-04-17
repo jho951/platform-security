@@ -10,14 +10,12 @@ import io.github.jho951.platform.security.policy.RateLimitKeyResolver;
 import io.github.jho951.platform.security.policy.SecurityAttributes;
 import io.github.jho951.platform.security.policy.SecurityBoundary;
 import io.github.jho951.platform.security.policy.SecurityBoundaryType;
-import io.github.jho951.platform.security.core.limiter.InMemoryRateLimiter;
 import io.github.jho951.ratelimiter.core.RateLimitDecision;
 import io.github.jho951.ratelimiter.core.RateLimitKey;
 import io.github.jho951.ratelimiter.core.RateLimitKeyType;
 import io.github.jho951.ratelimiter.core.RateLimitPlan;
 import io.github.jho951.ratelimiter.spi.RateLimiter;
 
-import java.time.Clock;
 import java.util.Objects;
 
 /**
@@ -28,14 +26,6 @@ public final class BoundaryAwareRateLimitPolicy implements SecurityPolicy {
     private final PlatformSecurityProperties.RateLimitProperties properties;
     private final RateLimitKeyResolver keyResolver;
     private final RateLimiter rateLimiter;
-
-    public BoundaryAwareRateLimitPolicy(
-            SecurityBoundary boundary,
-            PlatformSecurityProperties.RateLimitProperties properties,
-            RateLimitKeyResolver keyResolver
-    ) {
-        this(boundary, properties, keyResolver, new InMemoryRateLimiter(Clock.systemUTC()));
-    }
 
     public BoundaryAwareRateLimitPolicy(
             SecurityBoundary boundary,
