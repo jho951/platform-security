@@ -107,6 +107,7 @@ RateLimiter rateLimiter(RedisClient redisClient) {
 
 `platform-security-governance-bridge`는 `platform-security` release에 포함되지 않는다.
 governance audit 연동이 필요한 서비스만 `platform-integrations` repository를 추가하고 bridge artifact를 붙인다.
+`platform-security` 자체에는 `platform-integrations` 의존성을 추가하지 않는다.
 
 ```gradle
 repositories {

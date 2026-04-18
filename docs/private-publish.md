@@ -33,7 +33,7 @@ platform-policy-api
 ```
 
 `platform-security-policyconfig-bridge`는 `platform-policy-api`의 `PolicyConfigSource`를 공식 타입으로 소비한다.
-`platform-security-governance-bridge`는 이 release에서 배포하지 않는다. governance audit 연동 bridge는 `platform-integrations` repository에서 배포한다.
+`platform-security-governance-bridge`는 이 release에서 배포하지 않는다. governance audit 연동 bridge는 `platform-integrations` repository에서 배포하고, 필요한 소비 서비스가 직접 의존성으로 추가한다.
 
 배포하지 않는 것:
 

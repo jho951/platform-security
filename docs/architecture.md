@@ -142,7 +142,7 @@ auth/ip/rate-limit 흐름을 서비스마다 재구성
 
 `platform-security-client`는 내부 호출 시 `SecurityContext`를 표준 header로 전달할 때 쓴다.
 
-`platform-security-governance-bridge`는 `platform-security` release에 포함되지 않는다. security audit event를 governance audit으로 보낼 때만 `platform-integrations` repository에서 별도 artifact로 추가한다.
+`platform-security-governance-bridge`는 `platform-security` release에 포함되지 않는다. `platform-security`는 integration module을 직접 의존하지 않고 `SecurityAuditEvent`와 `SecurityAuditPublisher` 계약만 제공한다. security audit event를 governance audit으로 보낼 때만 소비 서비스가 `platform-integrations` repository에서 별도 artifact를 추가한다.
 
 `platform-security-policyconfig-bridge`는 IP rule 같은 값을 외부 policy config에서 읽고 싶을 때만 추가한다.
 
