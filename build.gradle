@@ -6,7 +6,6 @@ ext {
     authVersion = findProperty('auth_version')
     ipGuardVersion = findProperty('ipGuard_version')
     rateLimiterVersion = findProperty('rateLimiter_version')
-    governanceVersion = findProperty('governance_version')
     platformReleaseVersion = findProperty('release_version')
 }
 

@@ -31,7 +31,7 @@ export GITHUB_TOKEN=<read:packages 권한이 있는 PAT>
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:1.1.0")
+    implementation platform("io.github.jho951.platform:platform-security-bom:2.0.0")
     implementation "io.github.jho951.platform:platform-security-starter"
 }
 ```
@@ -104,6 +104,21 @@ RateLimiter rateLimiter(RedisClient redisClient) {
 `issuer` preset은 운영용 `TokenService`와 필요한 경우 `SessionStore`를 제공해야 한다. `internal-service` 또는 internal token을 쓰는 서비스는 `InternalTokenClaimsValidator`를 제공한다.
 
 ## Optional Addons
+
+`platform-security-governance-bridge`는 `platform-security` release에 포함되지 않는다.
+governance audit 연동이 필요한 서비스만 `platform-integrations` repository를 추가하고 bridge artifact를 붙인다.
+
+```gradle
+repositories {
+    maven {
+        url = uri("https://maven.pkg.github.com/jho951/platform-integrations")
+        credentials {
+            username = findProperty("githubPackagesUsername") ?: System.getenv("GITHUB_ACTOR")
+            password = findProperty("githubPackagesToken") ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+```
 
 ```gradle
 dependencies {

@@ -145,7 +145,7 @@ SecurityEvaluationResult
 ```
 
 감사 기록을 어디에 저장할지는 3계층이 정한다.  
-governance와 연결하고 싶으면 bridge 모듈을 붙인다.
+governance와 연결하고 싶으면 `platform-integrations` repository의 bridge 모듈을 붙인다.
 
 ## 내부 호출 사용자 정보
 

@@ -33,6 +33,7 @@ platform-policy-api
 ```
 
 `platform-security-policyconfig-bridge`는 `platform-policy-api`의 `PolicyConfigSource`를 공식 타입으로 소비한다.
+`platform-security-governance-bridge`는 이 release에서 배포하지 않는다. governance audit 연동 bridge는 `platform-integrations` repository에서 배포한다.
 
 배포하지 않는 것:
 
@@ -45,15 +46,15 @@ platform-security-sample-consumer
 tag를 push하면 publish workflow가 돈다.
 
 ```bash
-git tag v1.1.0
-git push origin v1.1.0
+git tag v2.0.0
+git push origin v2.0.0
 ```
 
 version은 tag에서 계산한다.
 
 ```text
-v1.1.0
--> release_version=1.1.0
+v2.0.0
+-> release_version=2.0.0
 ```
 
 workflow 권한:
@@ -83,7 +84,7 @@ export GITHUB_ACTOR=jho951
 export GITHUB_TOKEN=<write:packages 권한이 있는 PAT>
 
 ./gradlew clean test publish \
-  -Prelease_version=1.1.0 \
+  -Prelease_version=2.0.0 \
   -PgithubPackagesUrl=https://maven.pkg.github.com/jho951/platform-security \
   -PgithubPackagesUsername="$GITHUB_ACTOR" \
   -PgithubPackagesToken="$GITHUB_TOKEN"
@@ -118,7 +119,7 @@ dependency:
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:1.1.0")
+    implementation platform("io.github.jho951.platform:platform-security-bom:2.0.0")
     implementation "io.github.jho951.platform:platform-security-starter"
 }
 ```

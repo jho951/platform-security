@@ -144,7 +144,7 @@ SecurityAuditPublisher bean이 있는지 확인한다.
 governance audit에 남기려면:
 
 ```text
-- platform-security-governance-bridge가 classpath에 있는지
+- platform-integrations repository에서 받은 platform-security-governance-bridge가 classpath에 있는지
 - AuditLogRecorder bean이 있는지
 - 직접 등록한 SecurityAuditPublisher가 bridge 기본 bean을 대체하지 않았는지
 ```
