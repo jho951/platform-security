@@ -1,6 +1,6 @@
 # Release Notes
 
-## 2.0.0 Breaking Changes
+## 2.0.1 Changes
 
 ### IP guard configuration
 

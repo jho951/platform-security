@@ -31,7 +31,7 @@ export GITHUB_TOKEN=<read:packages 권한이 있는 PAT>
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:2.0.0")
+    implementation platform("io.github.jho951.platform:platform-security-bom:2.0.1")
     implementation "io.github.jho951.platform:platform-security-starter"
 }
 ```

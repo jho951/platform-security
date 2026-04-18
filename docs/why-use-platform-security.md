@@ -22,7 +22,7 @@
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:2.0.0")
+    implementation platform("io.github.jho951.platform:platform-security-bom:2.0.1")
     implementation "io.github.jho951.platform:platform-security-starter"
 }
 ```
