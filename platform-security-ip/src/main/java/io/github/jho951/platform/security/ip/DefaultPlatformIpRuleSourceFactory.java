@@ -3,8 +3,6 @@ package io.github.jho951.platform.security.ip;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties.IpRuleSourceType;
 
-import java.util.List;
-
 /**
  * inline IP rule만 처리하는 기본 rule source factory다.
  *
@@ -12,13 +10,12 @@ import java.util.List;
  */
 public class DefaultPlatformIpRuleSourceFactory implements PlatformIpRuleSourceFactory {
     @Override
-    public PlatformIpRuleSource create(PlatformSecurityProperties.BoundaryIpGuardPolicy policy, List<String> legacyRules) {
+    public PlatformIpRuleSource create(PlatformSecurityProperties.BoundaryIpGuardPolicy policy) {
         PlatformSecurityProperties.BoundaryIpGuardPolicy effective =
                 policy == null ? new PlatformSecurityProperties.BoundaryIpGuardPolicy() : policy;
         if (effective.getSource() != IpRuleSourceType.INLINE) {
             throw new IllegalStateException("Unsupported IP rule source without bridge/autoconfigure support: " + effective.getSource());
         }
-        List<String> rules = effective.getRules().isEmpty() ? legacyRules : effective.getRules();
-        return new InlinePlatformIpRuleSource(rules);
+        return new InlinePlatformIpRuleSource(effective.getRules());
     }
 }

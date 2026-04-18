@@ -470,12 +470,10 @@ public class PlatformSecurityProperties {
      */
     public static class IpGuardProperties {
         private boolean enabled = true;
-        private boolean trustProxy = true;
+        private boolean trustProxy = false;
         private BoundaryIpGuardPolicy admin = new BoundaryIpGuardPolicy();
         private BoundaryIpGuardPolicy internal = new BoundaryIpGuardPolicy();
         private List<String> trustedProxyCidrs = new ArrayList<>();
-        private List<String> adminAllowCidrs = new ArrayList<>();
-        private List<String> internalAllowCidrs = new ArrayList<>();
 
         public boolean isEnabled() {
             return enabled;
@@ -517,25 +515,6 @@ public class PlatformSecurityProperties {
             this.internal = internal == null ? new BoundaryIpGuardPolicy() : internal;
         }
 
-        @Deprecated
-        public List<String> getAdminAllowCidrs() {
-            return adminAllowCidrs;
-        }
-
-        @Deprecated
-        public void setAdminAllowCidrs(List<String> adminAllowCidrs) {
-            this.adminAllowCidrs = adminAllowCidrs == null ? new ArrayList<>() : adminAllowCidrs;
-        }
-
-        @Deprecated
-        public List<String> getInternalAllowCidrs() {
-            return internalAllowCidrs;
-        }
-
-        @Deprecated
-        public void setInternalAllowCidrs(List<String> internalAllowCidrs) {
-            this.internalAllowCidrs = internalAllowCidrs == null ? new ArrayList<>() : internalAllowCidrs;
-        }
     }
 
     /**

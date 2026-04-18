@@ -9,6 +9,8 @@ import io.github.jho951.platform.security.ip.DefaultBoundaryIpPolicyProvider;
 import io.github.jho951.platform.security.policy.DefaultAuthenticationModeResolver;
 import io.github.jho951.platform.security.policy.DefaultClientTypeResolver;
 import io.github.jho951.platform.security.policy.DefaultPlatformPrincipalFactory;
+import io.github.jho951.platform.security.policy.ClientType;
+import io.github.jho951.platform.security.policy.ClientTypeResolver;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import io.github.jho951.platform.security.ratelimit.DefaultBoundaryRateLimitPolicyProvider;
 import io.github.jho951.platform.security.ratelimit.DefaultRateLimitKeyResolver;
@@ -22,6 +24,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PlatformSecurityAcceptanceTest {
     @Test
@@ -53,7 +56,7 @@ class PlatformSecurityAcceptanceTest {
     @Test
     void adminBoundaryRejectsDisallowedIp() {
         PlatformSecurityProperties properties = baseProperties();
-        properties.getIpGuard().setAdminAllowCidrs(List.of("10.0.0.0/8"));
+        properties.getIpGuard().getAdmin().setRules(List.of("10.0.0.0/8"));
         SecurityIngressAdapter adapter = adapter(properties);
 
         SecurityFailureResponse response = adapter.evaluateFailureResponse(
@@ -62,6 +65,23 @@ class PlatformSecurityAcceptanceTest {
         );
 
         assertEquals(403, response.status(), () -> "status=" + response.status() + ", code=" + response.code() + ", message=" + response.message());
+    }
+
+    @Test
+    void adminClientTypeOnProtectedBoundaryRejectsDisallowedIp() {
+        PlatformSecurityProperties properties = baseProperties();
+        properties.getIpGuard().getAdmin().setRules(List.of("10.0.0.0/8"));
+        SecurityIngressAdapter adapter = adapter(properties, request -> ClientType.ADMIN_CONSOLE);
+
+        SecurityFailureResponse response = adapter.evaluateFailureResponse(
+                newRequest("/api/orders", "192.168.1.10", Map.of()),
+                new SecurityContext(true, "admin-1", Set.of("ADMIN"), Map.of())
+        );
+
+        assertEquals(403, response.status());
+        assertTrue(response.message().contains("boundary=PROTECTED"));
+        assertTrue(response.message().contains("clientType=ADMIN_CONSOLE"));
+        assertTrue(response.message().contains("policyBasis=CLIENT_TYPE"));
     }
 
     @Test
@@ -241,6 +261,10 @@ class PlatformSecurityAcceptanceTest {
     }
 
     private SecurityIngressAdapter adapter(PlatformSecurityProperties properties) {
+        return adapter(properties, new DefaultClientTypeResolver());
+    }
+
+    private SecurityIngressAdapter adapter(PlatformSecurityProperties properties, ClientTypeResolver clientTypeResolver) {
         var boundaryResolver = new PathPatternSecurityBoundaryResolver(
                 properties.getBoundary().getPublicPaths(),
                 properties.getBoundary().getProtectedPaths(),
@@ -249,7 +273,7 @@ class PlatformSecurityAcceptanceTest {
         );
         var service = new DefaultSecurityPolicyService(
                 boundaryResolver,
-                new DefaultClientTypeResolver(),
+                clientTypeResolver,
                 new DefaultAuthenticationModeResolver(properties.getAuth()),
                 new DefaultBoundaryIpPolicyProvider(properties.getIpGuard()),
                 new DefaultBoundaryRateLimitPolicyProvider(properties.getRateLimit(), new DefaultRateLimitKeyResolver(), new InMemoryRateLimiter(Clock.systemUTC())),

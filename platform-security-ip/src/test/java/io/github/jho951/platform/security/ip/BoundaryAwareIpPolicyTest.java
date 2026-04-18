@@ -1,7 +1,9 @@
 package io.github.jho951.platform.security.ip;
 
+import io.github.jho951.platform.security.api.ResolvedSecurityProfile;
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityRequest;
+import io.github.jho951.platform.security.api.SecurityVerdict;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import io.github.jho951.platform.security.policy.SecurityBoundary;
 import io.github.jho951.platform.security.policy.SecurityBoundaryType;
@@ -15,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BoundaryAwareIpPolicyTest {
     @Test
@@ -30,14 +33,78 @@ class BoundaryAwareIpPolicyTest {
     }
 
     @Test
-    void legacyAdminAllowCidrsStillFeedInlineSource() {
+    void protectedBoundaryDoesNotApplyIpRuleForExternalApiClient() {
         PlatformSecurityProperties.IpGuardProperties properties = new PlatformSecurityProperties.IpGuardProperties();
-        properties.setAdminAllowCidrs(List.of("10.0.0.0/8"));
+        properties.getAdmin().setRules(List.of("10.0.0.0/8"));
+        properties.getInternal().setRules(List.of("172.16.0.0/12"));
 
         DefaultBoundaryIpPolicyProvider provider = new DefaultBoundaryIpPolicyProvider(properties);
-        var policy = provider.resolve(new SecurityBoundary(SecurityBoundaryType.ADMIN, List.of("/admin/**")));
+        var policy = provider.resolve(
+                new SecurityBoundary(SecurityBoundaryType.PROTECTED, List.of("/api/**")),
+                profile(SecurityBoundaryType.PROTECTED, "EXTERNAL_API")
+        );
 
-        assertEquals(true, policy.evaluate(request("10.1.2.3"), context()).allowed());
+        SecurityVerdict verdict = policy.evaluate(request("192.168.1.10", "/api/orders"), context());
+
+        assertEquals(true, verdict.allowed());
+        assertTrue(verdict.reason().contains("policyBasis=NONE"));
+    }
+
+    @Test
+    void adminClientTypeAppliesAdminRuleOnProtectedBoundary() {
+        PlatformSecurityProperties.IpGuardProperties properties = new PlatformSecurityProperties.IpGuardProperties();
+        properties.getAdmin().setRules(List.of("10.0.0.0/8"));
+
+        DefaultBoundaryIpPolicyProvider provider = new DefaultBoundaryIpPolicyProvider(properties);
+        var policy = provider.resolve(
+                new SecurityBoundary(SecurityBoundaryType.PROTECTED, List.of("/api/**")),
+                profile(SecurityBoundaryType.PROTECTED, "ADMIN_CONSOLE")
+        );
+
+        SecurityVerdict verdict = policy.evaluate(request("192.168.1.10", "/api/orders"), context());
+
+        assertEquals(false, verdict.allowed());
+        assertTrue(verdict.reason().contains("boundary=PROTECTED"));
+        assertTrue(verdict.reason().contains("clientType=ADMIN_CONSOLE"));
+        assertTrue(verdict.reason().contains("policyBasis=CLIENT_TYPE"));
+    }
+
+    @Test
+    void internalClientTypeAppliesInternalRuleOnAnyBoundary() {
+        PlatformSecurityProperties.IpGuardProperties properties = new PlatformSecurityProperties.IpGuardProperties();
+        properties.getInternal().setRules(List.of("172.16.0.0/12"));
+
+        DefaultBoundaryIpPolicyProvider provider = new DefaultBoundaryIpPolicyProvider(properties);
+        var policy = provider.resolve(
+                new SecurityBoundary(SecurityBoundaryType.PUBLIC, List.of("/health")),
+                profile(SecurityBoundaryType.PUBLIC, "INTERNAL_SERVICE")
+        );
+
+        SecurityVerdict verdict = policy.evaluate(request("192.168.1.10", "/health"), context());
+
+        assertEquals(false, verdict.allowed());
+        assertTrue(verdict.reason().contains("boundary=PUBLIC"));
+        assertTrue(verdict.reason().contains("clientType=INTERNAL_SERVICE"));
+        assertTrue(verdict.reason().contains("policyBasis=CLIENT_TYPE"));
+    }
+
+    @Test
+    void adminBoundaryAppliesPathGuardWhenClientTypeDoesNotOverride() {
+        PlatformSecurityProperties.IpGuardProperties properties = new PlatformSecurityProperties.IpGuardProperties();
+        properties.getAdmin().setRules(List.of("10.0.0.0/8"));
+
+        DefaultBoundaryIpPolicyProvider provider = new DefaultBoundaryIpPolicyProvider(properties);
+        var policy = provider.resolve(
+                new SecurityBoundary(SecurityBoundaryType.ADMIN, List.of("/admin/**")),
+                profile(SecurityBoundaryType.ADMIN, "EXTERNAL_API")
+        );
+
+        SecurityVerdict verdict = policy.evaluate(request("192.168.1.10", "/admin/users"), context());
+
+        assertEquals(false, verdict.allowed());
+        assertTrue(verdict.reason().contains("boundary=ADMIN"));
+        assertTrue(verdict.reason().contains("clientType=EXTERNAL_API"));
+        assertTrue(verdict.reason().contains("policyBasis=PATH"));
     }
 
     @Test
@@ -82,10 +149,14 @@ class BoundaryAwareIpPolicyTest {
     }
 
     private SecurityRequest request(String ip) {
+        return request(ip, "/admin/users");
+    }
+
+    private SecurityRequest request(String ip, String path) {
         return new SecurityRequest(
                 "admin-1",
                 ip,
-                "/admin/users",
+                path,
                 "GET",
                 Map.of(),
                 Instant.parse("2026-01-01T00:00:00Z")
@@ -94,5 +165,9 @@ class BoundaryAwareIpPolicyTest {
 
     private SecurityContext context() {
         return new SecurityContext(true, "admin-1", Set.of("ADMIN"), Map.of());
+    }
+
+    private ResolvedSecurityProfile profile(SecurityBoundaryType boundaryType, String clientType) {
+        return new ResolvedSecurityProfile(boundaryType.name(), List.of(), clientType, "HYBRID");
     }
 }

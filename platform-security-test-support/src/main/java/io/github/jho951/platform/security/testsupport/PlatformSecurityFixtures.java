@@ -50,8 +50,9 @@ public final class PlatformSecurityFixtures {
 
         properties.getIpGuard().setEnabled(true);
         properties.getIpGuard().setTrustProxy(true);
-        properties.getIpGuard().setAdminAllowCidrs(java.util.List.of("10.0.0.0/8"));
-        properties.getIpGuard().setInternalAllowCidrs(java.util.List.of("172.16.0.0/12"));
+        properties.getIpGuard().setTrustedProxyCidrs(java.util.List.of("127.0.0.1", "::1"));
+        properties.getIpGuard().getAdmin().setRules(java.util.List.of("10.0.0.0/8"));
+        properties.getIpGuard().getInternal().setRules(java.util.List.of("172.16.0.0/12"));
 
         properties.getRateLimit().getAnonymous().setRequests(60L);
         properties.getRateLimit().getAnonymous().setWindowSeconds(60L);
@@ -77,8 +78,9 @@ public final class PlatformSecurityFixtures {
 
         properties.getIpGuard().setEnabled(true);
         properties.getIpGuard().setTrustProxy(true);
-        properties.getIpGuard().setAdminAllowCidrs(java.util.List.of("10.0.0.0/8"));
-        properties.getIpGuard().setInternalAllowCidrs(java.util.List.of("172.16.0.0/12"));
+        properties.getIpGuard().setTrustedProxyCidrs(java.util.List.of("127.0.0.1", "::1"));
+        properties.getIpGuard().getAdmin().setRules(java.util.List.of("10.0.0.0/8"));
+        properties.getIpGuard().getInternal().setRules(java.util.List.of("172.16.0.0/12"));
 
         properties.getRateLimit().getAnonymous().setRequests(30L);
         properties.getRateLimit().getAnonymous().setWindowSeconds(60L);

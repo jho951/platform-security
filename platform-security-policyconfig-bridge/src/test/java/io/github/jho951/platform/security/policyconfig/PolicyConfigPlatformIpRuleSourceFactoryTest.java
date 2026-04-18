@@ -32,7 +32,7 @@ class PolicyConfigPlatformIpRuleSourceFactoryTest {
 
         assertEquals(
                 "10.0.0.0/8\n203.0.113.10/32\n198.51.100.7/32",
-                factory.create(policy, java.util.List.of()).loadRules()
+                factory.create(policy).loadRules()
         );
     }
 
@@ -45,7 +45,7 @@ class PolicyConfigPlatformIpRuleSourceFactoryTest {
         PolicyConfigPlatformIpRuleSourceFactory factory =
                 new PolicyConfigPlatformIpRuleSourceFactory(new DefaultResourceLoader(), new MapPolicyConfigSource(Map.of()));
 
-        assertThrows(IllegalStateException.class, () -> factory.create(policy, java.util.List.of()).loadRules());
+        assertThrows(IllegalStateException.class, () -> factory.create(policy).loadRules());
     }
 
     @Test
@@ -69,7 +69,7 @@ class PolicyConfigPlatformIpRuleSourceFactoryTest {
                     policy.setPolicyKey("security.ip-guard.admin.allow-cidrs");
 
                     PlatformIpRuleSourceFactory factory = context.getBean(PlatformIpRuleSourceFactory.class);
-                    assertEquals("10.0.0.0/8\n203.0.113.10/32", factory.create(policy, java.util.List.of()).loadRules());
+                    assertEquals("10.0.0.0/8\n203.0.113.10/32", factory.create(policy).loadRules());
                 });
     }
 

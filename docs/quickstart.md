@@ -63,6 +63,7 @@ platform:
         enabled: false
 
     ip-guard:
+      trust-proxy: true
       trusted-proxy-cidrs:
         - 10.0.0.0/8
       admin:

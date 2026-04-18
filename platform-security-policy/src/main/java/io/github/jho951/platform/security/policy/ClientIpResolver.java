@@ -5,7 +5,7 @@ import java.util.Map;
 /**
  * remote address와 proxy header에서 최종 client IP를 해석한다.
  *
- * <p>기본 구현은 trusted proxy CIDR에 속한 proxy에서 온
+ * <p>기본 구현은 trusted proxy exact IP 또는 CIDR에 속한 proxy에서 온
  * {@code X-Forwarded-For}만 신뢰하도록 구성할 수 있다.</p>
  */
 public interface ClientIpResolver {

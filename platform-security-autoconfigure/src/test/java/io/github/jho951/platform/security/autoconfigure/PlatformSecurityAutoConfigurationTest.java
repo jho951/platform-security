@@ -71,7 +71,6 @@ class PlatformSecurityAutoConfigurationTest {
                         "platform.security.enabled=true",
                         "platform.security.local-support.enabled=true",
                         "platform.security.auth.dev-fallback.enabled=true",
-                        "platform.security.ip-guard.trust-proxy=false",
                         "platform.security.auth.allow-session-for-browser=false",
                         "platform.security.auth.allow-bearer-for-api=false"
                 )

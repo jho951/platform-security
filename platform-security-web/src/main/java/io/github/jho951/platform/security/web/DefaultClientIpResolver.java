@@ -1,11 +1,11 @@
 package io.github.jho951.platform.security.web;
 
 import io.github.jho951.platform.security.policy.ClientIpResolver;
+import io.github.jho951.platform.security.policy.IpAddressMatcher;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,8 +30,7 @@ public final class DefaultClientIpResolver implements ClientIpResolver {
         if (headers != null) {
             String forwardedFor = header(headers, "X-Forwarded-For");
             if (forwardedFor != null && !forwardedFor.isBlank()) {
-                int comma = forwardedFor.indexOf(',');
-                return normalize(comma >= 0 ? forwardedFor.substring(0, comma) : forwardedFor);
+                return resolveForwardedFor(forwardedFor, fallback);
             }
         }
         return fallback;
@@ -46,64 +45,41 @@ public final class DefaultClientIpResolver implements ClientIpResolver {
 
     private String normalize(String value) {
         if (value == null) return "127.0.0.1";
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) return "127.0.0.1";
-        return trimmed.toLowerCase(Locale.ROOT).contains("::ffff:")
-                ? trimmed.substring(trimmed.lastIndexOf(':') + 1)
-                : trimmed;
+        String normalized = IpAddressMatcher.normalize(value);
+        if (normalized.isEmpty()) return "127.0.0.1";
+        return normalized;
+    }
+
+    private String resolveForwardedFor(String forwardedFor, String fallback) {
+        List<String> forwardedIps = forwardedIps(forwardedFor);
+        if (forwardedIps.isEmpty()) {
+            return fallback;
+        }
+        for (int i = forwardedIps.size() - 1; i >= 0; i--) {
+            String candidate = forwardedIps.get(i);
+            if (!isTrustedProxy(candidate)) {
+                return candidate;
+            }
+        }
+        return fallback;
+    }
+
+    private List<String> forwardedIps(String forwardedFor) {
+        String[] parts = forwardedFor.split(",");
+        List<String> ips = new ArrayList<>(parts.length);
+        for (String part : parts) {
+            String normalized = IpAddressMatcher.normalize(part);
+            if (!normalized.isEmpty() && IpAddressMatcher.isIpAddress(normalized)) {
+                ips.add(normalized);
+            }
+        }
+        return ips;
     }
 
     private boolean isTrustedProxy(String remoteAddress) {
         if (properties.getTrustedProxyCidrs().isEmpty()) {
-            return true;
-        }
-        for (String cidr : properties.getTrustedProxyCidrs()) {
-            if (matchesCidr(remoteAddress, cidr)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean matchesCidr(String address, String cidr) {
-        if (address == null || cidr == null || cidr.isBlank()) {
             return false;
         }
-        String normalizedCidr = cidr.trim();
-        String network = normalizedCidr;
-        int prefixLength;
-        int slash = normalizedCidr.indexOf('/');
-        if (slash >= 0) {
-            network = normalizedCidr.substring(0, slash).trim();
-            try {
-                prefixLength = Integer.parseInt(normalizedCidr.substring(slash + 1).trim());
-            } catch (NumberFormatException exception) {
-                return false;
-            }
-        } else {
-            prefixLength = address.contains(":") ? 128 : 32;
-        }
-
-        try {
-            byte[] addressBytes = InetAddress.getByName(address).getAddress();
-            byte[] networkBytes = InetAddress.getByName(normalize(network)).getAddress();
-            if (addressBytes.length != networkBytes.length || prefixLength < 0 || prefixLength > addressBytes.length * 8) {
-                return false;
-            }
-            int fullBytes = prefixLength / 8;
-            int remainingBits = prefixLength % 8;
-            for (int i = 0; i < fullBytes; i++) {
-                if (addressBytes[i] != networkBytes[i]) {
-                    return false;
-                }
-            }
-            if (remainingBits == 0) {
-                return true;
-            }
-            int mask = 0xFF << (8 - remainingBits);
-            return (addressBytes[fullBytes] & mask) == (networkBytes[fullBytes] & mask);
-        } catch (UnknownHostException exception) {
-            return false;
-        }
+        return IpAddressMatcher.matchesAny(remoteAddress, properties.getTrustedProxyCidrs());
     }
 }

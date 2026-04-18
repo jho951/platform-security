@@ -7,7 +7,6 @@ import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties.IpRuleSourceType;
 import org.springframework.core.io.ResourceLoader;
 
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -21,7 +20,7 @@ public class SpringPlatformIpRuleSourceFactory extends DefaultPlatformIpRuleSour
     }
 
     @Override
-    public PlatformIpRuleSource create(PlatformSecurityProperties.BoundaryIpGuardPolicy policy, List<String> legacyRules) {
+    public PlatformIpRuleSource create(PlatformSecurityProperties.BoundaryIpGuardPolicy policy) {
         PlatformSecurityProperties.BoundaryIpGuardPolicy effective =
                 policy == null ? new PlatformSecurityProperties.BoundaryIpGuardPolicy() : policy;
         if (effective.getSource() == IpRuleSourceType.FILE) {
@@ -31,7 +30,7 @@ public class SpringPlatformIpRuleSourceFactory extends DefaultPlatformIpRuleSour
             }
             return cache(new ResourceLocationPlatformIpRuleSource(resourceLoader, location), effective);
         }
-        return super.create(effective, legacyRules);
+        return super.create(effective);
     }
 
     protected PlatformIpRuleSource cache(

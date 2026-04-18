@@ -8,6 +8,7 @@
 | Spring Boot 서비스에 붙이기                       | [quickstart.md](./quickstart.md)                               |
 | `platform.security.*` 설정 확인                | [configuration.md](./configuration.md)                         |
 | 런타임 평가 순서와 header 규칙 확인                    | [security-model.md](./security-model.md)                       |
+| breaking change와 migration 확인                 | [release-notes.md](./release-notes.md)                         |
 | 서비스별로 바꿔 끼우는 bean 확인                      | [extension-guide.md](./extension-guide.md)                     |
 | private publish와 소비 설정                     | [private-publish.md](./private-publish.md)                     |
 | 장애 대응                                      | [troubleshooting.md](./troubleshooting.md)                     |

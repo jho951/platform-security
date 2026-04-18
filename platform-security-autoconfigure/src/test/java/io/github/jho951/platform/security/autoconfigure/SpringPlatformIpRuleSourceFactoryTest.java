@@ -22,7 +22,7 @@ class SpringPlatformIpRuleSourceFactoryTest {
 
         SpringPlatformIpRuleSourceFactory factory = new SpringPlatformIpRuleSourceFactory(new DefaultResourceLoader());
 
-        assertEquals("10.0.0.0/8\n203.0.113.10/32", factory.create(policy, java.util.List.of()).loadRules());
+        assertEquals("10.0.0.0/8\n203.0.113.10/32", factory.create(policy).loadRules());
     }
 
     @Test
@@ -33,6 +33,6 @@ class SpringPlatformIpRuleSourceFactoryTest {
 
         SpringPlatformIpRuleSourceFactory factory = new SpringPlatformIpRuleSourceFactory(new DefaultResourceLoader());
 
-        assertThrows(IllegalStateException.class, () -> factory.create(policy, java.util.List.of()));
+        assertThrows(IllegalStateException.class, () -> factory.create(policy));
     }
 }

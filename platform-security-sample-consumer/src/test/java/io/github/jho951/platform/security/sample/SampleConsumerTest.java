@@ -37,8 +37,8 @@ class SampleConsumerTest {
             ))
             .withPropertyValues(
                     "platform.security.service-role-preset=api-server",
-                    "platform.security.ip-guard.admin-allow-cidrs[0]=10.0.0.0/8",
-                    "platform.security.ip-guard.internal-allow-cidrs[0]=10.0.0.0/8"
+                    "platform.security.ip-guard.admin.rules[0]=10.0.0.0/8",
+                    "platform.security.ip-guard.internal.rules[0]=10.0.0.0/8"
             );
 
     @Test

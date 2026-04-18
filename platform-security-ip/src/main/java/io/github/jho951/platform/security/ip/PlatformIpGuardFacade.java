@@ -13,8 +13,8 @@ import java.util.Objects;
 public final class PlatformIpGuardFacade {
     private final IpAllowListPolicy policy;
 
-    public static PlatformIpGuardFacade fromRules(List<String> rules, boolean defaultAllow) {
-        return new PlatformIpGuardFacade(IpAllowListPolicy.fromRules(rules, defaultAllow));
+    public static PlatformIpGuardFacade fromIpGuardRules(List<String> rules, boolean defaultAllow) {
+        return new PlatformIpGuardFacade(IpAllowListPolicy.fromIpGuardRules(rules, defaultAllow));
     }
 
     public SecurityVerdict evaluate(SecurityRequest request) {

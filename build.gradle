@@ -2,6 +2,7 @@ ext {
     springFrameworkVersion = findProperty('springFramework_version')
     springBootVersion = findProperty('springBoot_version')
     junitVersion = findProperty('junit_version')
+    junitPlatformVersion = findProperty('junitPlatform_version')
     jakartaServletVersion = findProperty('jakartaServlet_version')
     authVersion = findProperty('auth_version')
     ipGuardVersion = findProperty('ipGuard_version')
@@ -41,6 +42,12 @@ subprojects {
 
     tasks.withType(Test).configureEach {
         useJUnitPlatform()
+    }
+
+    if (name != 'platform-security-bom') {
+        dependencies {
+            testRuntimeOnly "org.junit.platform:junit-platform-launcher:${rootProject.junitPlatformVersion}"
+        }
     }
 
     if (name != 'platform-security-bom' && name != 'platform-security-sample-consumer') {

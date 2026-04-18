@@ -12,16 +12,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PlatformIpGuardFacadeTest {
     @Test
-    void fromRulesPreservesIpGuardIpv6RangeRules() {
-        PlatformIpGuardFacade facade = PlatformIpGuardFacade.fromRules(List.of("2001:db8::1-2001:db8::f"), false);
+    void fromIpGuardRulesPreservesIpv6RangeRules() {
+        PlatformIpGuardFacade facade = PlatformIpGuardFacade.fromIpGuardRules(List.of("2001:db8::1-2001:db8::f"), false);
 
         assertTrue(facade.evaluate(request("2001:db8::8")).allowed());
         assertFalse(facade.evaluate(request("2001:db8::10")).allowed());
     }
 
     @Test
-    void fromRulesHonorsDefaultAllowWhenRulesAreEmpty() {
-        PlatformIpGuardFacade facade = PlatformIpGuardFacade.fromRules(List.of(), true);
+    void fromIpGuardRulesHonorsDefaultAllowWhenRulesAreEmpty() {
+        PlatformIpGuardFacade facade = PlatformIpGuardFacade.fromIpGuardRules(List.of(), true);
 
         assertTrue(facade.evaluate(request("10.0.0.10")).allowed());
     }
