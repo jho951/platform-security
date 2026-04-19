@@ -1,6 +1,8 @@
 dependencies {
     api project(':platform-security-api')
     api project(':platform-security-policy')
+    api "org.springframework.boot:spring-boot-starter-security:${rootProject.springBootVersion}"
+    api "org.springframework.boot:spring-boot-starter-oauth2-resource-server:${rootProject.springBootVersion}"
     implementation project(':platform-security-autoconfigure')
     implementation project(':platform-security-issuer-autoconfigure')
     implementation project(':platform-security-internal-autoconfigure')

@@ -19,11 +19,15 @@ dependencies {
     implementation "io.github.jho951:rate-limiter-spi:${rootProject.rateLimiterVersion}"
     compileOnly "jakarta.servlet:jakarta.servlet-api:${rootProject.jakartaServletVersion}"
     compileOnly "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
+    compileOnly "org.springframework.boot:spring-boot-starter-security:${rootProject.springBootVersion}"
+    compileOnly "org.springframework.boot:spring-boot-starter-oauth2-resource-server:${rootProject.springBootVersion}"
     compileOnly "org.springframework.boot:spring-boot-configuration-processor:${rootProject.springBootVersion}"
     annotationProcessor "org.springframework.boot:spring-boot-configuration-processor:${rootProject.springBootVersion}"
 
     testImplementation "org.springframework.boot:spring-boot-test:${rootProject.springBootVersion}"
     testImplementation "org.springframework.boot:spring-boot-test-autoconfigure:${rootProject.springBootVersion}"
+    testImplementation "org.springframework.boot:spring-boot-starter-security:${rootProject.springBootVersion}"
+    testImplementation "org.springframework.boot:spring-boot-starter-oauth2-resource-server:${rootProject.springBootVersion}"
     testImplementation project(':platform-security-local-support')
     testImplementation "org.springframework:spring-test:${rootProject.springFrameworkVersion}"
     testImplementation "org.springframework:spring-web:${rootProject.springFrameworkVersion}"

@@ -93,12 +93,12 @@ class PlatformSecurityAutoConfigurationTest {
     }
 
     @Test
-    void failsFastWhenSecurityContextResolverIsMissing() {
+    void registersSpringSecurityContextResolverByDefault() {
         localContextRunner
                 .withPropertyValues("platform.security.enabled=true")
                 .run(context -> {
-                    assertNotNull(context.getStartupFailure());
-                    assertTrue(context.getStartupFailure().getMessage().contains("No SecurityContextResolver configured"));
+                    assertEquals(null, context.getStartupFailure());
+                    assertNotNull(context.getBean(SecurityContextResolver.class));
                 });
     }
 

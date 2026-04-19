@@ -69,7 +69,6 @@ import com.auth.session.SessionPrincipalMapper;
 import com.auth.session.SessionStore;
 import com.auth.spi.OAuth2PrincipalResolver;
 import com.auth.spi.TokenService;
-import jakarta.servlet.Filter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationContext;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -77,16 +76,34 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.server.WebFilter;
 
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * platform-security의 Spring Boot 자동 구성 진입점이다.
@@ -96,6 +113,7 @@ import java.util.Set;
  */
 @AutoConfiguration
 @ConditionalOnProperty(prefix = "platform.security", name = "enabled", havingValue = "true", matchIfMissing = true)
+@EnableMethodSecurity
 public class PlatformSecurityAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
@@ -410,14 +428,26 @@ public class PlatformSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(SecurityContextResolver.class)
-    @ConditionalOnProperty(prefix = "platform.security.auth", name = "enabled", havingValue = "false")
-    public SecurityContextResolver anonymousSecurityContextResolver() {
-        return request -> new SecurityContext(false, null, Set.of(), new LinkedHashMap<>(request.attributes()));
+    @ConditionalOnClass(Authentication.class)
+    public SecurityContextResolver springSecurityContextResolver() {
+        return request -> {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            var attributes = new LinkedHashMap<>(request.attributes());
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return new SecurityContext(false, null, Set.of(), attributes);
+            }
+            String principal = resolvePrincipal(authentication);
+            Set<String> roles = authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .filter(authority -> authority != null && !authority.isBlank())
+                    .collect(Collectors.toUnmodifiableSet());
+            return new SecurityContext(true, principal, roles, attributes);
+        };
     }
 
-    @Bean
-    @ConditionalOnMissingBean
-    public OperationalProfileResolver operationalProfileResolver() {
+    @Bean(name = "platformSecurityOperationalProfileResolver")
+    @ConditionalOnMissingBean(OperationalProfileResolver.class)
+    public OperationalProfileResolver platformSecurityOperationalProfileResolver() {
         return OperationalProfileResolver.standard();
     }
 
@@ -472,7 +502,8 @@ public class PlatformSecurityAutoConfiguration {
     @ConditionalOnMissingBean(PlatformSecurityServletFilter.class)
     @ConditionalOnBean(SecurityContextResolver.class)
     @ConditionalOnClass(name = "jakarta.servlet.Filter")
-    public Filter securityServletFilter(
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    public PlatformSecurityServletFilter securityServletFilter(
             SecurityIngressAdapter securityIngressAdapter,
             SecurityContextResolver securityContextResolver,
             SecurityIngressRequestFactory securityIngressRequestFactory,
@@ -492,7 +523,19 @@ public class PlatformSecurityAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnBean(PlatformSecurityServletFilter.class)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    public FilterRegistrationBean<PlatformSecurityServletFilter> platformSecurityServletFilterRegistration(
+            PlatformSecurityServletFilter filter
+    ) {
+        FilterRegistrationBean<PlatformSecurityServletFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
     @ConditionalOnClass(WebFilter.class)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
     @ConditionalOnMissingBean(PlatformSecurityWebFilter.class)
     @ConditionalOnBean(SecurityContextResolver.class)
     public WebFilter securityWebFilter(
@@ -529,15 +572,127 @@ public class PlatformSecurityAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(name = "jakarta.servlet.http.HttpServletResponse")
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     public SecurityFailureResponseWriter securityFailureResponseWriter() {
         return SecurityFailureResponseWriter.json();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnClass(name = "org.springframework.web.server.ServerWebExchange")
+    @ConditionalOnClass(name = {
+            "org.springframework.web.server.ServerWebExchange",
+            "reactor.core.publisher.Mono"
+    })
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
     public ReactiveSecurityFailureResponseWriter reactiveSecurityFailureResponseWriter() {
         return ReactiveSecurityFailureResponseWriter.json();
+    }
+
+
+    @Bean
+    @ConditionalOnMissingBean(SecurityFilterChain.class)
+    @ConditionalOnBean(PlatformSecurityServletFilter.class)
+    @ConditionalOnClass({SecurityFilterChain.class, HttpSecurity.class, BearerTokenAuthenticationFilter.class})
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    public SecurityFilterChain platformSecurityFilterChain(
+            HttpSecurity http,
+            PlatformSecurityProperties properties,
+            PlatformSecurityServletFilter platformSecurityServletFilter,
+            ObjectProvider<JwtDecoder> jwtDecoderProvider,
+            ObjectProvider<JwtAuthenticationConverter> jwtAuthenticationConverterProvider
+    ) throws Exception {
+        http
+                .cors(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> {
+                    requestMatchers(auth, publicPaths(properties), AuthorizationRule.PERMIT_ALL);
+                    requestMatchers(auth, properties.getBoundary().getProtectedPaths(), AuthorizationRule.AUTHENTICATED);
+                    requestMatchers(auth, properties.getBoundary().getAdminPaths(), AuthorizationRule.AUTHENTICATED);
+                    requestMatchers(auth, properties.getBoundary().getInternalPaths(), AuthorizationRule.INTERNAL_AUTHORITY, properties);
+                    auth.anyRequest().denyAll();
+                })
+                .addFilterAfter(platformSecurityServletFilter, BearerTokenAuthenticationFilter.class);
+
+        JwtDecoder jwtDecoder = jwtDecoderProvider.getIfAvailable();
+        if (jwtDecoder != null) {
+            http.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {
+                jwt.decoder(jwtDecoder);
+                JwtAuthenticationConverter converter = jwtAuthenticationConverterProvider.getIfAvailable();
+                if (converter != null) {
+                    jwt.jwtAuthenticationConverter(converter);
+                }
+            }));
+        }
+
+        return http.build();
+    }
+
+    private static void requestMatchers(
+            org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry auth,
+            List<String> paths,
+            AuthorizationRule rule
+    ) {
+        requestMatchers(auth, paths, rule, null);
+    }
+
+    private static void requestMatchers(
+            org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry auth,
+            List<String> paths,
+            AuthorizationRule rule,
+            PlatformSecurityProperties properties
+    ) {
+        List<String> normalizedPaths = normalizePaths(paths);
+        if (normalizedPaths.isEmpty()) {
+            return;
+        }
+        var matcher = auth.requestMatchers(normalizedPaths.toArray(String[]::new));
+        if (rule == AuthorizationRule.PERMIT_ALL) {
+            matcher.permitAll();
+            return;
+        }
+        if (rule == AuthorizationRule.INTERNAL_AUTHORITY && properties != null) {
+            List<String> authorities = normalizePaths(properties.getAuth().getInternalRequiredAuthorities());
+            if (!authorities.isEmpty()) {
+                matcher.hasAnyAuthority(authorities.toArray(String[]::new));
+                return;
+            }
+        }
+        matcher.authenticated();
+    }
+
+    private static List<String> publicPaths(PlatformSecurityProperties properties) {
+        return normalizePaths(properties.getBoundary().getPublicPaths());
+    }
+
+    private static List<String> normalizePaths(List<String> paths) {
+        if (paths == null) {
+            return List.of();
+        }
+        return paths.stream()
+                .filter(path -> path != null && !path.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
+    }
+
+    private static String resolvePrincipal(Authentication authentication) {
+        if (authentication instanceof JwtAuthenticationToken jwtAuthenticationToken) {
+            Jwt token = jwtAuthenticationToken.getToken();
+            if (token.getSubject() != null && !token.getSubject().isBlank()) {
+                return token.getSubject();
+            }
+        }
+        String name = authentication.getName();
+        return name == null || name.isBlank() ? null : name;
+    }
+
+    private enum AuthorizationRule {
+        PERMIT_ALL,
+        AUTHENTICATED,
+        INTERNAL_AUTHORITY
     }
 
     @Bean

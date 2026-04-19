@@ -152,6 +152,7 @@ public class PlatformSecurityProperties {
         private boolean allowOidcForApi = true;
         private boolean serviceAccountEnabled = true;
         private boolean internalTokenEnabled = true;
+        private List<String> internalRequiredAuthorities = new ArrayList<>();
         private boolean defaultModeConfigured = false;
         private boolean allowSessionForBrowserConfigured = false;
         private boolean allowApiKeyForApiConfigured = false;
@@ -298,6 +299,14 @@ public class PlatformSecurityProperties {
 
         public void applyInternalTokenEnabled(boolean internalTokenEnabled) {
             this.internalTokenEnabled = internalTokenEnabled;
+        }
+
+        public List<String> getInternalRequiredAuthorities() {
+            return internalRequiredAuthorities;
+        }
+
+        public void setInternalRequiredAuthorities(List<String> internalRequiredAuthorities) {
+            this.internalRequiredAuthorities = internalRequiredAuthorities == null ? new ArrayList<>() : internalRequiredAuthorities;
         }
 
         public DevFallbackProperties getDevFallback() {
