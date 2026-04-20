@@ -46,6 +46,7 @@ import io.github.jho951.platform.security.web.SecurityIngressAdapter;
 import io.github.jho951.platform.security.web.SecurityIngressRequestFactory;
 import io.github.jho951.platform.security.web.SecurityIdentityScrubber;
 import io.github.jho951.platform.security.web.SecurityDownstreamIdentityPropagator;
+import io.github.jho951.platform.security.web.SecurityFailureResponse;
 import io.github.jho951.platform.security.web.SecurityFailureResponseWriter;
 import io.github.jho951.platform.security.web.ReactiveSecurityFailureResponseWriter;
 import io.github.jho951.platform.security.ratelimit.DefaultBoundaryRateLimitPolicyProvider;
@@ -90,14 +91,25 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.server.WebFilter;
 
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -579,6 +591,74 @@ public class PlatformSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnClass(AuthenticationEntryPoint.class)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    public AuthenticationEntryPoint platformAuthenticationEntryPoint(
+            SecurityFailureResponseWriter failureResponseWriter
+    ) {
+        return (request, response, authException) -> failureResponseWriter.write(
+                request,
+                response,
+                new SecurityFailureResponse(401, "security.auth.required", exceptionMessage(authException))
+        );
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnClass(AccessDeniedHandler.class)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    public AccessDeniedHandler platformAccessDeniedHandler(
+            SecurityFailureResponseWriter failureResponseWriter
+    ) {
+        return (request, response, accessDeniedException) -> failureResponseWriter.write(
+                request,
+                response,
+                new SecurityFailureResponse(403, "security.denied", exceptionMessage(accessDeniedException))
+        );
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(JwtDecoder.class)
+    @ConditionalOnClass({JwtDecoder.class, NimbusJwtDecoder.class})
+    public JwtDecoder platformSecurityJwtDecoder(PlatformSecurityProperties properties) {
+        PlatformSecurityProperties.AuthProperties auth = properties.getAuth();
+        SecretKey secretKey = new SecretKeySpec(auth.getJwtSecret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(secretKey).build();
+        decoder.setJwtValidator(jwtValidator(auth));
+        return decoder;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(JwtAuthenticationConverter.class)
+    @ConditionalOnClass(JwtAuthenticationConverter.class)
+    public JwtAuthenticationConverter platformSecurityJwtAuthenticationConverter(PlatformSecurityProperties properties) {
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(new PlatformJwtAuthorityConverter(properties.getAuth()));
+        converter.setPrincipalClaimName(properties.getAuth().getJwtPrincipalClaim());
+        return converter;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(GatewayHeaderAuthenticationFilter.class)
+    @ConditionalOnClass(name = "jakarta.servlet.Filter")
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    public GatewayHeaderAuthenticationFilter gatewayHeaderAuthenticationFilter(PlatformSecurityProperties properties) {
+        return new GatewayHeaderAuthenticationFilter(properties.getAuth().getGatewayHeader());
+    }
+
+    @Bean
+    @ConditionalOnBean(GatewayHeaderAuthenticationFilter.class)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    public FilterRegistrationBean<GatewayHeaderAuthenticationFilter> gatewayHeaderAuthenticationFilterRegistration(
+            GatewayHeaderAuthenticationFilter filter
+    ) {
+        FilterRegistrationBean<GatewayHeaderAuthenticationFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
     @ConditionalOnClass(name = {
             "org.springframework.web.server.ServerWebExchange",
             "reactor.core.publisher.Mono"
@@ -598,8 +678,11 @@ public class PlatformSecurityAutoConfiguration {
             HttpSecurity http,
             PlatformSecurityProperties properties,
             PlatformSecurityServletFilter platformSecurityServletFilter,
+            ObjectProvider<GatewayHeaderAuthenticationFilter> gatewayHeaderAuthenticationFilterProvider,
             ObjectProvider<JwtDecoder> jwtDecoderProvider,
-            ObjectProvider<JwtAuthenticationConverter> jwtAuthenticationConverterProvider
+            ObjectProvider<JwtAuthenticationConverter> jwtAuthenticationConverterProvider,
+            ObjectProvider<AuthenticationEntryPoint> authenticationEntryPointProvider,
+            ObjectProvider<AccessDeniedHandler> accessDeniedHandlerProvider
     ) throws Exception {
         http
                 .cors(AbstractHttpConfigurer::disable)
@@ -607,14 +690,31 @@ public class PlatformSecurityAutoConfiguration {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exceptions -> {
+                    AuthenticationEntryPoint entryPoint = authenticationEntryPointProvider.getIfAvailable();
+                    AccessDeniedHandler deniedHandler = accessDeniedHandlerProvider.getIfAvailable();
+                    if (entryPoint != null) {
+                        exceptions.authenticationEntryPoint(entryPoint);
+                    }
+                    if (deniedHandler != null) {
+                        exceptions.accessDeniedHandler(deniedHandler);
+                    }
+                })
                 .authorizeHttpRequests(auth -> {
                     requestMatchers(auth, publicPaths(properties), AuthorizationRule.PERMIT_ALL);
                     requestMatchers(auth, properties.getBoundary().getProtectedPaths(), AuthorizationRule.AUTHENTICATED);
                     requestMatchers(auth, properties.getBoundary().getAdminPaths(), AuthorizationRule.AUTHENTICATED);
                     requestMatchers(auth, properties.getBoundary().getInternalPaths(), AuthorizationRule.INTERNAL_AUTHORITY, properties);
                     auth.anyRequest().denyAll();
-                })
-                .addFilterAfter(platformSecurityServletFilter, BearerTokenAuthenticationFilter.class);
+                });
+
+        GatewayHeaderAuthenticationFilter gatewayHeaderAuthenticationFilter = gatewayHeaderAuthenticationFilterProvider.getIfAvailable();
+        if (gatewayHeaderAuthenticationFilter != null) {
+            http.addFilterAfter(gatewayHeaderAuthenticationFilter, BearerTokenAuthenticationFilter.class);
+            http.addFilterAfter(platformSecurityServletFilter, GatewayHeaderAuthenticationFilter.class);
+        } else {
+            http.addFilterAfter(platformSecurityServletFilter, BearerTokenAuthenticationFilter.class);
+        }
 
         JwtDecoder jwtDecoder = jwtDecoderProvider.getIfAvailable();
         if (jwtDecoder != null) {
@@ -628,6 +728,47 @@ public class PlatformSecurityAutoConfiguration {
         }
 
         return http.build();
+    }
+
+    private static OAuth2TokenValidator<Jwt> jwtValidator(PlatformSecurityProperties.AuthProperties auth) {
+        List<OAuth2TokenValidator<Jwt>> validators = new ArrayList<>();
+        String issuer = trimToNull(auth.getJwtIssuer());
+        if (issuer == null) {
+            validators.add(JwtValidators.createDefault());
+        } else {
+            validators.add(JwtValidators.createDefaultWithIssuer(issuer));
+        }
+
+        String audience = trimToNull(auth.getJwtAudience());
+        if (audience != null) {
+            validators.add(jwt -> {
+                List<String> audiences = jwt.getAudience();
+                if (audiences != null && audiences.contains(audience)) {
+                    return OAuth2TokenValidatorResult.success();
+                }
+                return OAuth2TokenValidatorResult.failure(
+                        new OAuth2Error("invalid_token", "aud claim does not include required audience", null)
+                );
+            });
+        }
+
+        if (auth.isJwtRequireSubject()) {
+            validators.add(jwt -> {
+                String subject = jwt.getSubject();
+                if (subject != null && !subject.isBlank()) {
+                    return OAuth2TokenValidatorResult.success();
+                }
+                return OAuth2TokenValidatorResult.failure(
+                        new OAuth2Error("invalid_token", "sub claim is required", null)
+                );
+            });
+        }
+
+        return new DelegatingOAuth2TokenValidator<>(validators);
+    }
+
+    private static String exceptionMessage(Exception exception) {
+        return exception == null ? null : exception.getMessage();
     }
 
     private static void requestMatchers(
@@ -676,6 +817,13 @@ public class PlatformSecurityAutoConfiguration {
                 .map(String::trim)
                 .distinct()
                 .toList();
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private static String resolvePrincipal(Authentication authentication) {

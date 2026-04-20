@@ -153,6 +153,14 @@ public class PlatformSecurityProperties {
         private boolean serviceAccountEnabled = true;
         private boolean internalTokenEnabled = true;
         private List<String> internalRequiredAuthorities = new ArrayList<>();
+        private String jwtIssuer;
+        private String jwtAudience;
+        private String jwtPrincipalClaim = "sub";
+        private boolean jwtRequireSubject = true;
+        private String jwtRoleClaim = "role";
+        private String jwtRolesClaim = "roles";
+        private String jwtStatusClaim = "status";
+        private GatewayHeaderProperties gatewayHeader = new GatewayHeaderProperties();
         private boolean defaultModeConfigured = false;
         private boolean allowSessionForBrowserConfigured = false;
         private boolean allowApiKeyForApiConfigured = false;
@@ -309,6 +317,70 @@ public class PlatformSecurityProperties {
             this.internalRequiredAuthorities = internalRequiredAuthorities == null ? new ArrayList<>() : internalRequiredAuthorities;
         }
 
+        public String getJwtIssuer() {
+            return jwtIssuer;
+        }
+
+        public void setJwtIssuer(String jwtIssuer) {
+            this.jwtIssuer = jwtIssuer;
+        }
+
+        public String getJwtAudience() {
+            return jwtAudience;
+        }
+
+        public void setJwtAudience(String jwtAudience) {
+            this.jwtAudience = jwtAudience;
+        }
+
+        public String getJwtPrincipalClaim() {
+            return jwtPrincipalClaim;
+        }
+
+        public void setJwtPrincipalClaim(String jwtPrincipalClaim) {
+            this.jwtPrincipalClaim = jwtPrincipalClaim == null || jwtPrincipalClaim.isBlank() ? "sub" : jwtPrincipalClaim.trim();
+        }
+
+        public boolean isJwtRequireSubject() {
+            return jwtRequireSubject;
+        }
+
+        public void setJwtRequireSubject(boolean jwtRequireSubject) {
+            this.jwtRequireSubject = jwtRequireSubject;
+        }
+
+        public String getJwtRoleClaim() {
+            return jwtRoleClaim;
+        }
+
+        public void setJwtRoleClaim(String jwtRoleClaim) {
+            this.jwtRoleClaim = jwtRoleClaim == null || jwtRoleClaim.isBlank() ? "role" : jwtRoleClaim.trim();
+        }
+
+        public String getJwtRolesClaim() {
+            return jwtRolesClaim;
+        }
+
+        public void setJwtRolesClaim(String jwtRolesClaim) {
+            this.jwtRolesClaim = jwtRolesClaim == null || jwtRolesClaim.isBlank() ? "roles" : jwtRolesClaim.trim();
+        }
+
+        public String getJwtStatusClaim() {
+            return jwtStatusClaim;
+        }
+
+        public void setJwtStatusClaim(String jwtStatusClaim) {
+            this.jwtStatusClaim = jwtStatusClaim == null || jwtStatusClaim.isBlank() ? "status" : jwtStatusClaim.trim();
+        }
+
+        public GatewayHeaderProperties getGatewayHeader() {
+            return gatewayHeader;
+        }
+
+        public void setGatewayHeader(GatewayHeaderProperties gatewayHeader) {
+            this.gatewayHeader = gatewayHeader == null ? new GatewayHeaderProperties() : gatewayHeader;
+        }
+
         public DevFallbackProperties getDevFallback() {
             return devFallback;
         }
@@ -347,6 +419,75 @@ public class PlatformSecurityProperties {
 
         public void setRefreshTokenTtl(Duration refreshTokenTtl) {
             this.refreshTokenTtl = refreshTokenTtl == null ? Duration.ofDays(14) : refreshTokenTtl;
+        }
+    }
+
+    /**
+     * Gateway가 전달한 사용자 컨텍스트 헤더를 Spring Security 인증으로 변환하는 설정이다.
+     */
+    public static class GatewayHeaderProperties {
+        private boolean enabled = false;
+        private String userIdHeader = "X-User-Id";
+        private String userStatusHeader = "X-User-Status";
+        private String userAuthority = "ROLE_USER";
+        private String statusAuthorityPrefix = "STATUS_";
+        private String activeStatus = "A";
+        private String activeStatusAuthority = "STATUS_ACTIVE";
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getUserIdHeader() {
+            return userIdHeader;
+        }
+
+        public void setUserIdHeader(String userIdHeader) {
+            this.userIdHeader = userIdHeader == null || userIdHeader.isBlank() ? "X-User-Id" : userIdHeader.trim();
+        }
+
+        public String getUserStatusHeader() {
+            return userStatusHeader;
+        }
+
+        public void setUserStatusHeader(String userStatusHeader) {
+            this.userStatusHeader = userStatusHeader == null || userStatusHeader.isBlank() ? "X-User-Status" : userStatusHeader.trim();
+        }
+
+        public String getUserAuthority() {
+            return userAuthority;
+        }
+
+        public void setUserAuthority(String userAuthority) {
+            this.userAuthority = userAuthority == null ? null : userAuthority.trim();
+        }
+
+        public String getStatusAuthorityPrefix() {
+            return statusAuthorityPrefix;
+        }
+
+        public void setStatusAuthorityPrefix(String statusAuthorityPrefix) {
+            this.statusAuthorityPrefix = statusAuthorityPrefix == null ? "" : statusAuthorityPrefix.trim();
+        }
+
+        public String getActiveStatus() {
+            return activeStatus;
+        }
+
+        public void setActiveStatus(String activeStatus) {
+            this.activeStatus = activeStatus == null ? null : activeStatus.trim();
+        }
+
+        public String getActiveStatusAuthority() {
+            return activeStatusAuthority;
+        }
+
+        public void setActiveStatusAuthority(String activeStatusAuthority) {
+            this.activeStatusAuthority = activeStatusAuthority == null ? null : activeStatusAuthority.trim();
         }
     }
 

@@ -1,6 +1,7 @@
 package io.github.jho951.platform.security.autoconfigure;
 
 import io.github.jho951.platform.security.api.SecurityContext;
+import io.github.jho951.platform.security.api.GatewayUserPrincipal;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.policy.ClientIpResolver;
@@ -23,6 +24,11 @@ import io.github.jho951.ratelimiter.core.RateLimitDecision;
 import io.github.jho951.ratelimiter.spi.RateLimiter;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.springframework.mock.web.MockFilterChain;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 import java.time.Instant;
 import java.util.List;
@@ -100,6 +106,56 @@ class PlatformSecurityAutoConfigurationTest {
                     assertEquals(null, context.getStartupFailure());
                     assertNotNull(context.getBean(SecurityContextResolver.class));
                 });
+    }
+
+    @Test
+    void platformJwtAuthorityConverterAddsRoleScopeAndStatusAuthorities() {
+        PlatformSecurityProperties.AuthProperties properties = new PlatformSecurityProperties.AuthProperties();
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "none")
+                .subject("123e4567-e89b-12d3-a456-426614174000")
+                .claim("role", "USER")
+                .claim("scope", "internal")
+                .claim("status", "A")
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(60))
+                .build();
+
+        Set<String> authorities = new PlatformJwtAuthorityConverter(properties)
+                .convert(jwt)
+                .stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .collect(java.util.stream.Collectors.toSet());
+
+        assertTrue(authorities.contains("ROLE_USER"));
+        assertTrue(authorities.contains("SCOPE_internal"));
+        assertTrue(authorities.contains("STATUS_A"));
+        assertTrue(authorities.contains("STATUS_ACTIVE"));
+    }
+
+    @Test
+    void gatewayHeaderAuthenticationFilterAuthenticatesGatewayUserHeaders() throws Exception {
+        SecurityContextHolder.clearContext();
+        try {
+            PlatformSecurityProperties.GatewayHeaderProperties properties =
+                    new PlatformSecurityProperties.GatewayHeaderProperties();
+            properties.setEnabled(true);
+            GatewayHeaderAuthenticationFilter filter = new GatewayHeaderAuthenticationFilter(properties);
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/users/me");
+            request.addHeader("X-User-Id", "123e4567-e89b-12d3-a456-426614174000");
+            request.addHeader("X-User-Status", "A");
+
+            filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+
+            var authentication = SecurityContextHolder.getContext().getAuthentication();
+            assertNotNull(authentication);
+            assertEquals("123e4567-e89b-12d3-a456-426614174000", authentication.getName());
+            assertTrue(authentication.getPrincipal() instanceof GatewayUserPrincipal);
+            assertTrue(authentication.getAuthorities().stream()
+                    .anyMatch(authority -> "STATUS_ACTIVE".equals(authority.getAuthority())));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
     }
 
     @Test
