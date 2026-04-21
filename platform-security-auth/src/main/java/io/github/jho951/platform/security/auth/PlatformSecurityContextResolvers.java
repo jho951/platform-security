@@ -68,10 +68,11 @@ public final class PlatformSecurityContextResolvers {
      */
     public static SecurityContextResolver from(HybridAuthenticationProvider hybridAuthenticationProvider) {
         Objects.requireNonNull(hybridAuthenticationProvider, "hybridAuthenticationProvider");
+        PlatformSessionSupport platformSessionSupport = new DefaultPlatformSessionSupport(hybridAuthenticationProvider);
         return new PlatformAuthenticationFacade(new DefaultAuthenticationCapabilityResolver(
-                new DefaultJwtAuthenticationCapability(hybridAuthenticationProvider),
-                new DefaultSessionAuthenticationCapability(hybridAuthenticationProvider),
-                new DefaultHybridAuthenticationCapability(hybridAuthenticationProvider),
+                new DefaultJwtAuthenticationCapability(platformSessionSupport),
+                new DefaultSessionAuthenticationCapability(platformSessionSupport),
+                new DefaultHybridAuthenticationCapability(platformSessionSupport),
                 null
         ));
     }
@@ -87,7 +88,10 @@ public final class PlatformSecurityContextResolvers {
             HybridAuthenticationProvider hybridAuthenticationProvider,
             InternalTokenClaimsValidator internalTokenClaimsValidator
     ) {
-        return new PlatformAuthenticationFacade(hybridAuthenticationProvider, internalTokenClaimsValidator);
+        return new PlatformAuthenticationFacade(
+                new DefaultPlatformSessionSupport(hybridAuthenticationProvider),
+                internalTokenClaimsValidator
+        );
     }
 
     /**
@@ -129,7 +133,7 @@ public final class PlatformSecurityContextResolvers {
      * @return token issuance capability
      */
     public static TokenIssuanceCapability tokenIssuer(TokenService tokenService) {
-        return new DefaultTokenIssuanceCapability(tokenService);
+        return new DefaultTokenIssuanceCapability(new TokenServicePlatformTokenIssuerPort(tokenService));
     }
 
     /**
@@ -139,7 +143,7 @@ public final class PlatformSecurityContextResolvers {
      * @return session issuance capability
      */
     public static SessionIssuanceCapability sessionIssuer(SessionStore sessionStore) {
-        return new DefaultSessionIssuanceCapability(sessionStore);
+        return new DefaultSessionIssuanceCapability(new SessionStorePlatformSessionIssuerPort(sessionStore));
     }
 
     /**

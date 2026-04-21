@@ -1,9 +1,6 @@
 package io.github.jho951.platform.security.auth;
 
 import com.auth.api.model.Principal;
-import com.auth.session.SecureRandomSessionIdGenerator;
-import com.auth.session.SessionIdGenerator;
-import com.auth.session.SessionStore;
 
 import java.util.Objects;
 
@@ -14,34 +11,18 @@ import java.util.Objects;
  * 저장 가능한 session으로 바꾸는 작업만 담당한다.</p>
  */
 public final class DefaultSessionIssuanceCapability implements SessionIssuanceCapability {
-    private final SessionStore sessionStore;
-    private final SessionIdGenerator sessionIdGenerator;
+    private final PlatformSessionIssuerPort sessionIssuerPort;
 
     /**
-     * secure random session id generator를 사용하는 issuer를 만든다.
-     *
-     * @param sessionStore 발급된 session을 저장할 1계층 store
+     * @param sessionIssuerPort session 발급 port
      */
-    public DefaultSessionIssuanceCapability(SessionStore sessionStore) {
-        this(sessionStore, new SecureRandomSessionIdGenerator());
-    }
-
-    /**
-     * session id 생성 전략을 명시해 issuer를 만든다.
-     *
-     * @param sessionStore 발급된 session을 저장할 1계층 store
-     * @param sessionIdGenerator session id 생성기
-     */
-    public DefaultSessionIssuanceCapability(SessionStore sessionStore, SessionIdGenerator sessionIdGenerator) {
-        this.sessionStore = Objects.requireNonNull(sessionStore, "sessionStore");
-        this.sessionIdGenerator = Objects.requireNonNull(sessionIdGenerator, "sessionIdGenerator");
+    public DefaultSessionIssuanceCapability(PlatformSessionIssuerPort sessionIssuerPort) {
+        this.sessionIssuerPort = Objects.requireNonNull(sessionIssuerPort, "sessionIssuerPort");
     }
 
     @Override
     public String issueSession(Principal principal) {
         Objects.requireNonNull(principal, "principal");
-        String sessionId = sessionIdGenerator.generate();
-        sessionStore.save(sessionId, principal);
-        return sessionId;
+        return sessionIssuerPort.issueSession(principal);
     }
 }

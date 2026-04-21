@@ -1,7 +1,6 @@
 package io.github.jho951.platform.security.auth;
 
 import com.auth.api.model.Principal;
-import com.auth.spi.TokenService;
 
 import java.util.Objects;
 
@@ -9,24 +8,20 @@ import java.util.Objects;
  * 1계층 token service에 위임해 access/refresh token을 발급하는 기본 구현이다.
  */
 public final class DefaultTokenIssuanceCapability implements TokenIssuanceCapability {
-    private final TokenService tokenService;
+    private final PlatformTokenIssuerPort tokenIssuerPort;
 
     /**
      * token service와 issuer capability를 연결한다.
      *
-     * @param tokenService access/refresh token 발급 service
+     * @param tokenIssuerPort access/refresh token 발급 port
      */
-    public DefaultTokenIssuanceCapability(TokenService tokenService) {
-        this.tokenService = Objects.requireNonNull(tokenService, "tokenService");
+    public DefaultTokenIssuanceCapability(PlatformTokenIssuerPort tokenIssuerPort) {
+        this.tokenIssuerPort = Objects.requireNonNull(tokenIssuerPort, "tokenIssuerPort");
     }
 
     @Override
     public PlatformTokenBundle issue(Principal principal) {
         Objects.requireNonNull(principal, "principal");
-        return new PlatformTokenBundle(
-                tokenService.issueAccessToken(principal),
-                tokenService.issueRefreshToken(principal),
-                null
-        );
+        return tokenIssuerPort.issue(principal);
     }
 }

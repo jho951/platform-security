@@ -6,7 +6,6 @@ import io.github.jho951.platform.security.policy.BoundaryRateLimitPolicyProvider
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import io.github.jho951.platform.security.policy.RateLimitKeyResolver;
 import io.github.jho951.platform.security.policy.SecurityBoundary;
-import io.github.jho951.ratelimiter.spi.RateLimiter;
 
 import java.util.Map;
 import java.util.Objects;
@@ -18,17 +17,17 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class DefaultBoundaryRateLimitPolicyProvider implements BoundaryRateLimitPolicyProvider {
     private final PlatformSecurityProperties.RateLimitProperties properties;
     private final RateLimitKeyResolver keyResolver;
-    private final RateLimiter rateLimiter;
+    private final PlatformRateLimitAdapter rateLimitAdapter;
     private final Map<String, SecurityPolicy> cache = new ConcurrentHashMap<>();
 
     public DefaultBoundaryRateLimitPolicyProvider(
             PlatformSecurityProperties.RateLimitProperties properties,
             RateLimitKeyResolver keyResolver,
-            RateLimiter rateLimiter
+            PlatformRateLimitAdapter rateLimitAdapter
     ) {
         this.properties = properties == null ? new PlatformSecurityProperties.RateLimitProperties() : properties;
         this.keyResolver = Objects.requireNonNull(keyResolver, "keyResolver");
-        this.rateLimiter = Objects.requireNonNull(rateLimiter, "rateLimiter");
+        this.rateLimitAdapter = Objects.requireNonNull(rateLimitAdapter, "rateLimitAdapter");
     }
 
     @Override
@@ -47,7 +46,7 @@ public final class DefaultBoundaryRateLimitPolicyProvider implements BoundaryRat
                 boundary,
                 properties,
                 keyResolver,
-                rateLimiter
+                rateLimitAdapter.rateLimiter()
         ));
     }
 

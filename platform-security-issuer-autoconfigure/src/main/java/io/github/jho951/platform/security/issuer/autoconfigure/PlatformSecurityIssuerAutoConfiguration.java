@@ -6,7 +6,11 @@ import com.auth.session.SessionStore;
 import com.auth.spi.TokenService;
 import io.github.jho951.platform.security.auth.DefaultSessionIssuanceCapability;
 import io.github.jho951.platform.security.auth.DefaultTokenIssuanceCapability;
+import io.github.jho951.platform.security.auth.PlatformSessionIssuerPort;
+import io.github.jho951.platform.security.auth.PlatformTokenIssuerPort;
+import io.github.jho951.platform.security.auth.SessionStorePlatformSessionIssuerPort;
 import io.github.jho951.platform.security.auth.SessionIssuanceCapability;
+import io.github.jho951.platform.security.auth.TokenServicePlatformTokenIssuerPort;
 import io.github.jho951.platform.security.auth.TokenIssuanceCapability;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -29,15 +33,29 @@ public class PlatformSecurityIssuerAutoConfiguration {
 
     @Bean
     @ConditionalOnBean(TokenService.class)
-    @ConditionalOnMissingBean(TokenIssuanceCapability.class)
-    public TokenIssuanceCapability tokenIssuanceCapability(TokenService tokenService) {
-        return new DefaultTokenIssuanceCapability(tokenService);
+    @ConditionalOnMissingBean(PlatformTokenIssuerPort.class)
+    public PlatformTokenIssuerPort platformTokenIssuerPort(TokenService tokenService) {
+        return new TokenServicePlatformTokenIssuerPort(tokenService);
     }
 
     @Bean
     @ConditionalOnBean(SessionStore.class)
+    @ConditionalOnMissingBean(PlatformSessionIssuerPort.class)
+    public PlatformSessionIssuerPort platformSessionIssuerPort(SessionStore sessionStore) {
+        return new SessionStorePlatformSessionIssuerPort(sessionStore);
+    }
+
+    @Bean
+    @ConditionalOnBean(PlatformTokenIssuerPort.class)
+    @ConditionalOnMissingBean(TokenIssuanceCapability.class)
+    public TokenIssuanceCapability tokenIssuanceCapability(PlatformTokenIssuerPort tokenIssuerPort) {
+        return new DefaultTokenIssuanceCapability(tokenIssuerPort);
+    }
+
+    @Bean
+    @ConditionalOnBean(PlatformSessionIssuerPort.class)
     @ConditionalOnMissingBean(SessionIssuanceCapability.class)
-    public SessionIssuanceCapability sessionIssuanceCapability(SessionStore sessionStore) {
-        return new DefaultSessionIssuanceCapability(sessionStore);
+    public SessionIssuanceCapability sessionIssuanceCapability(PlatformSessionIssuerPort sessionIssuerPort) {
+        return new DefaultSessionIssuanceCapability(sessionIssuerPort);
     }
 }

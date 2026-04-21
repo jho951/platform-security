@@ -1,0 +1,15 @@
+dependencies {
+    api project(':platform-security-api')
+    api project(':platform-security-policy')
+    api project(':platform-security-autoconfigure')
+    implementation "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
+
+    testImplementation "org.springframework.boot:spring-boot-test:${rootProject.springBootVersion}"
+    testImplementation "org.springframework.boot:spring-boot-test-autoconfigure:${rootProject.springBootVersion}"
+    testImplementation "org.springframework.boot:spring-boot-starter-security:${rootProject.springBootVersion}"
+    testImplementation "org.springframework.boot:spring-boot-starter-oauth2-resource-server:${rootProject.springBootVersion}"
+    testImplementation "org.assertj:assertj-core:3.27.7"
+    testImplementation "jakarta.servlet:jakarta.servlet-api:${rootProject.jakartaServletVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitVersion}"
+}

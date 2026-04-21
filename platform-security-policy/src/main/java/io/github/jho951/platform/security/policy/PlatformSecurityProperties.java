@@ -497,7 +497,10 @@ public class PlatformSecurityProperties {
     public static class OperationalPolicyProperties {
         private boolean enabled = true;
         private boolean production = false;
-        private List<String> productionProfiles = new ArrayList<>(List.of("prod"));
+        private List<String> productionProfiles = new ArrayList<>(List.of("prod", "production"));
+        private boolean allowIpGuardDisabledInProduction = false;
+        private boolean allowRateLimitDisabledInProduction = false;
+        private boolean allowNonDistributedRateLimiterInProduction = false;
 
         public boolean isEnabled() {
             return enabled;
@@ -536,6 +539,30 @@ public class PlatformSecurityProperties {
                 }
             }
             return false;
+        }
+
+        public boolean isAllowIpGuardDisabledInProduction() {
+            return allowIpGuardDisabledInProduction;
+        }
+
+        public void setAllowIpGuardDisabledInProduction(boolean allowIpGuardDisabledInProduction) {
+            this.allowIpGuardDisabledInProduction = allowIpGuardDisabledInProduction;
+        }
+
+        public boolean isAllowRateLimitDisabledInProduction() {
+            return allowRateLimitDisabledInProduction;
+        }
+
+        public void setAllowRateLimitDisabledInProduction(boolean allowRateLimitDisabledInProduction) {
+            this.allowRateLimitDisabledInProduction = allowRateLimitDisabledInProduction;
+        }
+
+        public boolean isAllowNonDistributedRateLimiterInProduction() {
+            return allowNonDistributedRateLimiterInProduction;
+        }
+
+        public void setAllowNonDistributedRateLimiterInProduction(boolean allowNonDistributedRateLimiterInProduction) {
+            this.allowNonDistributedRateLimiterInProduction = allowNonDistributedRateLimiterInProduction;
         }
     }
 

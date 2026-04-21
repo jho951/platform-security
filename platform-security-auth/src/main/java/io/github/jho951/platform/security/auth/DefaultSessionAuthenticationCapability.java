@@ -1,8 +1,6 @@
 package io.github.jho951.platform.security.auth;
 
 import com.auth.api.model.Principal;
-import com.auth.hybrid.HybridAuthenticationContext;
-import com.auth.hybrid.HybridAuthenticationProvider;
 import io.github.jho951.platform.security.api.SecurityRequest;
 
 import java.util.Map;
@@ -12,19 +10,19 @@ import java.util.Optional;
 /**
  * session id를 처리하는 session capability다.
  *
- * <p>session 조회와 principal 복원은 1계층 {@link HybridAuthenticationProvider}로
+ * <p>session 조회와 principal 복원은 platform session support port로
  * 위임한다.</p>
  */
 public final class DefaultSessionAuthenticationCapability implements AuthenticationCapability {
-    private final HybridAuthenticationProvider hybridAuthenticationProvider;
+    private final PlatformSessionSupport platformSessionSupport;
 
     /**
      * session 검증 provider와 capability를 연결한다.
      *
-     * @param hybridAuthenticationProvider session 검증 provider
+     * @param platformSessionSupport session 검증 port
      */
-    public DefaultSessionAuthenticationCapability(HybridAuthenticationProvider hybridAuthenticationProvider) {
-        this.hybridAuthenticationProvider = Objects.requireNonNull(hybridAuthenticationProvider, "hybridAuthenticationProvider");
+    public DefaultSessionAuthenticationCapability(PlatformSessionSupport platformSessionSupport) {
+        this.platformSessionSupport = Objects.requireNonNull(platformSessionSupport, "platformSessionSupport");
     }
 
     @Override
@@ -42,7 +40,6 @@ public final class DefaultSessionAuthenticationCapability implements Authenticat
         if (sessionId == null) {
             return Optional.empty();
         }
-        Principal principal = hybridAuthenticationProvider.authenticate(HybridAuthenticationContext.of(null, sessionId)).orElse(null);
-        return Optional.ofNullable(principal);
+        return platformSessionSupport.authenticateSession(sessionId);
     }
 }

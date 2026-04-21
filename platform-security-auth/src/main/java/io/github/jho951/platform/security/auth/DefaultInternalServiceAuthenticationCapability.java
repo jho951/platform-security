@@ -1,8 +1,6 @@
 package io.github.jho951.platform.security.auth;
 
 import com.auth.api.model.Principal;
-import com.auth.hybrid.HybridAuthenticationContext;
-import com.auth.hybrid.HybridAuthenticationProvider;
 import io.github.jho951.platform.security.api.SecurityRequest;
 
 import java.util.Map;
@@ -12,27 +10,27 @@ import java.util.Optional;
 /**
  * 내부 서비스 간 호출에 사용하는 internal token capability다.
  *
- * <p>token 검증은 1계층 hybrid provider가 맡고, 서비스별 issuer/audience/service id
+ * <p>token 검증은 platform session support port가 맡고, 서비스별 issuer/audience/service id
  * 검증은 {@link InternalTokenClaimsValidator} hook으로 분리한다.</p>
  */
 public final class DefaultInternalServiceAuthenticationCapability implements AuthenticationCapability {
     /** request attributes에서 internal token을 읽을 때 사용하는 key다. */
     public static final String INTERNAL_TOKEN_ATTRIBUTE = "auth.internalToken";
 
-    private final HybridAuthenticationProvider hybridAuthenticationProvider;
+    private final PlatformSessionSupport platformSessionSupport;
     private final InternalTokenClaimsValidator claimsValidator;
 
     /**
      * service-specific claim validator를 포함한 internal token capability를 만든다.
      *
-     * @param hybridAuthenticationProvider token/session 검증 provider
+     * @param platformSessionSupport token/session 검증 port
      * @param claimsValidator internal token claim 추가 검증 hook
      */
     public DefaultInternalServiceAuthenticationCapability(
-            HybridAuthenticationProvider hybridAuthenticationProvider,
+            PlatformSessionSupport platformSessionSupport,
             InternalTokenClaimsValidator claimsValidator
     ) {
-        this.hybridAuthenticationProvider = Objects.requireNonNull(hybridAuthenticationProvider, "hybridAuthenticationProvider");
+        this.platformSessionSupport = Objects.requireNonNull(platformSessionSupport, "platformSessionSupport");
         this.claimsValidator = Objects.requireNonNull(claimsValidator, "claimsValidator");
     }
 
@@ -56,7 +54,7 @@ public final class DefaultInternalServiceAuthenticationCapability implements Aut
         if (internalToken == null && sessionId == null) {
             return Optional.empty();
         }
-        Principal principal = hybridAuthenticationProvider.authenticate(HybridAuthenticationContext.of(internalToken, sessionId)).orElse(null);
+        Principal principal = platformSessionSupport.authenticate(internalToken, sessionId).orElse(null);
         if (principal != null && !claimsValidator.validate(principal, request)) {
             return Optional.empty();
         }

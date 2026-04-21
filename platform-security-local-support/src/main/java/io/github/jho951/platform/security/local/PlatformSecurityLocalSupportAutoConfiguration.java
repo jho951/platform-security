@@ -10,9 +10,17 @@ import com.auth.session.SimpleSessionStore;
 import com.auth.spi.TokenService;
 import com.auth.support.jwt.JwtTokenService;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
+import io.github.jho951.platform.security.auth.DefaultPlatformSessionSupport;
 import io.github.jho951.platform.security.auth.InternalTokenClaimsValidator;
 import io.github.jho951.platform.security.auth.PlatformAuthenticationFacade;
+import io.github.jho951.platform.security.auth.PlatformSessionIssuerPort;
+import io.github.jho951.platform.security.auth.PlatformSessionSupport;
+import io.github.jho951.platform.security.auth.PlatformTokenIssuerPort;
+import io.github.jho951.platform.security.auth.SessionStorePlatformSessionIssuerPort;
+import io.github.jho951.platform.security.auth.TokenServicePlatformTokenIssuerPort;
 import io.github.jho951.platform.security.core.limiter.InMemoryRateLimiter;
+import io.github.jho951.platform.security.ratelimit.DefaultPlatformRateLimitAdapter;
+import io.github.jho951.platform.security.ratelimit.PlatformRateLimitAdapter;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import io.github.jho951.ratelimiter.spi.RateLimiter;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -67,9 +75,35 @@ public class PlatformSecurityLocalSupportAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean(PlatformSessionSupport.class)
+    public PlatformSessionSupport platformSecurityLocalPlatformSessionSupport(
+            HybridAuthenticationProvider hybridAuthenticationProvider
+    ) {
+        return new DefaultPlatformSessionSupport(hybridAuthenticationProvider);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(PlatformTokenIssuerPort.class)
+    public PlatformTokenIssuerPort platformSecurityLocalTokenIssuerPort(TokenService tokenService) {
+        return new TokenServicePlatformTokenIssuerPort(tokenService);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(PlatformSessionIssuerPort.class)
+    public PlatformSessionIssuerPort platformSecurityLocalSessionIssuerPort(SessionStore sessionStore) {
+        return new SessionStorePlatformSessionIssuerPort(sessionStore);
+    }
+
+    @Bean
     @ConditionalOnMissingBean(RateLimiter.class)
     public RateLimiter platformSecurityLocalRateLimiter() {
         return new InMemoryRateLimiter(Clock.systemUTC());
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(PlatformRateLimitAdapter.class)
+    public PlatformRateLimitAdapter platformSecurityLocalRateLimitAdapter(RateLimiter rateLimiter) {
+        return new DefaultPlatformRateLimitAdapter(rateLimiter);
     }
 
     @Bean
@@ -82,9 +116,9 @@ public class PlatformSecurityLocalSupportAutoConfiguration {
     @ConditionalOnMissingBean(SecurityContextResolver.class)
     @ConditionalOnProperty(prefix = "platform.security.auth.dev-fallback", name = "enabled", havingValue = "true")
     public SecurityContextResolver platformSecurityLocalDevFallbackSecurityContextResolver(
-            HybridAuthenticationProvider hybridAuthenticationProvider,
+            PlatformSessionSupport platformSessionSupport,
             InternalTokenClaimsValidator internalTokenClaimsValidator
     ) {
-        return new PlatformAuthenticationFacade(hybridAuthenticationProvider, internalTokenClaimsValidator);
+        return new PlatformAuthenticationFacade(platformSessionSupport, internalTokenClaimsValidator);
     }
 }

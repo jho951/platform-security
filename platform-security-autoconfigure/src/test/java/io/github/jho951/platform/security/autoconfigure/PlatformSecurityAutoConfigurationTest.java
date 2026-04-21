@@ -181,7 +181,10 @@ class PlatformSecurityAutoConfigurationTest {
                         "spring.profiles.active=production",
                         "platform.security.auth.dev-fallback.enabled=true"
                 )
-                .run(context -> assertEquals(null, context.getStartupFailure()));
+                .run(context -> {
+                    assertNotNull(context.getStartupFailure());
+                    assertTrue(context.getStartupFailure().getMessage().contains("operational policy violation"));
+                });
     }
 
     @Test
@@ -199,10 +202,10 @@ class PlatformSecurityAutoConfigurationTest {
                 .run(context -> {
                     assertNotNull(context.getStartupFailure());
                     String message = context.getStartupFailure().getMessage();
-                    assertTrue(message.contains("production TokenService bean must be provided"));
-                    assertTrue(message.contains("production SessionStore bean must be provided"));
+                    assertTrue(message.contains("production PlatformTokenIssuerPort bean must be provided"));
+                    assertTrue(message.contains("production PlatformSessionIssuerPort bean must be provided"));
                     assertTrue(message.contains("production InternalTokenClaimsValidator bean must be provided"));
-                    assertTrue(message.contains("in-memory rate limiter is local/test only"));
+                    assertTrue(message.contains("platform local rate limiter is local/test only"));
                 });
     }
 
@@ -223,9 +226,24 @@ class PlatformSecurityAutoConfigurationTest {
                 .run(context -> {
                     assertNotNull(context.getStartupFailure());
                     String message = context.getStartupFailure().getMessage();
-                    assertTrue(message.contains("issuer services must provide a production TokenService bean"));
-                    assertTrue(message.contains("issuer services with browser session support must provide a production SessionStore bean"));
+                    assertTrue(message.contains("issuer services must provide a production PlatformTokenIssuerPort bean"));
+                    assertTrue(message.contains("issuer services with browser session support must provide a production PlatformSessionIssuerPort bean"));
                 });
+    }
+
+    @Test
+    void internalServicePresetAllowsDisabledIngressControlsInProduction() {
+        contextRunner
+                .withBean(SecurityContextResolver.class, () -> request -> new SecurityContext(true, "internal", Set.of("INTERNAL"), Map.of()))
+                .withBean(InternalTokenClaimsValidator.class, () -> (principal, request) -> true)
+                .withPropertyValues(
+                        "spring.profiles.active=prod",
+                        "platform.security.service-role-preset=internal-service",
+                        "platform.security.auth.jwt-secret=prod-secret-prod-secret-prod-secret-prod-secret",
+                        "platform.security.ip-guard.enabled=false",
+                        "platform.security.rate-limit.enabled=false"
+                )
+                .run(context -> assertEquals(null, context.getStartupFailure()));
     }
 
     @Test

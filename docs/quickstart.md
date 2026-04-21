@@ -125,7 +125,7 @@ repositories {
 ```gradle
 dependencies {
     implementation "io.github.jho951.platform:platform-security-client"
-    implementation "io.github.jho951.platform:platform-security-governance-bridge:1.0.0"
+    implementation "io.github.jho951.platform:platform-security-governance-bridge:1.0.2"
     implementation "io.github.jho951.platform:platform-security-policyconfig-bridge"
     testImplementation "io.github.jho951.platform:platform-security-local-support"
     testImplementation "io.github.jho951.platform:platform-security-test-support"

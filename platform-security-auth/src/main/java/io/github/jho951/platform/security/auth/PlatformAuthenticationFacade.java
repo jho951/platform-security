@@ -1,7 +1,6 @@
 package io.github.jho951.platform.security.auth;
 
 import com.auth.api.model.Principal;
-import com.auth.hybrid.HybridAuthenticationProvider;
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
 import io.github.jho951.platform.security.api.SecurityRequest;
@@ -68,20 +67,20 @@ public final class PlatformAuthenticationFacade implements SecurityContextResolv
     }
 
     /**
-     * hybrid provider와 internal claim validator로 JWT/session/hybrid/internal capability를 구성한다.
+     * platform session support와 internal claim validator로 JWT/session/hybrid/internal capability를 구성한다.
      *
-     * @param hybridAuthenticationProvider token/session 검증 provider
+     * @param platformSessionSupport token/session 검증 port
      * @param internalTokenClaimsValidator internal token claim 추가 검증 hook
      */
     public PlatformAuthenticationFacade(
-            HybridAuthenticationProvider hybridAuthenticationProvider,
+            PlatformSessionSupport platformSessionSupport,
             InternalTokenClaimsValidator internalTokenClaimsValidator
     ) {
         this(new DefaultAuthenticationCapabilityResolver(
-                new DefaultJwtAuthenticationCapability(hybridAuthenticationProvider),
-                new DefaultSessionAuthenticationCapability(hybridAuthenticationProvider),
-                new DefaultHybridAuthenticationCapability(hybridAuthenticationProvider),
-                new DefaultInternalServiceAuthenticationCapability(hybridAuthenticationProvider, internalTokenClaimsValidator)
+                new DefaultJwtAuthenticationCapability(platformSessionSupport),
+                new DefaultSessionAuthenticationCapability(platformSessionSupport),
+                new DefaultHybridAuthenticationCapability(platformSessionSupport),
+                new DefaultInternalServiceAuthenticationCapability(platformSessionSupport, internalTokenClaimsValidator)
         ));
     }
 

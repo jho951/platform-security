@@ -27,16 +27,16 @@ public final class OperationalSecurityPolicyEnforcer {
     public void enforce(
             PlatformSecurityProperties properties,
             boolean securityContextResolverPresent,
-            boolean platformDefaultTokenServicePresent,
+            boolean platformDefaultTokenIssuerPortPresent,
             String... activeProfiles
     ) {
         enforce(
                 properties,
                 securityContextResolverPresent,
-                platformDefaultTokenServicePresent,
+                platformDefaultTokenIssuerPortPresent,
                 false,
-                true,
-                platformDefaultTokenServicePresent,
+                false,
+                false,
                 false,
                 false,
                 false,
@@ -47,19 +47,19 @@ public final class OperationalSecurityPolicyEnforcer {
     public void enforce(
             PlatformSecurityProperties properties,
             boolean securityContextResolverPresent,
-            boolean platformDefaultTokenServicePresent,
-            boolean platformDefaultRateLimiterPresent,
+            boolean platformDefaultTokenIssuerPortPresent,
+            boolean platformDefaultRateLimitAdapterPresent,
             String... activeProfiles
     ) {
         enforce(
                 properties,
                 securityContextResolverPresent,
-                platformDefaultTokenServicePresent,
+                platformDefaultTokenIssuerPortPresent,
                 false,
-                true,
-                platformDefaultTokenServicePresent,
                 false,
-                platformDefaultRateLimiterPresent,
+                false,
+                false,
+                platformDefaultRateLimitAdapterPresent,
                 false,
                 activeProfiles
         );
@@ -68,22 +68,22 @@ public final class OperationalSecurityPolicyEnforcer {
     public void enforce(
             PlatformSecurityProperties properties,
             boolean securityContextResolverPresent,
-            boolean platformDefaultTokenServicePresent,
-            boolean platformDefaultSessionStorePresent,
-            boolean rateLimiterPresent,
-            boolean inMemoryRateLimiterPresent,
+            boolean platformDefaultTokenIssuerPortPresent,
+            boolean platformDefaultSessionIssuerPortPresent,
+            boolean rateLimitAdapterPresent,
+            boolean nonDistributedRateLimitAdapterPresent,
             boolean platformDefaultInternalTokenClaimsValidatorPresent,
             String... activeProfiles
     ) {
         enforce(
                 properties,
                 securityContextResolverPresent,
-                platformDefaultTokenServicePresent,
-                platformDefaultSessionStorePresent,
-                rateLimiterPresent,
-                platformDefaultTokenServicePresent,
-                platformDefaultSessionStorePresent,
-                inMemoryRateLimiterPresent,
+                platformDefaultTokenIssuerPortPresent,
+                platformDefaultSessionIssuerPortPresent,
+                rateLimitAdapterPresent,
+                false,
+                false,
+                nonDistributedRateLimitAdapterPresent,
                 platformDefaultInternalTokenClaimsValidatorPresent,
                 activeProfiles
         );
@@ -92,12 +92,12 @@ public final class OperationalSecurityPolicyEnforcer {
     public void enforce(
             PlatformSecurityProperties properties,
             boolean securityContextResolverPresent,
-            boolean platformDefaultTokenServicePresent,
-            boolean platformDefaultSessionStorePresent,
-            boolean rateLimiterPresent,
-            boolean tokenServicePresent,
-            boolean sessionStorePresent,
-            boolean inMemoryRateLimiterPresent,
+            boolean platformDefaultTokenIssuerPortPresent,
+            boolean platformDefaultSessionIssuerPortPresent,
+            boolean rateLimitAdapterPresent,
+            boolean tokenIssuerPortPresent,
+            boolean sessionIssuerPortPresent,
+            boolean nonDistributedRateLimitAdapterPresent,
             boolean platformDefaultInternalTokenClaimsValidatorPresent,
             String... activeProfiles
     ) {
@@ -113,14 +113,14 @@ public final class OperationalSecurityPolicyEnforcer {
         validateAuth(
                 properties,
                 securityContextResolverPresent,
-                platformDefaultTokenServicePresent,
-                platformDefaultSessionStorePresent,
+                platformDefaultTokenIssuerPortPresent,
+                platformDefaultSessionIssuerPortPresent,
                 platformDefaultInternalTokenClaimsValidatorPresent,
                 violations
         );
-        validateIssuer(properties, tokenServicePresent, sessionStorePresent, violations);
+        validateIssuer(properties, tokenIssuerPortPresent, sessionIssuerPortPresent, violations);
         validateIpGuard(properties, violations);
-        validateRateLimit(properties, rateLimiterPresent, inMemoryRateLimiterPresent, violations);
+        validateRateLimit(properties, rateLimitAdapterPresent, nonDistributedRateLimitAdapterPresent, violations);
         if (!violations.isEmpty()) {
             throw new IllegalStateException("Platform security operational policy violation: " + String.join("; ", violations));
         }
@@ -128,18 +128,18 @@ public final class OperationalSecurityPolicyEnforcer {
 
     private void validateIssuer(
             PlatformSecurityProperties properties,
-            boolean tokenServicePresent,
-            boolean sessionStorePresent,
+            boolean tokenIssuerPortPresent,
+            boolean sessionIssuerPortPresent,
             List<String> violations
     ) {
         if (properties.getServiceRolePreset() != ServiceRolePreset.ISSUER) {
             return;
         }
-        if (!tokenServicePresent) {
-            violations.add("issuer services must provide a production TokenService bean");
+        if (!tokenIssuerPortPresent) {
+            violations.add("issuer services must provide a production PlatformTokenIssuerPort bean");
         }
-        if (properties.getAuth().isAllowSessionForBrowser() && !sessionStorePresent) {
-            violations.add("issuer services with browser session support must provide a production SessionStore bean");
+        if (properties.getAuth().isAllowSessionForBrowser() && !sessionIssuerPortPresent) {
+            violations.add("issuer services with browser session support must provide a production PlatformSessionIssuerPort bean");
         }
     }
 
@@ -156,8 +156,8 @@ public final class OperationalSecurityPolicyEnforcer {
     private void validateAuth(
             PlatformSecurityProperties properties,
             boolean securityContextResolverPresent,
-            boolean platformDefaultTokenServicePresent,
-            boolean platformDefaultSessionStorePresent,
+            boolean platformDefaultTokenIssuerPortPresent,
+            boolean platformDefaultSessionIssuerPortPresent,
             boolean platformDefaultInternalTokenClaimsValidatorPresent,
             List<String> violations
     ) {
@@ -175,14 +175,14 @@ public final class OperationalSecurityPolicyEnforcer {
         if (!securityContextResolverPresent) {
             violations.add("production SecurityContextResolver bean is required");
         }
-        if (platformDefaultTokenServicePresent) {
-            violations.add("production TokenService bean must be provided; platform JwtTokenService is local/test only");
+        if (platformDefaultTokenIssuerPortPresent) {
+            violations.add("production PlatformTokenIssuerPort bean must be provided; platform local issuer port is local/test only");
         }
         if (PlatformSecurityProperties.DEFAULT_JWT_SECRET.equals(auth.getJwtSecret())) {
             violations.add("platform.security.auth.jwt-secret must not use the platform dev default in production");
         }
-        if (platformDefaultSessionStorePresent) {
-            violations.add("production SessionStore bean must be provided; platform SimpleSessionStore is local/test only");
+        if (platformDefaultSessionIssuerPortPresent) {
+            violations.add("production PlatformSessionIssuerPort bean must be provided; platform local session issuer port is local/test only");
         }
         if (auth.isInternalTokenEnabled() && platformDefaultInternalTokenClaimsValidatorPresent) {
             violations.add("production InternalTokenClaimsValidator bean must be provided; platform local validator is local/test only");
@@ -192,7 +192,12 @@ public final class OperationalSecurityPolicyEnforcer {
     private void validateIpGuard(PlatformSecurityProperties properties, List<String> violations) {
         PlatformSecurityProperties.IpGuardProperties ipGuard = properties.getIpGuard();
         if (!ipGuard.isEnabled()) {
-            violations.add("platform.security.ip-guard.enabled must be true in production");
+            if (requiresStrictIngressControls(properties.getServiceRolePreset())
+                    && !properties.getOperationalPolicy().isAllowIpGuardDisabledInProduction()) {
+                violations.add("platform.security.ip-guard.enabled must be true in production for preset "
+                        + properties.getServiceRolePreset().name());
+            }
+            return;
         }
         if (ipGuard.isTrustProxy() && ipGuard.getTrustedProxyCidrs().isEmpty()) {
             violations.add("platform.security.ip-guard.trusted-proxy-cidrs must not be empty when trust-proxy=true in production");
@@ -203,20 +208,26 @@ public final class OperationalSecurityPolicyEnforcer {
 
     private void validateRateLimit(
             PlatformSecurityProperties properties,
-            boolean rateLimiterPresent,
-            boolean inMemoryRateLimiterPresent,
+            boolean rateLimitAdapterPresent,
+            boolean nonDistributedRateLimitAdapterPresent,
             List<String> violations
     ) {
         PlatformSecurityProperties.RateLimitProperties rateLimit = properties.getRateLimit();
         if (!rateLimit.isEnabled()) {
-            violations.add("platform.security.rate-limit.enabled must be true in production");
+            if (requiresStrictIngressControls(properties.getServiceRolePreset())
+                    && !properties.getOperationalPolicy().isAllowRateLimitDisabledInProduction()) {
+                violations.add("platform.security.rate-limit.enabled must be true in production for preset "
+                        + properties.getServiceRolePreset().name());
+            }
             return;
         }
-        if (!rateLimiterPresent) {
-            violations.add("production RateLimiter bean is required");
+        if (!rateLimitAdapterPresent) {
+            violations.add("production PlatformRateLimitAdapter bean is required");
         }
-        if (inMemoryRateLimiterPresent) {
-            violations.add("production RateLimiter bean must be distributed; in-memory rate limiter is local/test only");
+        if (requiresStrictIngressControls(properties.getServiceRolePreset())
+                && nonDistributedRateLimitAdapterPresent
+                && !properties.getOperationalPolicy().isAllowNonDistributedRateLimiterInProduction()) {
+            violations.add("production PlatformRateLimitAdapter bean must be distributed; platform local rate limiter is local/test only");
         }
         validateQuota("platform.security.rate-limit.anonymous", rateLimit.getAnonymous(), violations);
         validateQuota("platform.security.rate-limit.authenticated", rateLimit.getAuthenticated(), violations);
@@ -282,5 +293,15 @@ public final class OperationalSecurityPolicyEnforcer {
         if (policy.getReloadTtl() == null || policy.getReloadTtl().isZero() || policy.getReloadTtl().isNegative()) {
             violations.add(prefix + ".reload-ttl must be greater than 0 for dynamic IP rule sources in production");
         }
+    }
+
+    private boolean requiresStrictIngressControls(ServiceRolePreset preset) {
+        if (preset == null) {
+            return true;
+        }
+        return switch (preset) {
+            case EDGE, API_SERVER, GENERAL -> true;
+            case INTERNAL_SERVICE, ISSUER -> false;
+        };
     }
 }
