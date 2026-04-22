@@ -1,5 +1,7 @@
 dependencies {
     api project(':platform-security-api')
+    api project(':platform-security-ports')
+    api project(':platform-security-core')
     api project(':platform-security-policy')
 
     api "io.github.jho951:auth-core:${rootProject.authVersion}"
@@ -10,7 +12,11 @@ dependencies {
     api "io.github.jho951:auth-hmac:${rootProject.authVersion}"
     api "io.github.jho951:auth-oidc:${rootProject.authVersion}"
     api "io.github.jho951:auth-service-account:${rootProject.authVersion}"
+    compileOnly "org.springframework:spring-context:${rootProject.springFrameworkVersion}"
+    compileOnly "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
 
+    testImplementation "org.springframework:spring-context:${rootProject.springFrameworkVersion}"
+    testImplementation "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitVersion}"
 }

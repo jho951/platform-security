@@ -4,7 +4,6 @@ import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.api.SecurityVerdict;
 import io.github.jho951.platform.security.core.DefaultSecurityPolicyService;
-import io.github.jho951.platform.security.core.limiter.InMemoryRateLimiter;
 import io.github.jho951.platform.security.ip.DefaultBoundaryIpPolicyProvider;
 import io.github.jho951.platform.security.policy.DefaultAuthenticationModeResolver;
 import io.github.jho951.platform.security.policy.DefaultClientTypeResolver;
@@ -15,6 +14,7 @@ import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import io.github.jho951.platform.security.ratelimit.DefaultBoundaryRateLimitPolicyProvider;
 import io.github.jho951.platform.security.ratelimit.DefaultPlatformRateLimitAdapter;
 import io.github.jho951.platform.security.ratelimit.DefaultRateLimitKeyResolver;
+import io.github.jho951.platform.security.ratelimit.InMemoryRateLimiter;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;

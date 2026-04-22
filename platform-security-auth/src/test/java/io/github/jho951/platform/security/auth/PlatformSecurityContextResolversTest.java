@@ -55,13 +55,13 @@ class PlatformSecurityContextResolversTest {
     void hybridIssuerIssuesTokensAndSession() {
         TokenService tokenService = tokenService();
         InMemorySessionStore sessionStore = new InMemorySessionStore();
-        TokenIssuanceCapability issuer = PlatformSecurityContextResolvers.hybridIssuer(tokenService, sessionStore);
+        HybridIssuanceCapability issuer = PlatformSecurityContextResolvers.hybridIssuer(tokenService, sessionStore);
 
-        PlatformTokenBundle bundle = issuer.issue(new PlatformAuthenticatedPrincipal("user-1"));
+        PlatformIssuedCredentials credentials = issuer.issue(new PlatformAuthenticatedPrincipal("user-1"));
 
-        assertEquals("access-user-1", bundle.accessToken());
-        assertEquals("refresh-user-1", bundle.refreshToken());
-        assertTrue(bundle.sessionId() != null && sessionStore.find(bundle.sessionId()).isPresent());
+        assertEquals("access-user-1", credentials.token().accessToken());
+        assertEquals("refresh-user-1", credentials.token().refreshToken());
+        assertTrue(credentials.session() != null && sessionStore.find(credentials.session().sessionId()).isPresent());
     }
 
     @Test

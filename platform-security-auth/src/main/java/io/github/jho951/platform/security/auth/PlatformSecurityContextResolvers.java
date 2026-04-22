@@ -147,13 +147,13 @@ public final class PlatformSecurityContextResolvers {
     }
 
     /**
-     * access token, refresh token, session id를 함께 반환하는 issuer를 만든다.
+     * access token, refresh token, session view를 함께 반환하는 issuer를 만든다.
      *
      * @param tokenService token 발급을 담당하는 1계층 token service
      * @param sessionStore session 저장을 담당하는 1계층 session store
      * @return token과 session을 함께 발급하는 capability
      */
-    public static TokenIssuanceCapability hybridIssuer(TokenService tokenService, SessionStore sessionStore) {
+    public static HybridIssuanceCapability hybridIssuer(TokenService tokenService, SessionStore sessionStore) {
         return new HybridIssuanceCapability(tokenIssuer(tokenService), sessionIssuer(sessionStore));
     }
 }

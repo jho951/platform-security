@@ -15,8 +15,8 @@ import java.util.Objects;
 public final class PlatformRateLimitFacade {
     private final SecurityPolicy policy;
 
-    public PlatformRateLimitFacade(int limit, Duration window, PlatformRateLimitAdapter rateLimitAdapter) {
-        this.policy = new FixedWindowPolicy(limit, window, rateLimitAdapter);
+    public PlatformRateLimitFacade(int limit, Duration window, PlatformRateLimitPort rateLimitPort) {
+        this.policy = new FixedWindowPolicy(limit, window, rateLimitPort);
     }
 
     public SecurityVerdict evaluate(SecurityRequest request, SecurityContext context) {
@@ -30,12 +30,12 @@ public final class PlatformRateLimitFacade {
     private static final class FixedWindowPolicy implements SecurityPolicy {
         private final int limit;
         private final Duration window;
-        private final PlatformRateLimitAdapter rateLimitAdapter;
+        private final PlatformRateLimitPort rateLimitPort;
 
-        private FixedWindowPolicy(int limit, Duration window, PlatformRateLimitAdapter rateLimitAdapter) {
+        private FixedWindowPolicy(int limit, Duration window, PlatformRateLimitPort rateLimitPort) {
             this.limit = limit;
             this.window = Objects.requireNonNull(window, "window");
-            this.rateLimitAdapter = Objects.requireNonNull(rateLimitAdapter, "rateLimitAdapter");
+            this.rateLimitPort = Objects.requireNonNull(rateLimitPort, "rateLimitPort");
         }
 
         @Override
@@ -51,7 +51,7 @@ public final class PlatformRateLimitFacade {
 
             String value = request.subject() != null ? request.subject() : request.clientIp();
             String boundary = request.attributes().getOrDefault(SecurityAttributes.BOUNDARY, "UNKNOWN");
-            PlatformRateLimitDecision decision = rateLimitAdapter.evaluate(new PlatformRateLimitRequest(
+            PlatformRateLimitDecision decision = rateLimitPort.evaluate(new PlatformRateLimitRequest(
                     boundary + ":" + value,
                     request.subject() != null ? PlatformRateLimitKeyType.USER : PlatformRateLimitKeyType.IP,
                     1L,

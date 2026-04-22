@@ -1,7 +1,7 @@
 dependencies {
     api project(':platform-security-api')
+    api project(':platform-security-ports')
     api project(':platform-security-policy')
-    implementation project(':platform-security-auth')
     implementation "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
     implementation "org.springframework:spring-beans:${rootProject.springFrameworkVersion}"
 }

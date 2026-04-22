@@ -15,13 +15,12 @@ public final class TokenServicePlatformTokenIssuerPort implements PlatformTokenI
     }
 
     @Override
-    public PlatformTokenBundle issue(PlatformAuthenticatedPrincipal principal) {
-        Objects.requireNonNull(principal, "principal");
-        com.auth.api.model.Principal authPrincipal = AuthPrincipalAdapters.toAuth(principal);
-        return new PlatformTokenBundle(
+    public PlatformIssuedToken issue(PlatformIssueTokenCommand command) {
+        Objects.requireNonNull(command, "command");
+        com.auth.api.model.Principal authPrincipal = AuthPrincipalAdapters.toAuth(command.principal());
+        return new PlatformIssuedToken(
                 tokenService.issueAccessToken(authPrincipal),
-                tokenService.issueRefreshToken(authPrincipal),
-                null
+                tokenService.issueRefreshToken(authPrincipal)
         );
     }
 }

@@ -7,7 +7,7 @@ import io.github.jho951.platform.security.web.SecurityIngressAdapter;
 import jakarta.servlet.Filter;
 
 /**
- * gateway가 hybrid mode에서 직접 조립할 수 있는 공식 platform-security 통합 표면이다.
+ * gateway가 hybrid mode에서 직접 조립할 수 있는 공식 platform-security Servlet 통합 표면이다.
  */
 public final class PlatformSecurityGatewayIntegration {
     private final SecurityIngressAdapter securityIngressAdapter;

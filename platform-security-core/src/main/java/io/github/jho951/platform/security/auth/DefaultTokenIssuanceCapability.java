@@ -3,7 +3,7 @@ package io.github.jho951.platform.security.auth;
 import java.util.Objects;
 
 /**
- * 1계층 token service에 위임해 access/refresh token을 발급하는 기본 구현이다.
+ * token issuer port에 위임해 access/refresh token을 발급하는 기본 구현이다.
  */
 public final class DefaultTokenIssuanceCapability implements TokenIssuanceCapability {
     private final PlatformTokenIssuerPort tokenIssuerPort;
@@ -18,8 +18,8 @@ public final class DefaultTokenIssuanceCapability implements TokenIssuanceCapabi
     }
 
     @Override
-    public PlatformTokenBundle issue(PlatformAuthenticatedPrincipal principal) {
-        Objects.requireNonNull(principal, "principal");
-        return tokenIssuerPort.issue(principal);
+    public PlatformIssuedToken issue(PlatformIssueTokenCommand command) {
+        Objects.requireNonNull(command, "command");
+        return tokenIssuerPort.issue(command);
     }
 }

@@ -17,17 +17,17 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class DefaultBoundaryRateLimitPolicyProvider implements BoundaryRateLimitPolicyProvider {
     private final PlatformSecurityProperties.RateLimitProperties properties;
     private final RateLimitKeyResolver keyResolver;
-    private final PlatformRateLimitAdapter rateLimitAdapter;
+    private final PlatformRateLimitPort rateLimitPort;
     private final Map<String, SecurityPolicy> cache = new ConcurrentHashMap<>();
 
     public DefaultBoundaryRateLimitPolicyProvider(
             PlatformSecurityProperties.RateLimitProperties properties,
             RateLimitKeyResolver keyResolver,
-            PlatformRateLimitAdapter rateLimitAdapter
+            PlatformRateLimitPort rateLimitPort
     ) {
         this.properties = properties == null ? new PlatformSecurityProperties.RateLimitProperties() : properties;
         this.keyResolver = Objects.requireNonNull(keyResolver, "keyResolver");
-        this.rateLimitAdapter = Objects.requireNonNull(rateLimitAdapter, "rateLimitAdapter");
+        this.rateLimitPort = Objects.requireNonNull(rateLimitPort, "rateLimitPort");
     }
 
     @Override
@@ -46,7 +46,7 @@ public final class DefaultBoundaryRateLimitPolicyProvider implements BoundaryRat
                 boundary,
                 properties,
                 keyResolver,
-                rateLimitAdapter
+                rateLimitPort
         ));
     }
 

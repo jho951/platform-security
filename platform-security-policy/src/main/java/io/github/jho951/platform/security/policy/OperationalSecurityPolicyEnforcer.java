@@ -48,7 +48,7 @@ public final class OperationalSecurityPolicyEnforcer {
             PlatformSecurityProperties properties,
             boolean securityContextResolverPresent,
             boolean platformDefaultTokenIssuerPortPresent,
-            boolean platformDefaultRateLimitAdapterPresent,
+            boolean platformDefaultRateLimitPortPresent,
             String... activeProfiles
     ) {
         enforce(
@@ -59,7 +59,7 @@ public final class OperationalSecurityPolicyEnforcer {
                 false,
                 false,
                 false,
-                platformDefaultRateLimitAdapterPresent,
+                platformDefaultRateLimitPortPresent,
                 false,
                 activeProfiles
         );
@@ -70,8 +70,8 @@ public final class OperationalSecurityPolicyEnforcer {
             boolean securityContextResolverPresent,
             boolean platformDefaultTokenIssuerPortPresent,
             boolean platformDefaultSessionIssuerPortPresent,
-            boolean rateLimitAdapterPresent,
-            boolean nonDistributedRateLimitAdapterPresent,
+            boolean rateLimitPortPresent,
+            boolean nonDistributedRateLimitPortPresent,
             boolean platformDefaultInternalTokenClaimsValidatorPresent,
             String... activeProfiles
     ) {
@@ -80,10 +80,10 @@ public final class OperationalSecurityPolicyEnforcer {
                 securityContextResolverPresent,
                 platformDefaultTokenIssuerPortPresent,
                 platformDefaultSessionIssuerPortPresent,
-                rateLimitAdapterPresent,
+                rateLimitPortPresent,
                 false,
                 false,
-                nonDistributedRateLimitAdapterPresent,
+                nonDistributedRateLimitPortPresent,
                 platformDefaultInternalTokenClaimsValidatorPresent,
                 activeProfiles
         );
@@ -94,10 +94,10 @@ public final class OperationalSecurityPolicyEnforcer {
             boolean securityContextResolverPresent,
             boolean platformDefaultTokenIssuerPortPresent,
             boolean platformDefaultSessionIssuerPortPresent,
-            boolean rateLimitAdapterPresent,
+            boolean rateLimitPortPresent,
             boolean tokenIssuerPortPresent,
             boolean sessionIssuerPortPresent,
-            boolean nonDistributedRateLimitAdapterPresent,
+            boolean nonDistributedRateLimitPortPresent,
             boolean platformDefaultInternalTokenClaimsValidatorPresent,
             String... activeProfiles
     ) {
@@ -120,7 +120,7 @@ public final class OperationalSecurityPolicyEnforcer {
         );
         validateIssuer(properties, tokenIssuerPortPresent, sessionIssuerPortPresent, violations);
         validateIpGuard(properties, violations);
-        validateRateLimit(properties, rateLimitAdapterPresent, nonDistributedRateLimitAdapterPresent, violations);
+        validateRateLimit(properties, rateLimitPortPresent, nonDistributedRateLimitPortPresent, violations);
         if (!violations.isEmpty()) {
             throw new IllegalStateException("Platform security operational policy violation: " + String.join("; ", violations));
         }
@@ -208,8 +208,8 @@ public final class OperationalSecurityPolicyEnforcer {
 
     private void validateRateLimit(
             PlatformSecurityProperties properties,
-            boolean rateLimitAdapterPresent,
-            boolean nonDistributedRateLimitAdapterPresent,
+            boolean rateLimitPortPresent,
+            boolean nonDistributedRateLimitPortPresent,
             List<String> violations
     ) {
         PlatformSecurityProperties.RateLimitProperties rateLimit = properties.getRateLimit();
@@ -221,13 +221,13 @@ public final class OperationalSecurityPolicyEnforcer {
             }
             return;
         }
-        if (!rateLimitAdapterPresent) {
-            violations.add("production PlatformRateLimitAdapter bean is required");
+        if (!rateLimitPortPresent) {
+            violations.add("production PlatformRateLimitPort bean is required");
         }
         if (requiresStrictIngressControls(properties.getServiceRolePreset())
-                && nonDistributedRateLimitAdapterPresent
+                && nonDistributedRateLimitPortPresent
                 && !properties.getOperationalPolicy().isAllowNonDistributedRateLimiterInProduction()) {
-            violations.add("production PlatformRateLimitAdapter bean must be distributed; platform local rate limiter is local/test only");
+            violations.add("production PlatformRateLimitPort bean must be distributed; platform local rate limiter is local/test only");
         }
         validateQuota("platform.security.rate-limit.anonymous", rateLimit.getAnonymous(), violations);
         validateQuota("platform.security.rate-limit.authenticated", rateLimit.getAuthenticated(), violations);

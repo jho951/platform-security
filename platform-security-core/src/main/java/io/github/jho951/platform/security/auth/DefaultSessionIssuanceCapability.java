@@ -19,8 +19,8 @@ public final class DefaultSessionIssuanceCapability implements SessionIssuanceCa
     }
 
     @Override
-    public String issueSession(PlatformAuthenticatedPrincipal principal) {
-        Objects.requireNonNull(principal, "principal");
-        return sessionIssuerPort.issueSession(principal);
+    public PlatformSessionView issueSession(PlatformIssueSessionCommand command) {
+        Objects.requireNonNull(command, "command");
+        return sessionIssuerPort.issueSession(command);
     }
 }

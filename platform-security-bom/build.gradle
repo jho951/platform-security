@@ -14,10 +14,11 @@ dependencies {
     constraints {
         api project(':platform-policy-api')
         api project(':platform-security-api')
+        api project(':platform-security-ports')
         api project(':platform-security-policy')
-        api project(':platform-security-auth')
+        api project(':platform-security-adapter-auth')
         api project(':platform-security-ip')
-        api project(':platform-security-rate-limit')
+        api project(':platform-security-adapter-ratelimiter')
         api project(':platform-security-web')
         api project(':platform-security-autoconfigure')
         api project(':platform-security-issuer-autoconfigure')
@@ -25,7 +26,7 @@ dependencies {
         api project(':platform-security-policyconfig-bridge')
         api project(':platform-security-starter')
         api project(':platform-security-hybrid-web-adapter')
-        api project(':platform-security-local-support')
+        api project(':platform-security-support-local')
         api project(':platform-security-client')
         api project(':platform-security-test-support')
     }

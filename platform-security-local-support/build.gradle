@@ -1,9 +1,9 @@
 dependencies {
     api project(':platform-security-api')
     api project(':platform-security-policy')
-    implementation project(':platform-security-auth')
+    implementation project(':platform-security-adapter-auth')
     implementation project(':platform-security-core')
-    implementation project(':platform-security-rate-limit')
+    implementation project(':platform-security-adapter-ratelimiter')
     implementation "io.github.jho951:auth-core:${rootProject.authVersion}"
     implementation "io.github.jho951:auth-jwt:${rootProject.authVersion}"
     implementation "io.github.jho951:auth-session:${rootProject.authVersion}"

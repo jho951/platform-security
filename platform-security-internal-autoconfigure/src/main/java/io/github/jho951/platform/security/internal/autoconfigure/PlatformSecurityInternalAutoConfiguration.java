@@ -27,7 +27,7 @@ public class PlatformSecurityInternalAutoConfiguration {
                     && !hasSpringSecurityJwtDecoder(applicationContext)) {
                 throw new IllegalStateException(
                         "Internal service authentication requires an InternalTokenClaimsValidator bean or a Spring Security JwtDecoder bean. " +
-                                "Provide a service-specific validator, configure resource-server JWT, or add platform-security-local-support for local/test."
+                                "Provide a service-specific validator, configure resource-server JWT, or add platform-security-support-local for local/test."
                 );
             }
         };

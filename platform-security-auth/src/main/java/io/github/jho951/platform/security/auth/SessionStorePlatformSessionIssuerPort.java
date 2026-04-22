@@ -26,10 +26,11 @@ public final class SessionStorePlatformSessionIssuerPort implements PlatformSess
     }
 
     @Override
-    public String issueSession(PlatformAuthenticatedPrincipal principal) {
-        Objects.requireNonNull(principal, "principal");
+    public PlatformSessionView issueSession(PlatformIssueSessionCommand command) {
+        Objects.requireNonNull(command, "command");
         String sessionId = sessionIdGenerator.generate();
+        PlatformAuthenticatedPrincipal principal = command.principal();
         sessionStore.save(sessionId, AuthPrincipalAdapters.toAuth(principal));
-        return sessionId;
+        return new PlatformSessionView(sessionId, principal);
     }
 }

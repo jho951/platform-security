@@ -1,9 +1,9 @@
 package io.github.jho951.platform.security.ratelimit;
 
 /**
- * 1계층 RateLimiter를 platform 소유 decision 계약으로 감싼 adapter다.
+ * platform-owned request/decision 계약으로 rate limit 판단을 수행하는 port다.
  */
-public interface PlatformRateLimitAdapter {
+public interface PlatformRateLimitPort {
 
     PlatformRateLimitDecision evaluate(PlatformRateLimitRequest request);
 }

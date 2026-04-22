@@ -1,9 +1,9 @@
 dependencies {
     api project(':platform-security-api')
     api project(':platform-security-policy')
-    api project(':platform-security-auth')
+    api project(':platform-security-adapter-auth')
     api project(':platform-security-ip')
-    api project(':platform-security-rate-limit')
+    api project(':platform-security-adapter-ratelimiter')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitVersion}"

@@ -1,14 +1,14 @@
 dependencies {
     api project(':platform-security-api')
+    api project(':platform-security-ports')
     api project(':platform-security-policy')
     implementation "io.github.jho951:ip-guard-core:${rootProject.ipGuardVersion}"
     implementation "io.github.jho951:ip-guard-spi:${rootProject.ipGuardVersion}"
-    implementation "io.github.jho951:rate-limiter-core:${rootProject.rateLimiterVersion}"
-    implementation "io.github.jho951:rate-limiter-spi:${rootProject.rateLimiterVersion}"
 
     testImplementation project(':platform-security-web')
     testImplementation project(':platform-security-ip')
-    testImplementation project(':platform-security-rate-limit')
+    testImplementation project(':platform-security-adapter-ratelimiter')
+    testImplementation project(':platform-security-ports')
     testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitVersion}"
 }

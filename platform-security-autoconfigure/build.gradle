@@ -1,22 +1,12 @@
 dependencies {
     api project(':platform-security-api')
     api project(':platform-security-policy')
+    implementation project(':platform-security-ports')
     implementation project(':platform-security-core')
-    implementation project(':platform-security-auth')
     implementation project(':platform-security-ip')
-    implementation project(':platform-security-rate-limit')
     implementation project(':platform-security-web')
     implementation "org.springframework:spring-context:${rootProject.springFrameworkVersion}"
     implementation "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
-    implementation "io.github.jho951:auth-core:${rootProject.authVersion}"
-    implementation "io.github.jho951:auth-jwt:${rootProject.authVersion}"
-    implementation "io.github.jho951:auth-session:${rootProject.authVersion}"
-    implementation "io.github.jho951:auth-hybrid:${rootProject.authVersion}"
-    implementation "io.github.jho951:auth-apikey:${rootProject.authVersion}"
-    implementation "io.github.jho951:auth-hmac:${rootProject.authVersion}"
-    implementation "io.github.jho951:auth-oidc:${rootProject.authVersion}"
-    implementation "io.github.jho951:auth-service-account:${rootProject.authVersion}"
-    implementation "io.github.jho951:rate-limiter-spi:${rootProject.rateLimiterVersion}"
     compileOnly "jakarta.servlet:jakarta.servlet-api:${rootProject.jakartaServletVersion}"
     compileOnly "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
     compileOnly "org.springframework.boot:spring-boot-starter-security:${rootProject.springBootVersion}"
@@ -28,7 +18,9 @@ dependencies {
     testImplementation "org.springframework.boot:spring-boot-test-autoconfigure:${rootProject.springBootVersion}"
     testImplementation "org.springframework.boot:spring-boot-starter-security:${rootProject.springBootVersion}"
     testImplementation "org.springframework.boot:spring-boot-starter-oauth2-resource-server:${rootProject.springBootVersion}"
-    testImplementation project(':platform-security-local-support')
+    testImplementation project(':platform-security-adapter-auth')
+    testImplementation project(':platform-security-adapter-ratelimiter')
+    testImplementation project(':platform-security-support-local')
     testImplementation "org.springframework:spring-test:${rootProject.springFrameworkVersion}"
     testImplementation "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
     testImplementation "io.projectreactor:reactor-core:3.7.11"

@@ -1,16 +1,10 @@
 package io.github.jho951.platform.security.issuer.autoconfigure;
 
-import com.auth.session.IdentitySessionPrincipalMapper;
-import com.auth.session.SessionPrincipalMapper;
-import com.auth.session.SessionStore;
-import com.auth.spi.TokenService;
 import io.github.jho951.platform.security.auth.DefaultSessionIssuanceCapability;
 import io.github.jho951.platform.security.auth.DefaultTokenIssuanceCapability;
 import io.github.jho951.platform.security.auth.PlatformSessionIssuerPort;
 import io.github.jho951.platform.security.auth.PlatformTokenIssuerPort;
-import io.github.jho951.platform.security.auth.SessionStorePlatformSessionIssuerPort;
 import io.github.jho951.platform.security.auth.SessionIssuanceCapability;
-import io.github.jho951.platform.security.auth.TokenServicePlatformTokenIssuerPort;
 import io.github.jho951.platform.security.auth.TokenIssuanceCapability;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -25,26 +19,6 @@ import org.springframework.context.annotation.Bean;
  */
 @AutoConfiguration
 public class PlatformSecurityIssuerAutoConfiguration {
-    @Bean
-    @ConditionalOnMissingBean(SessionPrincipalMapper.class)
-    public SessionPrincipalMapper platformSecurityIssuerSessionPrincipalMapper() {
-        return new IdentitySessionPrincipalMapper();
-    }
-
-    @Bean
-    @ConditionalOnBean(TokenService.class)
-    @ConditionalOnMissingBean(PlatformTokenIssuerPort.class)
-    public PlatformTokenIssuerPort platformTokenIssuerPort(TokenService tokenService) {
-        return new TokenServicePlatformTokenIssuerPort(tokenService);
-    }
-
-    @Bean
-    @ConditionalOnBean(SessionStore.class)
-    @ConditionalOnMissingBean(PlatformSessionIssuerPort.class)
-    public PlatformSessionIssuerPort platformSessionIssuerPort(SessionStore sessionStore) {
-        return new SessionStorePlatformSessionIssuerPort(sessionStore);
-    }
-
     @Bean
     @ConditionalOnBean(PlatformTokenIssuerPort.class)
     @ConditionalOnMissingBean(TokenIssuanceCapability.class)

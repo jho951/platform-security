@@ -8,20 +8,12 @@ import io.github.jho951.platform.security.api.PlatformSecurityHybridWebAdapterMa
 import io.github.jho951.platform.policy.api.OperationalProfileResolver;
 import io.github.jho951.platform.security.auth.AuthenticationCapability;
 import io.github.jho951.platform.security.auth.AuthenticationCapabilityResolver;
-import io.github.jho951.platform.security.auth.DefaultApiKeyAuthenticationCapability;
 import io.github.jho951.platform.security.auth.DefaultAuthenticationCapabilityResolver;
-import io.github.jho951.platform.security.auth.DefaultHmacAuthenticationCapability;
 import io.github.jho951.platform.security.auth.DefaultHybridAuthenticationCapability;
 import io.github.jho951.platform.security.auth.DefaultInternalServiceAuthenticationCapability;
 import io.github.jho951.platform.security.auth.DefaultJwtAuthenticationCapability;
-import io.github.jho951.platform.security.auth.DefaultOAuth2PrincipalBridge;
-import io.github.jho951.platform.security.auth.DefaultOidcPrincipalMapper;
-import io.github.jho951.platform.security.auth.DefaultOidcAuthenticationCapability;
-import io.github.jho951.platform.security.auth.DefaultPlatformSessionSupportFactory;
-import io.github.jho951.platform.security.auth.DefaultServiceAccountAuthenticationCapability;
 import io.github.jho951.platform.security.auth.DefaultSessionAuthenticationCapability;
 import io.github.jho951.platform.security.auth.InternalTokenClaimsValidator;
-import io.github.jho951.platform.security.auth.OAuth2PrincipalBridge;
 import io.github.jho951.platform.security.auth.PlatformSessionIssuerPort;
 import io.github.jho951.platform.security.auth.PlatformSessionSupport;
 import io.github.jho951.platform.security.auth.PlatformSessionSupportFactory;
@@ -54,28 +46,9 @@ import io.github.jho951.platform.security.web.SecurityDownstreamIdentityPropagat
 import io.github.jho951.platform.security.web.SecurityFailureResponse;
 import io.github.jho951.platform.security.web.SecurityFailureResponseWriter;
 import io.github.jho951.platform.security.web.ReactiveSecurityFailureResponseWriter;
-import io.github.jho951.platform.security.ratelimit.DefaultPlatformRateLimitAdapter;
 import io.github.jho951.platform.security.ratelimit.DefaultBoundaryRateLimitPolicyProvider;
 import io.github.jho951.platform.security.ratelimit.DefaultRateLimitKeyResolver;
-import io.github.jho951.platform.security.ratelimit.PlatformRateLimitAdapter;
-import io.github.jho951.ratelimiter.spi.RateLimiter;
-import com.auth.apikey.ApiKeyAuthenticationProvider;
-import com.auth.apikey.ApiKeyPrincipalResolver;
-import com.auth.hmac.HmacAuthenticationProvider;
-import com.auth.hmac.HmacPrincipalResolver;
-import com.auth.hmac.HmacSecretResolver;
-import com.auth.hmac.HmacSignatureVerifier;
-import com.auth.hybrid.HybridAuthenticationProvider;
-import com.auth.oidc.OidcAuthenticationProvider;
-import com.auth.oidc.OidcPrincipalMapper;
-import com.auth.oidc.OidcTokenVerifier;
-import com.auth.serviceaccount.ServiceAccountAuthenticationProvider;
-import com.auth.serviceaccount.ServiceAccountVerifier;
-import com.auth.session.DefaultSessionAuthenticationProvider;
-import com.auth.session.SessionPrincipalMapper;
-import com.auth.session.SessionStore;
-import com.auth.spi.OAuth2PrincipalResolver;
-import com.auth.spi.TokenService;
+import io.github.jho951.platform.security.ratelimit.PlatformRateLimitPort;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationContext;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -228,21 +201,14 @@ public class PlatformSecurityAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean(RateLimiter.class)
-    @ConditionalOnMissingBean(PlatformRateLimitAdapter.class)
-    public PlatformRateLimitAdapter platformRateLimitAdapter(RateLimiter rateLimiter) {
-        return new DefaultPlatformRateLimitAdapter(rateLimiter);
-    }
-
-    @Bean
-    @ConditionalOnBean(PlatformRateLimitAdapter.class)
+    @ConditionalOnBean(PlatformRateLimitPort.class)
     @ConditionalOnMissingBean
     public BoundaryRateLimitPolicyProvider boundaryRateLimitPolicyProvider(
             PlatformSecurityProperties properties,
             RateLimitKeyResolver rateLimitKeyResolver,
-            PlatformRateLimitAdapter platformRateLimitAdapter
+            PlatformRateLimitPort platformRateLimitPort
     ) {
-        return new DefaultBoundaryRateLimitPolicyProvider(properties.getRateLimit(), rateLimitKeyResolver, platformRateLimitAdapter);
+        return new DefaultBoundaryRateLimitPolicyProvider(properties.getRateLimit(), rateLimitKeyResolver, platformRateLimitPort);
     }
 
     @Bean
@@ -276,7 +242,7 @@ public class PlatformSecurityAutoConfiguration {
                             io.github.jho951.platform.security.api.SecurityRequest request,
                             SecurityContext context
                     ) {
-                        return io.github.jho951.platform.security.api.SecurityVerdict.allow(name(), "rate limit disabled; no PlatformRateLimitAdapter bean");
+                        return io.github.jho951.platform.security.api.SecurityVerdict.allow(name(), "rate limit disabled; no PlatformRateLimitPort bean");
                     }
                 };
             }
@@ -302,26 +268,6 @@ public class PlatformSecurityAutoConfiguration {
             SecurityIdentityScrubber securityIdentityScrubber
     ) {
         return new SecurityIngressRequestFactory(clientIpResolver, securityIdentityScrubber);
-    }
-
-    @Bean
-    @ConditionalOnBean(HybridAuthenticationProvider.class)
-    @ConditionalOnMissingBean({PlatformSessionSupport.class, PlatformSessionSupportFactory.class})
-    public PlatformSessionSupportFactory platformSessionSupportFactoryFromHybridProvider(
-            HybridAuthenticationProvider hybridAuthenticationProvider
-    ) {
-        return new DefaultPlatformSessionSupportFactory(hybridAuthenticationProvider);
-    }
-
-    @Bean
-    @ConditionalOnBean({TokenService.class, SessionStore.class, SessionPrincipalMapper.class})
-    @ConditionalOnMissingBean({PlatformSessionSupport.class, PlatformSessionSupportFactory.class})
-    public PlatformSessionSupportFactory platformSessionSupportFactoryFromOssAuthBeans(
-            TokenService tokenService,
-            SessionStore sessionStore,
-            SessionPrincipalMapper mapper
-    ) {
-        return new DefaultPlatformSessionSupportFactory(tokenService, sessionStore, mapper);
     }
 
     @Bean
@@ -360,84 +306,6 @@ public class PlatformSecurityAutoConfiguration {
             InternalTokenClaimsValidator internalTokenClaimsValidator
     ) {
         return new DefaultInternalServiceAuthenticationCapability(platformSessionSupport, internalTokenClaimsValidator);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(ApiKeyAuthenticationProvider.class)
-    @ConditionalOnBean(ApiKeyPrincipalResolver.class)
-    public ApiKeyAuthenticationProvider apiKeyAuthenticationProvider(ApiKeyPrincipalResolver resolver) {
-        return new ApiKeyAuthenticationProvider(resolver);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(name = "apiKeyAuthenticationCapability")
-    @ConditionalOnBean(ApiKeyAuthenticationProvider.class)
-    public AuthenticationCapability apiKeyAuthenticationCapability(ApiKeyAuthenticationProvider apiKeyAuthenticationProvider) {
-        return new DefaultApiKeyAuthenticationCapability(apiKeyAuthenticationProvider);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(HmacAuthenticationProvider.class)
-    @ConditionalOnBean({HmacSecretResolver.class, HmacSignatureVerifier.class, HmacPrincipalResolver.class})
-    public HmacAuthenticationProvider hmacAuthenticationProvider(
-            HmacSecretResolver secretResolver,
-            HmacSignatureVerifier signatureVerifier,
-            HmacPrincipalResolver principalResolver
-    ) {
-        return new HmacAuthenticationProvider(secretResolver, signatureVerifier, principalResolver);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(name = "hmacAuthenticationCapability")
-    @ConditionalOnBean(HmacAuthenticationProvider.class)
-    public AuthenticationCapability hmacAuthenticationCapability(HmacAuthenticationProvider hmacAuthenticationProvider) {
-        return new DefaultHmacAuthenticationCapability(hmacAuthenticationProvider);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(OidcPrincipalMapper.class)
-    public OidcPrincipalMapper oidcPrincipalMapper(PlatformSecurityProperties properties) {
-        return new DefaultOidcPrincipalMapper(properties.getAuth().getOidc());
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(OidcAuthenticationProvider.class)
-    @ConditionalOnBean({OidcTokenVerifier.class, OidcPrincipalMapper.class})
-    public OidcAuthenticationProvider oidcAuthenticationProvider(
-            OidcTokenVerifier tokenVerifier,
-            OidcPrincipalMapper principalMapper
-    ) {
-        return new OidcAuthenticationProvider(tokenVerifier, principalMapper);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(name = "oidcAuthenticationCapability")
-    @ConditionalOnBean(OidcAuthenticationProvider.class)
-    public AuthenticationCapability oidcAuthenticationCapability(OidcAuthenticationProvider oidcAuthenticationProvider) {
-        return new DefaultOidcAuthenticationCapability(oidcAuthenticationProvider);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(ServiceAccountAuthenticationProvider.class)
-    @ConditionalOnBean(ServiceAccountVerifier.class)
-    public ServiceAccountAuthenticationProvider serviceAccountAuthenticationProvider(ServiceAccountVerifier verifier) {
-        return new ServiceAccountAuthenticationProvider(verifier);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(name = "serviceAccountAuthenticationCapability")
-    @ConditionalOnBean(ServiceAccountAuthenticationProvider.class)
-    public AuthenticationCapability serviceAccountAuthenticationCapability(
-            ServiceAccountAuthenticationProvider serviceAccountAuthenticationProvider
-    ) {
-        return new DefaultServiceAccountAuthenticationCapability(serviceAccountAuthenticationProvider);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(OAuth2PrincipalBridge.class)
-    @ConditionalOnBean(OAuth2PrincipalResolver.class)
-    public OAuth2PrincipalBridge oauth2PrincipalBridge(OAuth2PrincipalResolver resolver) {
-        return new DefaultOAuth2PrincipalBridge(resolver);
     }
 
     @Bean
@@ -510,7 +378,7 @@ public class PlatformSecurityAutoConfiguration {
                     resolverProvider.getIfAvailable() != null,
                     applicationContext.containsBean("platformSecurityLocalTokenIssuerPort"),
                     applicationContext.containsBean("platformSecurityLocalSessionIssuerPort"),
-                    !applicationContext.getBeansOfType(PlatformRateLimitAdapter.class).isEmpty(),
+                    !applicationContext.getBeansOfType(PlatformRateLimitPort.class).isEmpty(),
                     !applicationContext.getBeansOfType(PlatformTokenIssuerPort.class).isEmpty(),
                     !applicationContext.getBeansOfType(PlatformSessionIssuerPort.class).isEmpty(),
                     applicationContext.containsBean("platformSecurityLocalRateLimitAdapter"),

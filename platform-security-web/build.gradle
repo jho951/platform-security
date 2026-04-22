@@ -7,7 +7,7 @@ dependencies {
 
     testImplementation project(':platform-security-core')
     testImplementation project(':platform-security-ip')
-    testImplementation project(':platform-security-rate-limit')
+    testImplementation project(':platform-security-adapter-ratelimiter')
     testImplementation "org.springframework:spring-context:${rootProject.springFrameworkVersion}"
     testImplementation "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
     testImplementation "org.springframework:spring-test:${rootProject.springFrameworkVersion}"

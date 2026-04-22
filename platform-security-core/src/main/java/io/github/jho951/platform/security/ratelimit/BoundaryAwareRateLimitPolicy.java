@@ -20,18 +20,18 @@ public final class BoundaryAwareRateLimitPolicy implements SecurityPolicy {
     private final SecurityBoundary boundary;
     private final PlatformSecurityProperties.RateLimitProperties properties;
     private final RateLimitKeyResolver keyResolver;
-    private final PlatformRateLimitAdapter rateLimitAdapter;
+    private final PlatformRateLimitPort rateLimitPort;
 
     public BoundaryAwareRateLimitPolicy(
             SecurityBoundary boundary,
             PlatformSecurityProperties.RateLimitProperties properties,
             RateLimitKeyResolver keyResolver,
-            PlatformRateLimitAdapter rateLimitAdapter
+            PlatformRateLimitPort rateLimitPort
     ) {
         this.boundary = Objects.requireNonNull(boundary, "boundary");
         this.properties = properties == null ? new PlatformSecurityProperties.RateLimitProperties() : properties;
         this.keyResolver = Objects.requireNonNull(keyResolver, "keyResolver");
-        this.rateLimitAdapter = Objects.requireNonNull(rateLimitAdapter, "rateLimitAdapter");
+        this.rateLimitPort = Objects.requireNonNull(rateLimitPort, "rateLimitPort");
     }
 
     @Override
@@ -61,7 +61,7 @@ public final class BoundaryAwareRateLimitPolicy implements SecurityPolicy {
         String keyValue = keyResolver.resolve(request, context, resolvedProfile);
         long windowSeconds = Math.max(1L, profile.getWindowSeconds());
         int limit = Math.toIntExact(profile.getRequests());
-        PlatformRateLimitDecision decision = rateLimitAdapter.evaluate(new PlatformRateLimitRequest(
+        PlatformRateLimitDecision decision = rateLimitPort.evaluate(new PlatformRateLimitRequest(
                 keyValue,
                 context.authenticated() ? PlatformRateLimitKeyType.USER : PlatformRateLimitKeyType.IP,
                 1L,

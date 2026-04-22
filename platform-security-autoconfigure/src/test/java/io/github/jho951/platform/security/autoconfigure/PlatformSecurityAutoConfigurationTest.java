@@ -4,6 +4,7 @@ import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.GatewayUserPrincipal;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
 import io.github.jho951.platform.security.api.SecurityRequest;
+import io.github.jho951.platform.security.auth.autoconfigure.PlatformSecurityAuthAdapterAutoConfiguration;
 import io.github.jho951.platform.security.policy.ClientIpResolver;
 import io.github.jho951.platform.security.policy.AuthMode;
 import io.github.jho951.platform.security.policy.PlatformSecurityCustomizer;
@@ -11,6 +12,7 @@ import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import io.github.jho951.platform.security.policy.ServiceRolePreset;
 import io.github.jho951.platform.security.policy.SecurityBoundary;
 import io.github.jho951.platform.security.policy.SecurityBoundaryResolver;
+import io.github.jho951.platform.security.ratelimit.autoconfigure.PlatformSecurityRateLimitAdapterAutoConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
@@ -50,12 +52,16 @@ class PlatformSecurityAutoConfigurationTest {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     ConfigurationPropertiesAutoConfiguration.class,
+                    PlatformSecurityAuthAdapterAutoConfiguration.class,
+                    PlatformSecurityRateLimitAdapterAutoConfiguration.class,
                     PlatformSecurityAutoConfiguration.class
             ));
     private final ApplicationContextRunner localContextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     ConfigurationPropertiesAutoConfiguration.class,
                     PlatformSecurityLocalSupportAutoConfiguration.class,
+                    PlatformSecurityAuthAdapterAutoConfiguration.class,
+                    PlatformSecurityRateLimitAdapterAutoConfiguration.class,
                     PlatformSecurityAutoConfiguration.class
             ));
 

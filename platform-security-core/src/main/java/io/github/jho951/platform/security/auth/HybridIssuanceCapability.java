@@ -8,7 +8,7 @@ import java.util.Objects;
  * <p>MSA 환경에서 gateway는 access token을, browser flow는 session id를 사용할 수
  * 있도록 하나의 로그인 결과에서 두 credential을 함께 만들 때 사용한다.</p>
  */
-public final class HybridIssuanceCapability implements TokenIssuanceCapability {
+public final class HybridIssuanceCapability {
     private final TokenIssuanceCapability tokenIssuanceCapability;
     private final SessionIssuanceCapability sessionIssuanceCapability;
 
@@ -26,13 +26,20 @@ public final class HybridIssuanceCapability implements TokenIssuanceCapability {
         this.sessionIssuanceCapability = Objects.requireNonNull(sessionIssuanceCapability, "sessionIssuanceCapability");
     }
 
-    @Override
-    public PlatformTokenBundle issue(PlatformAuthenticatedPrincipal principal) {
-        PlatformTokenBundle tokens = tokenIssuanceCapability.issue(principal);
-        return new PlatformTokenBundle(
-                tokens.accessToken(),
-                tokens.refreshToken(),
-                sessionIssuanceCapability.issueSession(principal)
+    public PlatformIssuedCredentials issue(PlatformAuthenticatedPrincipal principal) {
+        Objects.requireNonNull(principal, "principal");
+        return issue(new PlatformIssueTokenCommand(principal), new PlatformIssueSessionCommand(principal));
+    }
+
+    public PlatformIssuedCredentials issue(
+            PlatformIssueTokenCommand tokenCommand,
+            PlatformIssueSessionCommand sessionCommand
+    ) {
+        Objects.requireNonNull(tokenCommand, "tokenCommand");
+        Objects.requireNonNull(sessionCommand, "sessionCommand");
+        return new PlatformIssuedCredentials(
+                tokenIssuanceCapability.issue(tokenCommand),
+                sessionIssuanceCapability.issueSession(sessionCommand)
         );
     }
 }

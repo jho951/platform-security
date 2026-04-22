@@ -5,5 +5,5 @@ package io.github.jho951.platform.security.auth;
  */
 public interface PlatformSessionIssuerPort {
 
-    String issueSession(PlatformAuthenticatedPrincipal principal);
+    PlatformSessionView issueSession(PlatformIssueSessionCommand command);
 }

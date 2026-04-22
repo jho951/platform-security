@@ -18,9 +18,9 @@ import io.github.jho951.platform.security.auth.PlatformSessionSupport;
 import io.github.jho951.platform.security.auth.PlatformTokenIssuerPort;
 import io.github.jho951.platform.security.auth.SessionStorePlatformSessionIssuerPort;
 import io.github.jho951.platform.security.auth.TokenServicePlatformTokenIssuerPort;
-import io.github.jho951.platform.security.core.limiter.InMemoryRateLimiter;
 import io.github.jho951.platform.security.ratelimit.DefaultPlatformRateLimitAdapter;
-import io.github.jho951.platform.security.ratelimit.PlatformRateLimitAdapter;
+import io.github.jho951.platform.security.ratelimit.InMemoryRateLimiter;
+import io.github.jho951.platform.security.ratelimit.PlatformRateLimitPort;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import io.github.jho951.ratelimiter.spi.RateLimiter;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -101,8 +101,8 @@ public class PlatformSecurityLocalSupportAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean(PlatformRateLimitAdapter.class)
-    public PlatformRateLimitAdapter platformSecurityLocalRateLimitAdapter(RateLimiter rateLimiter) {
+    @ConditionalOnMissingBean(PlatformRateLimitPort.class)
+    public PlatformRateLimitPort platformSecurityLocalRateLimitAdapter(RateLimiter rateLimiter) {
         return new DefaultPlatformRateLimitAdapter(rateLimiter);
     }
 
