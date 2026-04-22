@@ -22,7 +22,7 @@
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:2.1.0")
+    implementation platform("io.github.jho951.platform:platform-security-bom:3.0.0")
     implementation "io.github.jho951.platform:platform-security-starter"
 }
 ```
@@ -72,9 +72,9 @@ X-Auth-Internal-Token: xxx
 - SecurityContextResolver 없음
 - dev fallback 사용
 - dev JWT secret 사용
-- local TokenService / SessionStore 사용
+- local token/session adapter 사용
 - local InternalTokenClaimsValidator 사용
-- local/in-memory PlatformRateLimitAdapter 사용
+- local/in-memory PlatformRateLimitPort 사용
 - admin/internal IP rule 없음
 ```
 

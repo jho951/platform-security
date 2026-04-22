@@ -1,16 +1,29 @@
 # Release Notes
 
-## 2.1.0 Changes
+## Unreleased
+
+### Reactive gateway hybrid integration
+
+- `platform-security-hybrid-web-adapter` now exposes `PlatformSecurityReactiveGatewayIntegration` for WebFlux gateway assembly.
+- hybrid mode registers a reactive gateway header authentication `WebFilter` and a `PlatformSecurityWebFilter` bundle when the application is reactive.
+
+## 3.0.0 Changes
+
+### Ports and runtime split
+
+- public auth and rate-limit contracts now live in `platform-security-ports`.
+- runtime/authentication/rate-limit orchestration classes now live in `platform-security-core`.
+- `platform-security-autoconfigure`, `platform-security-issuer-autoconfigure`, and `platform-security-starter` now wire against `ports/core` instead of depending on adapter modules directly.
 
 ### Public contract alignment
 
-- `platform-security-auth` public contracts now use platform-owned auth types such as `PlatformAuthenticatedPrincipal` and `PlatformOAuth2UserIdentity`.
+- `platform-security-adapter-auth` public contracts now use platform-owned auth types such as `PlatformAuthenticatedPrincipal` and `PlatformOAuth2UserIdentity`.
 - raw `com.auth.*` exposure is reduced from public contracts and kept behind adapter/helper boundaries where migration is still in progress.
 - exposed `com.auth.*` dependencies remain promoted to `api` until the remaining helper surface is removed.
 
 ### Rate limit contract alignment
 
-- `PlatformRateLimitAdapter` now returns platform-owned request/decision types instead of exposing raw `RateLimiter`.
+- `PlatformRateLimitPort` is now the primary service-facing rate-limit contract, while `PlatformRateLimitAdapter` remains only as an adapter marker around backing implementations.
 - rate-limit policy and operational checks now depend on the platform adapter contract rather than raw layer1 SPI.
 
 ### Auto-configuration and gateway integration

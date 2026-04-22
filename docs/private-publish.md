@@ -15,16 +15,17 @@ platform-security
 platform-security-bom
 platform-security-starter
 platform-security-client
-platform-security-local-support
+platform-security-support-local
 platform-security-test-support
 platform-security-policyconfig-bridge
 
 platform-security-policy
 platform-security-api
+platform-security-ports
 platform-security-core
-platform-security-auth
+platform-security-adapter-auth
 platform-security-ip
-platform-security-rate-limit
+platform-security-adapter-ratelimiter
 platform-security-web
 platform-security-hybrid-web-adapter
 platform-security-autoconfigure
@@ -47,15 +48,15 @@ platform-security-sample-consumer
 tag를 push하면 publish workflow가 돈다.
 
 ```bash
-git tag v2.1.0
-git push origin v2.1.0
+git tag v3.0.0
+git push origin v3.0.0
 ```
 
 version은 tag에서 계산한다.
 
 ```text
-v2.1.0
--> release_version=2.1.0
+v3.0.0
+-> release_version=3.0.0
 ```
 
 workflow 권한:
@@ -85,7 +86,7 @@ export GITHUB_ACTOR=jho951
 export GITHUB_TOKEN=<write:packages 권한이 있는 PAT>
 
 ./gradlew clean test publish \
-  -Prelease_version=2.1.0 \
+  -Prelease_version=3.0.0 \
   -PgithubPackagesUrl=https://maven.pkg.github.com/jho951/platform-security \
   -PgithubPackagesUsername="$GITHUB_ACTOR" \
   -PgithubPackagesToken="$GITHUB_TOKEN"
@@ -120,7 +121,7 @@ dependency:
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:2.1.0")
+    implementation platform("io.github.jho951.platform:platform-security-bom:3.0.0")
     implementation "io.github.jho951.platform:platform-security-starter"
 }
 ```

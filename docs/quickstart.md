@@ -31,7 +31,7 @@ export GITHUB_TOKEN=<read:packages 권한이 있는 PAT>
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:2.1.0")
+    implementation platform("io.github.jho951.platform:platform-security-bom:3.0.0")
     implementation "io.github.jho951.platform:platform-security-starter"
 }
 ```
@@ -93,16 +93,16 @@ SecurityContextResolver securityContextResolver(CurrentUserResolver currentUserR
 }
 ```
 
-운영에서 rate limit을 켜면 공유 저장소 기반 구현을 `PlatformRateLimitAdapter`로 연결한다. raw `RateLimiter`는 adapter 내부 helper로만 쓰고, policy/public surface는 platform 계약만 본다.
+운영에서 rate limit을 켜면 공유 저장소 기반 구현을 `PlatformRateLimitPort`로 연결한다. raw `RateLimiter`는 adapter 내부 helper로만 쓰고, service-facing 계약과 policy/public surface는 platform port만 본다.
 
 ```java
 @Bean
-PlatformRateLimitAdapter platformRateLimitAdapter(RedisClient redisClient) {
+PlatformRateLimitPort platformRateLimitPort(RedisClient redisClient) {
     return new DefaultPlatformRateLimitAdapter(new RedisBackedRateLimiter(redisClient));
 }
 ```
 
-`issuer` preset은 운영용 `TokenService`와 필요한 경우 `SessionStore`를 제공해야 한다. auto-configuration은 이 raw auth bean을 platform-owned port와 `PlatformSessionSupportFactory` 뒤로 감싼다. `internal-service` 또는 internal token을 쓰는 서비스는 `PlatformAuthenticatedPrincipal` 기준의 `InternalTokenClaimsValidator`를 제공한다.
+strict 기준에서 서비스는 `PlatformTokenIssuerPort`, `PlatformSessionIssuerPort`, `PlatformSessionSupportFactory`, `PlatformRateLimitPort` 같은 platform port를 제공하거나 adapter 모듈을 선택하는 쪽이 우선이다. raw `TokenService`, `SessionStore`, `RateLimiter`는 adapter layer 내부에서만 소비하는 것이 목표 경계다. `internal-service` 또는 internal token을 쓰는 서비스는 runtime validation hook인 `InternalTokenClaimsValidator`를 제공한다.
 
 ## Optional Addons
 
@@ -110,7 +110,7 @@ PlatformRateLimitAdapter platformRateLimitAdapter(RedisClient redisClient) {
 governance audit 연동이 필요한 서비스만 `platform-integrations` repository를 추가하고 bridge artifact를 붙인다.
 `platform-security` 자체에는 `platform-integrations` 의존성을 추가하지 않는다.
 
-gateway가 hybrid mode에서 servlet filter, ingress adapter, gateway header filter를 함께 받아 직접 조립해야 하면 `platform-security-hybrid-web-adapter`를 추가하고 `PlatformSecurityGatewayIntegration` bean을 사용한다.
+gateway가 hybrid mode에서 ingress를 직접 조립해야 하면 `platform-security-hybrid-web-adapter`를 추가한다. Servlet gateway는 `PlatformSecurityGatewayIntegration`, WebFlux gateway는 `PlatformSecurityReactiveGatewayIntegration` bean을 사용한다.
 
 ```gradle
 repositories {
@@ -128,9 +128,9 @@ repositories {
 dependencies {
     implementation "io.github.jho951.platform:platform-security-client"
     implementation "io.github.jho951.platform:platform-security-hybrid-web-adapter"
-    implementation "io.github.jho951.platform:platform-security-governance-bridge:1.0.3"
+    implementation "io.github.jho951.platform:platform-security-governance-bridge:2.0.0"
     implementation "io.github.jho951.platform:platform-security-policyconfig-bridge"
-    testImplementation "io.github.jho951.platform:platform-security-local-support"
+    testImplementation "io.github.jho951.platform:platform-security-support-local"
     testImplementation "io.github.jho951.platform:platform-security-test-support"
 }
 ```

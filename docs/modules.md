@@ -37,8 +37,8 @@ local/test 전용 구현
 | Artifact | 언제 쓰나 |
 | --- | --- |
 | `platform-security-client` | 다른 서비스로 호출할 때 표준 사용자 header를 자동으로 붙이고 싶을 때 |
-| `platform-security-hybrid-web-adapter` | gateway/edge가 hybrid mode에서 servlet filter, ingress adapter, gateway header filter를 공식 bundle로 받아 직접 조립하고 싶을 때 |
-| `platform-security-local-support` | local/test에서만 기본 token/session/rate-limit 구현을 쓰고 싶을 때. 운영 `implementation` 금지 |
+| `platform-security-hybrid-web-adapter` | gateway/edge가 hybrid mode에서 Servlet 또는 WebFlux ingress를 공식 bundle로 받아 직접 조립하고 싶을 때 |
+| `platform-security-support-local` | local/test에서만 기본 token/session/rate-limit 구현을 쓰고 싶을 때. 운영 `implementation` 금지 |
 | `platform-security-governance-bridge` | 보안 차단 기록을 governance audit에 같이 남기고 싶을 때. `platform-integrations` repository에서 별도 bridge artifact로 추가 |
 | `platform-security-policyconfig-bridge` | IP rule 같은 정책 읽기를 공통 policy config에서 하고 싶을 때 |
 | `platform-security-test-support` | 테스트 fixture가 필요할 때 |
@@ -51,16 +51,19 @@ local/test 전용 구현
 ```text
 platform-security-policy
 platform-security-api
+platform-security-ports
 platform-security-core
-platform-security-auth
+platform-security-adapter-auth
 platform-security-ip
-platform-security-rate-limit
+platform-security-adapter-ratelimiter
 platform-security-web
 platform-security-autoconfigure
 platform-security-issuer-autoconfigure
 platform-security-internal-autoconfigure
 platform-policy-api
 ```
+
+`platform-security-ports`는 공개 auth/rate-limit 계약과 runtime view를 담고, `platform-security-core`는 그 port만 보고 runtime을 조립한다.
 
 3계층은 내부 class를 직접 import하지 않고, 공개 API, 공개 bean, `platform.security.*` 설정으로 차이를 표현한다.
 

@@ -25,8 +25,8 @@ platform:
     service-role-preset: api-server
 ```
 
-issuer 역할의 운영 서비스는 `TokenService`와 `SessionStore`를 직접 제공해야 한다.  
-`platform-security`는 발급 흐름만 연결하고, 운영 token/session 저장소는 3계층이 소유한다. auto-configuration은 이 raw auth bean을 platform-owned 발급 port와 `PlatformSessionSupportFactory` 뒤로 감싼다.
+issuer 역할의 운영 서비스는 `PlatformTokenIssuerPort`와 `PlatformSessionIssuerPort`를 제공하거나, 동일한 역할을 수행하는 adapter module을 포함해야 한다.  
+`platform-security`는 발급 흐름만 연결하고, 운영 token/session 저장소는 3계층이 소유한다. auth adapter auto-configuration을 쓰는 경우에만 raw auth bean을 내부에서 platform-owned 발급 port와 `PlatformSessionSupportFactory` 뒤로 감싼다.
 
 ## Boundary
 
@@ -89,7 +89,7 @@ INTERNAL
 운영에서 `auth.enabled=true`이면 `SecurityContextResolver` bean이 반드시 필요하다.  
 쉽게 말하면 “현재 요청의 사용자가 누구인지 찾는 코드”를 서비스가 제공해야 한다.
 
-`InternalTokenClaimsValidator`, `TokenIssuanceCapability`, `SessionIssuanceCapability`, `OAuth2PrincipalBridge` 같은 공개 auth 계약은 `PlatformAuthenticatedPrincipal`, `PlatformOAuth2UserIdentity`를 기준으로 동작한다.
+`InternalTokenClaimsValidator`, `TokenIssuanceCapability`, `SessionIssuanceCapability`, `OAuth2PrincipalBridge` 같은 공개 auth 계약은 `PlatformIssueTokenCommand`, `PlatformIssueSessionCommand`, `PlatformIssuedToken`, `PlatformSessionView`, `PlatformOAuth2UserIdentity` 같은 runtime view를 기준으로 동작한다. `PlatformAuthenticatedPrincipal`은 canonical principal 모델이 아니라 발급/검증 흐름에서만 쓰는 runtime principal view로 유지한다.
 
 ## OIDC
 
@@ -208,7 +208,7 @@ rate limit은 요청 횟수를 제한하는 기능이다.
 
 로그인처럼 public이지만 제한이 필요한 endpoint는 route limit을 추가한다.
 
-운영 확장 표면은 `PlatformRateLimitAdapter`다. 기존 `RateLimiter` bean이 있으면 auto-configuration이 adapter로 감쌀 수 있지만, policy와 운영 안전검사는 raw limiter가 아니라 adapter bean 존재와 분산 backing 여부만 본다.
+운영 확장 표면은 `PlatformRateLimitPort`다. 기존 `RateLimiter` bean이 있으면 adapter auto-configuration이 이를 `PlatformRateLimitPort` 구현으로 감싸지만, policy와 운영 안전검사는 raw limiter가 아니라 platform port bean 존재와 분산 backing 여부만 본다.
 
 ```yaml
 platform:
@@ -250,7 +250,7 @@ platform.security.operational.production=true
 - `trust-proxy=true`인데 trusted proxy exact IP 또는 CIDR 없음
 - admin/internal IP rule 없음
 - rate limit 꺼짐
-- production `PlatformRateLimitAdapter` bean 없음
+- production `PlatformRateLimitPort` bean 없음
 - local/test 전용 in-memory rate-limit adapter 사용
 - quota가 0 이하
 - route limit에 path 없음

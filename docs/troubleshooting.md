@@ -69,12 +69,12 @@ platform.security.operational.production=true
 - auth.dev-fallback.enabled=false
 - SecurityContextResolver bean 존재
 - 운영용 token/session/internal token validator 사용
-- issuer 서비스라면 운영용 TokenService / SessionStore 존재
+- issuer 서비스라면 운영용 `PlatformTokenIssuerPort` / `PlatformSessionIssuerPort` 또는 동등한 adapter bean 존재
 - ip-guard.enabled=true
 - trust-proxy=true이면 trusted-proxy-cidrs 존재
 - admin/internal IP rule 존재
 - rate-limit.enabled=true
-- 운영용 공유 `PlatformRateLimitAdapter` bean 존재
+- 운영용 공유 `PlatformRateLimitPort` bean 존재
 - quota 값이 0보다 큼
 - route limit에는 path가 하나 이상 있음
 ```
@@ -205,7 +205,7 @@ platform:
 - anonymous/authenticated/internal quota가 맞는지
 - route limit path가 실제 path와 매칭되는지
 - RateLimitKeyResolver를 바꿨는지
-- 운영에서 공유 `PlatformRateLimitAdapter`를 쓰는지
+- 운영에서 공유 `PlatformRateLimitPort`를 쓰는지
 - 기존 `RateLimiter`를 감싸는 방식이면 backing store가 분산 저장소인지
 ```
 
