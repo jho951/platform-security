@@ -1,6 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
 import io.github.jho951.platform.security.api.SecurityRequest;
 
 /**
@@ -19,5 +18,5 @@ public interface InternalTokenClaimsValidator {
      * @param request 현재 platform 요청
      * @return 추가 claim 조건을 만족하면 true
      */
-    boolean validate(Principal principal, SecurityRequest request);
+    boolean validate(PlatformAuthenticatedPrincipal principal, SecurityRequest request);
 }

@@ -1,7 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
-
 /**
  * 이미 인증된 principal에 대해 platform token을 발급한다.
  *
@@ -15,5 +13,5 @@ public interface TokenIssuanceCapability {
      * @param principal 이미 인증이 끝난 principal
      * @return access token, refresh token, 필요 시 session id를 담은 bundle
      */
-    PlatformTokenBundle issue(Principal principal);
+    PlatformTokenBundle issue(PlatformAuthenticatedPrincipal principal);
 }

@@ -1,6 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
 import com.auth.hmac.HmacAuthenticationProvider;
 import com.auth.hmac.HmacAuthenticationRequest;
 import io.github.jho951.platform.security.api.SecurityRequest;
@@ -40,7 +39,7 @@ public final class DefaultHmacAuthenticationCapability implements Authentication
     }
 
     @Override
-    public Optional<Principal> authenticate(SecurityRequest request) {
+    public Optional<PlatformAuthenticatedPrincipal> authenticate(SecurityRequest request) {
         Map<String, String> attributes = request.attributes();
         String keyId = DefaultJwtAuthenticationCapability.trimToNull(attributes.get(PlatformAuthenticationFacade.HMAC_KEY_ID_ATTRIBUTE));
         String signature = DefaultJwtAuthenticationCapability.trimToNull(attributes.get(PlatformAuthenticationFacade.HMAC_SIGNATURE_ATTRIBUTE));
@@ -56,7 +55,8 @@ public final class DefaultHmacAuthenticationCapability implements Authentication
                 signature,
                 timestamp(attributes, request.occurredAt())
         );
-        return hmacAuthenticationProvider.authenticate(authenticationRequest);
+        return hmacAuthenticationProvider.authenticate(authenticationRequest)
+                .map(AuthPrincipalAdapters::toPlatform);
     }
 
     private byte[] body(Map<String, String> attributes) {

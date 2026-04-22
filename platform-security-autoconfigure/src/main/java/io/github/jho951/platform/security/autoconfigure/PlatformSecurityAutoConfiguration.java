@@ -17,13 +17,14 @@ import io.github.jho951.platform.security.auth.DefaultJwtAuthenticationCapabilit
 import io.github.jho951.platform.security.auth.DefaultOAuth2PrincipalBridge;
 import io.github.jho951.platform.security.auth.DefaultOidcPrincipalMapper;
 import io.github.jho951.platform.security.auth.DefaultOidcAuthenticationCapability;
-import io.github.jho951.platform.security.auth.DefaultPlatformSessionSupport;
+import io.github.jho951.platform.security.auth.DefaultPlatformSessionSupportFactory;
 import io.github.jho951.platform.security.auth.DefaultServiceAccountAuthenticationCapability;
 import io.github.jho951.platform.security.auth.DefaultSessionAuthenticationCapability;
 import io.github.jho951.platform.security.auth.InternalTokenClaimsValidator;
 import io.github.jho951.platform.security.auth.OAuth2PrincipalBridge;
 import io.github.jho951.platform.security.auth.PlatformSessionIssuerPort;
 import io.github.jho951.platform.security.auth.PlatformSessionSupport;
+import io.github.jho951.platform.security.auth.PlatformSessionSupportFactory;
 import io.github.jho951.platform.security.auth.PlatformTokenIssuerPort;
 import io.github.jho951.platform.security.core.DefaultSecurityPolicyService;
 import io.github.jho951.platform.security.policy.ClientIpResolver;
@@ -64,7 +65,6 @@ import com.auth.hmac.HmacAuthenticationProvider;
 import com.auth.hmac.HmacPrincipalResolver;
 import com.auth.hmac.HmacSecretResolver;
 import com.auth.hmac.HmacSignatureVerifier;
-import com.auth.hybrid.DefaultHybridAuthenticationProvider;
 import com.auth.hybrid.HybridAuthenticationProvider;
 import com.auth.oidc.OidcAuthenticationProvider;
 import com.auth.oidc.OidcPrincipalMapper;
@@ -306,26 +306,29 @@ public class PlatformSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnBean(HybridAuthenticationProvider.class)
-    @ConditionalOnMissingBean(PlatformSessionSupport.class)
-    public PlatformSessionSupport platformSessionSupportFromHybridProvider(
+    @ConditionalOnMissingBean({PlatformSessionSupport.class, PlatformSessionSupportFactory.class})
+    public PlatformSessionSupportFactory platformSessionSupportFactoryFromHybridProvider(
             HybridAuthenticationProvider hybridAuthenticationProvider
     ) {
-        return new DefaultPlatformSessionSupport(hybridAuthenticationProvider);
+        return new DefaultPlatformSessionSupportFactory(hybridAuthenticationProvider);
     }
 
     @Bean
     @ConditionalOnBean({TokenService.class, SessionStore.class, SessionPrincipalMapper.class})
-    @ConditionalOnMissingBean(PlatformSessionSupport.class)
-    public PlatformSessionSupport platformSessionSupportFromOssAuthBeans(
+    @ConditionalOnMissingBean({PlatformSessionSupport.class, PlatformSessionSupportFactory.class})
+    public PlatformSessionSupportFactory platformSessionSupportFactoryFromOssAuthBeans(
             TokenService tokenService,
             SessionStore sessionStore,
             SessionPrincipalMapper mapper
     ) {
-        HybridAuthenticationProvider hybridAuthenticationProvider = new DefaultHybridAuthenticationProvider(
-                tokenService,
-                new DefaultSessionAuthenticationProvider(sessionStore, mapper)
-        );
-        return new DefaultPlatformSessionSupport(hybridAuthenticationProvider);
+        return new DefaultPlatformSessionSupportFactory(tokenService, sessionStore, mapper);
+    }
+
+    @Bean
+    @ConditionalOnBean(PlatformSessionSupportFactory.class)
+    @ConditionalOnMissingBean(PlatformSessionSupport.class)
+    public PlatformSessionSupport platformSessionSupport(PlatformSessionSupportFactory platformSessionSupportFactory) {
+        return platformSessionSupportFactory.create();
     }
 
     @Bean

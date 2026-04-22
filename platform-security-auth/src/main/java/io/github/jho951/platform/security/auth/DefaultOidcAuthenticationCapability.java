@@ -1,6 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
 import com.auth.oidc.OidcAuthenticationProvider;
 import com.auth.oidc.OidcAuthenticationRequest;
 import io.github.jho951.platform.security.api.SecurityRequest;
@@ -35,7 +34,7 @@ public final class DefaultOidcAuthenticationCapability implements Authentication
     }
 
     @Override
-    public Optional<Principal> authenticate(SecurityRequest request) {
+    public Optional<PlatformAuthenticatedPrincipal> authenticate(SecurityRequest request) {
         Map<String, String> attributes = request.attributes();
         String idToken = DefaultJwtAuthenticationCapability.trimToNull(attributes.get(PlatformAuthenticationFacade.OIDC_ID_TOKEN_ATTRIBUTE));
         if (idToken == null) {
@@ -43,7 +42,8 @@ public final class DefaultOidcAuthenticationCapability implements Authentication
         }
         String nonce = DefaultJwtAuthenticationCapability.trimToNull(attributes.get(PlatformAuthenticationFacade.OIDC_NONCE_ATTRIBUTE));
         try {
-            return oidcAuthenticationProvider.authenticate(new OidcAuthenticationRequest(idToken, nonce));
+            return oidcAuthenticationProvider.authenticate(new OidcAuthenticationRequest(idToken, nonce))
+                    .map(AuthPrincipalAdapters::toPlatform);
         } catch (RuntimeException ex) {
             return Optional.empty();
         }

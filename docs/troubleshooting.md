@@ -7,7 +7,7 @@
 2. boundary path가 맞는가?
 3. SecurityContextResolver가 있는가?
 4. 운영 Spring profile에서 local/test 기본 구현을 쓰고 있지 않은가?
-5. IP rule과 RateLimiter가 운영용으로 설정됐는가?
+5. IP rule과 rate-limit adapter가 운영용으로 설정됐는가?
 ```
 
 ## 앱이 시작하지 않음
@@ -58,7 +58,7 @@ Spring profile이 platform.security.operational.production-profiles에 포함됨
 platform.security.operational.production=true
 ```
 
-기본 운영 profile은 `prod` 하나다. `production`, `live`는 기본값으로는 운영 profile이 아니다.  
+기본 운영 profile은 `prod`, `production`이다. `live`는 기본값으로는 운영 profile이 아니다.  
 기존 `platform.security.operational-policy.*` 설정도 계속 동작한다.
 
 확인할 것:
@@ -74,7 +74,7 @@ platform.security.operational.production=true
 - trust-proxy=true이면 trusted-proxy-cidrs 존재
 - admin/internal IP rule 존재
 - rate-limit.enabled=true
-- 운영용 공유 RateLimiter bean 존재
+- 운영용 공유 `PlatformRateLimitAdapter` bean 존재
 - quota 값이 0보다 큼
 - route limit에는 path가 하나 이상 있음
 ```
@@ -205,7 +205,8 @@ platform:
 - anonymous/authenticated/internal quota가 맞는지
 - route limit path가 실제 path와 매칭되는지
 - RateLimitKeyResolver를 바꿨는지
-- 운영에서 공유 RateLimiter를 쓰는지
+- 운영에서 공유 `PlatformRateLimitAdapter`를 쓰는지
+- 기존 `RateLimiter`를 감싸는 방식이면 backing store가 분산 저장소인지
 ```
 
 `PUBLIC` path는 기본 quota를 건너뛴다.  

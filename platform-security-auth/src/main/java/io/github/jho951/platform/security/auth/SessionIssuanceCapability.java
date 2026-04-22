@@ -1,7 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
-
 /**
  * 이미 인증된 principal에 대해 session을 생성한다.
  *
@@ -14,5 +12,5 @@ public interface SessionIssuanceCapability {
      * @param principal 이미 인증이 끝난 principal
      * @return 발급된 session id
      */
-    String issueSession(Principal principal);
+    String issueSession(PlatformAuthenticatedPrincipal principal);
 }

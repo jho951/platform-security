@@ -1,6 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.OAuth2UserIdentity;
 import com.auth.api.model.Principal;
 import com.auth.oidc.OidcIdentity;
 import com.auth.session.SessionStore;
@@ -41,7 +40,7 @@ class PlatformSecurityContextResolversTest {
                 new Principal(identity.getProvider() + ":" + identity.getProviderUserId())
         );
 
-        Principal principal = bridge.resolve(new OAuth2UserIdentity(
+        PlatformAuthenticatedPrincipal principal = bridge.resolve(new PlatformOAuth2UserIdentity(
                 "github",
                 "42",
                 "user@example.com",
@@ -49,7 +48,7 @@ class PlatformSecurityContextResolversTest {
                 Map.of()
         ));
 
-        assertEquals("github:42", principal.getUserId());
+        assertEquals("github:42", principal.userId());
     }
 
     @Test
@@ -58,7 +57,7 @@ class PlatformSecurityContextResolversTest {
         InMemorySessionStore sessionStore = new InMemorySessionStore();
         TokenIssuanceCapability issuer = PlatformSecurityContextResolvers.hybridIssuer(tokenService, sessionStore);
 
-        PlatformTokenBundle bundle = issuer.issue(new Principal("user-1"));
+        PlatformTokenBundle bundle = issuer.issue(new PlatformAuthenticatedPrincipal("user-1"));
 
         assertEquals("access-user-1", bundle.accessToken());
         assertEquals("refresh-user-1", bundle.refreshToken());

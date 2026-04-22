@@ -1,6 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
 import com.auth.session.SecureRandomSessionIdGenerator;
 import com.auth.session.SessionIdGenerator;
 import com.auth.session.SessionStore;
@@ -27,10 +26,10 @@ public final class SessionStorePlatformSessionIssuerPort implements PlatformSess
     }
 
     @Override
-    public String issueSession(Principal principal) {
+    public String issueSession(PlatformAuthenticatedPrincipal principal) {
         Objects.requireNonNull(principal, "principal");
         String sessionId = sessionIdGenerator.generate();
-        sessionStore.save(sessionId, principal);
+        sessionStore.save(sessionId, AuthPrincipalAdapters.toAuth(principal));
         return sessionId;
     }
 }

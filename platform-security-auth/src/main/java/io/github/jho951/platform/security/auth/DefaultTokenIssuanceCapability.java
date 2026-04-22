@@ -1,7 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
-
 import java.util.Objects;
 
 /**
@@ -20,7 +18,7 @@ public final class DefaultTokenIssuanceCapability implements TokenIssuanceCapabi
     }
 
     @Override
-    public PlatformTokenBundle issue(Principal principal) {
+    public PlatformTokenBundle issue(PlatformAuthenticatedPrincipal principal) {
         Objects.requireNonNull(principal, "principal");
         return tokenIssuerPort.issue(principal);
     }

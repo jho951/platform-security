@@ -1,6 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
 import io.github.jho951.platform.security.api.SecurityRequest;
@@ -90,7 +89,7 @@ public final class PlatformAuthenticationFacade implements SecurityContextResolv
         var attributes = new LinkedHashMap<>(request.attributes());
         AuthMode authMode = resolveAuthMode(attributes);
         boolean internalService = isInternalService(attributes, authMode);
-        Optional<Principal> principal = capabilityResolver.resolve(authMode, internalService).authenticate(request);
+        Optional<PlatformAuthenticatedPrincipal> principal = capabilityResolver.resolve(authMode, internalService).authenticate(request);
         if (principal.isPresent()) {
             removeCredentialAttributes(attributes);
             return fromPrincipal(principal.get(), attributes);
@@ -162,19 +161,19 @@ public final class PlatformAuthenticationFacade implements SecurityContextResolv
         return authMode == AuthMode.HYBRID && "true".equalsIgnoreCase(attributes.getOrDefault("auth.internal", "false"));
     }
 
-    private static SecurityContext fromPrincipal(Principal principal, java.util.Map<String, String> attributes) {
-        Set<String> roles = principal.getAuthorities().stream()
+    private static SecurityContext fromPrincipal(PlatformAuthenticatedPrincipal principal, java.util.Map<String, String> attributes) {
+        Set<String> roles = principal.authorities().stream()
                 .map(PlatformAuthenticationFacade::trimToNull)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toUnmodifiableSet());
 
         var merged = new LinkedHashMap<>(attributes);
-        principal.getAttributes().forEach((key, value) -> {
+        principal.attributes().forEach((key, value) -> {
             if (key != null && value != null) {
                 merged.putIfAbsent(key, String.valueOf(value));
             }
         });
-        return new SecurityContext(true, principal.getUserId(), roles, merged);
+        return new SecurityContext(true, principal.userId(), roles, merged);
     }
 
     private boolean hasApiKeyCredential(Map<String, String> attributes) {

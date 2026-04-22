@@ -1,6 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
 import com.auth.apikey.ApiKeyAuthenticationProvider;
 import com.auth.apikey.ApiKeyCredential;
 import io.github.jho951.platform.security.api.SecurityRequest;
@@ -34,13 +33,14 @@ public final class DefaultApiKeyAuthenticationCapability implements Authenticati
     }
 
     @Override
-    public Optional<Principal> authenticate(SecurityRequest request) {
+    public Optional<PlatformAuthenticatedPrincipal> authenticate(SecurityRequest request) {
         Map<String, String> attributes = request.attributes();
         String keyId = DefaultJwtAuthenticationCapability.trimToNull(attributes.get(PlatformAuthenticationFacade.API_KEY_ID_ATTRIBUTE));
         String secret = DefaultJwtAuthenticationCapability.trimToNull(attributes.get(PlatformAuthenticationFacade.API_KEY_SECRET_ATTRIBUTE));
         if (keyId == null || secret == null) {
             return Optional.empty();
         }
-        return apiKeyAuthenticationProvider.authenticate(new ApiKeyCredential(keyId, secret));
+        return apiKeyAuthenticationProvider.authenticate(new ApiKeyCredential(keyId, secret))
+                .map(AuthPrincipalAdapters::toPlatform);
     }
 }

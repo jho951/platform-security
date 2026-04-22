@@ -1,6 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
 import com.auth.hybrid.HybridAuthenticationContext;
 import com.auth.hybrid.HybridAuthenticationProvider;
 
@@ -18,7 +17,8 @@ public final class DefaultPlatformSessionSupport implements PlatformSessionSuppo
     }
 
     @Override
-    public Optional<Principal> authenticate(String accessToken, String sessionId) {
-        return hybridAuthenticationProvider.authenticate(HybridAuthenticationContext.of(accessToken, sessionId));
+    public Optional<PlatformAuthenticatedPrincipal> authenticate(String accessToken, String sessionId) {
+        return hybridAuthenticationProvider.authenticate(HybridAuthenticationContext.of(accessToken, sessionId))
+                .map(AuthPrincipalAdapters::toPlatform);
     }
 }

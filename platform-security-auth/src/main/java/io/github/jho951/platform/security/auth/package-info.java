@@ -2,7 +2,8 @@
  * 1계층 auth provider를 platform-security {@code SecurityContextResolver}와 issuance capability로
  * 연결하는 adapter 모듈이다.
  *
- * <p>현재 이 package의 일부 helper는 {@code com.auth.*} 타입을 공개 표면에 노출한다.
- * 기본 starter 경로에서 이 노출을 줄이려면 별도 auth bridge/support 모듈로 분리해야 한다.</p>
+ * <p>핵심 capability, principal, issuance 계약은 platform 소유 타입만 공개한다.
+ * 다만 조립 helper는 아직 {@code com.auth.*} SPI를 입력으로 받을 수 있으므로, 해당
+ * 의존성은 auth 공개 surface와 publish metadata가 어긋나지 않게 {@code api} 범위로 유지한다.</p>
  */
 package io.github.jho951.platform.security.auth;

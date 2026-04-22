@@ -5,11 +5,6 @@ import io.github.jho951.platform.security.api.SecurityPolicy;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.api.SecurityVerdict;
 import io.github.jho951.platform.security.policy.SecurityAttributes;
-import io.github.jho951.ratelimiter.core.RateLimitDecision;
-import io.github.jho951.ratelimiter.core.RateLimitKey;
-import io.github.jho951.ratelimiter.core.RateLimitKeyType;
-import io.github.jho951.ratelimiter.core.RateLimitPlan;
-import io.github.jho951.ratelimiter.spi.RateLimiter;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -20,8 +15,8 @@ import java.util.Objects;
 public final class PlatformRateLimitFacade {
     private final SecurityPolicy policy;
 
-    public PlatformRateLimitFacade(int limit, Duration window, RateLimiter rateLimiter) {
-        this.policy = new FixedWindowPolicy(limit, window, rateLimiter);
+    public PlatformRateLimitFacade(int limit, Duration window, PlatformRateLimitAdapter rateLimitAdapter) {
+        this.policy = new FixedWindowPolicy(limit, window, rateLimitAdapter);
     }
 
     public SecurityVerdict evaluate(SecurityRequest request, SecurityContext context) {
@@ -35,12 +30,12 @@ public final class PlatformRateLimitFacade {
     private static final class FixedWindowPolicy implements SecurityPolicy {
         private final int limit;
         private final Duration window;
-        private final RateLimiter rateLimiter;
+        private final PlatformRateLimitAdapter rateLimitAdapter;
 
-        private FixedWindowPolicy(int limit, Duration window, RateLimiter rateLimiter) {
+        private FixedWindowPolicy(int limit, Duration window, PlatformRateLimitAdapter rateLimitAdapter) {
             this.limit = limit;
             this.window = Objects.requireNonNull(window, "window");
-            this.rateLimiter = Objects.requireNonNull(rateLimiter, "rateLimiter");
+            this.rateLimitAdapter = Objects.requireNonNull(rateLimitAdapter, "rateLimitAdapter");
         }
 
         @Override
@@ -55,17 +50,18 @@ public final class PlatformRateLimitFacade {
             }
 
             String value = request.subject() != null ? request.subject() : request.clientIp();
-            RateLimitKeyType keyType = request.subject() != null ? RateLimitKeyType.USER_ID : RateLimitKeyType.IP;
             String boundary = request.attributes().getOrDefault(SecurityAttributes.BOUNDARY, "UNKNOWN");
-            RateLimitKey key = RateLimitKey.of(keyType, boundary + ":" + value);
-            long windowSeconds = Math.max(1L, window.toSeconds());
-            double refillPerSecond = (double) limit / (double) windowSeconds;
-            RateLimitPlan plan = RateLimitPlan.perSecond(limit, refillPerSecond);
-            RateLimitDecision decision = rateLimiter.tryAcquire(key, 1L, plan);
-            if (!decision.isAllowed()) {
-                return SecurityVerdict.deny(name(), "rate limit exceeded for " + key.asString());
+            PlatformRateLimitDecision decision = rateLimitAdapter.evaluate(new PlatformRateLimitRequest(
+                    boundary + ":" + value,
+                    request.subject() != null ? PlatformRateLimitKeyType.USER : PlatformRateLimitKeyType.IP,
+                    1L,
+                    limit,
+                    Math.max(1L, window.toSeconds())
+            ));
+            if (!decision.allowed()) {
+                return SecurityVerdict.deny(name(), decision.detail());
             }
-            return SecurityVerdict.allow(name(), "within rate limit");
+            return SecurityVerdict.allow(name(), decision.detail());
         }
     }
 }

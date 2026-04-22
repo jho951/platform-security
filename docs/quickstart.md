@@ -31,7 +31,7 @@ export GITHUB_TOKEN=<read:packages 권한이 있는 PAT>
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:2.0.1")
+    implementation platform("io.github.jho951.platform:platform-security-bom:2.1.0")
     implementation "io.github.jho951.platform:platform-security-starter"
 }
 ```
@@ -93,22 +93,24 @@ SecurityContextResolver securityContextResolver(CurrentUserResolver currentUserR
 }
 ```
 
-운영에서 rate limit을 켜면 공유 저장소 기반 `RateLimiter`를 제공한다.
+운영에서 rate limit을 켜면 공유 저장소 기반 구현을 `PlatformRateLimitAdapter`로 연결한다. raw `RateLimiter`는 adapter 내부 helper로만 쓰고, policy/public surface는 platform 계약만 본다.
 
 ```java
 @Bean
-RateLimiter rateLimiter(RedisClient redisClient) {
-    return new RedisBackedRateLimiter(redisClient);
+PlatformRateLimitAdapter platformRateLimitAdapter(RedisClient redisClient) {
+    return new DefaultPlatformRateLimitAdapter(new RedisBackedRateLimiter(redisClient));
 }
 ```
 
-`issuer` preset은 운영용 `TokenService`와 필요한 경우 `SessionStore`를 제공해야 한다. `internal-service` 또는 internal token을 쓰는 서비스는 `InternalTokenClaimsValidator`를 제공한다.
+`issuer` preset은 운영용 `TokenService`와 필요한 경우 `SessionStore`를 제공해야 한다. auto-configuration은 이 raw auth bean을 platform-owned port와 `PlatformSessionSupportFactory` 뒤로 감싼다. `internal-service` 또는 internal token을 쓰는 서비스는 `PlatformAuthenticatedPrincipal` 기준의 `InternalTokenClaimsValidator`를 제공한다.
 
 ## Optional Addons
 
 `platform-security-governance-bridge`는 `platform-security` release에 포함되지 않는다.
 governance audit 연동이 필요한 서비스만 `platform-integrations` repository를 추가하고 bridge artifact를 붙인다.
 `platform-security` 자체에는 `platform-integrations` 의존성을 추가하지 않는다.
+
+gateway가 hybrid mode에서 servlet filter, ingress adapter, gateway header filter를 함께 받아 직접 조립해야 하면 `platform-security-hybrid-web-adapter`를 추가하고 `PlatformSecurityGatewayIntegration` bean을 사용한다.
 
 ```gradle
 repositories {
@@ -125,7 +127,8 @@ repositories {
 ```gradle
 dependencies {
     implementation "io.github.jho951.platform:platform-security-client"
-    implementation "io.github.jho951.platform:platform-security-governance-bridge:1.0.2"
+    implementation "io.github.jho951.platform:platform-security-hybrid-web-adapter"
+    implementation "io.github.jho951.platform:platform-security-governance-bridge:1.0.3"
     implementation "io.github.jho951.platform:platform-security-policyconfig-bridge"
     testImplementation "io.github.jho951.platform:platform-security-local-support"
     testImplementation "io.github.jho951.platform:platform-security-test-support"

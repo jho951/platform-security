@@ -20,7 +20,7 @@ public final class DefaultAuthenticationCapabilityResolver implements Authentica
         }
 
         @Override
-        public java.util.Optional<com.auth.api.model.Principal> authenticate(io.github.jho951.platform.security.api.SecurityRequest request) {
+        public java.util.Optional<PlatformAuthenticatedPrincipal> authenticate(io.github.jho951.platform.security.api.SecurityRequest request) {
             return java.util.Optional.empty();
         }
     };

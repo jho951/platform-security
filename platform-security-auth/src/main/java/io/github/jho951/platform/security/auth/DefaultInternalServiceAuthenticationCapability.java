@@ -1,6 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
 import io.github.jho951.platform.security.api.SecurityRequest;
 
 import java.util.Map;
@@ -40,11 +39,11 @@ public final class DefaultInternalServiceAuthenticationCapability implements Aut
     }
 
     @Override
-    public Optional<Principal> authenticate(SecurityRequest request) {
+    public Optional<PlatformAuthenticatedPrincipal> authenticate(SecurityRequest request) {
         return doAuthenticate(request);
     }
 
-    Optional<Principal> doAuthenticate(SecurityRequest request) {
+    Optional<PlatformAuthenticatedPrincipal> doAuthenticate(SecurityRequest request) {
         Map<String, String> attributes = request.attributes();
         String internalToken = DefaultJwtAuthenticationCapability.trimToNull(attributes.get(INTERNAL_TOKEN_ATTRIBUTE));
         if (internalToken == null) {
@@ -54,7 +53,7 @@ public final class DefaultInternalServiceAuthenticationCapability implements Aut
         if (internalToken == null && sessionId == null) {
             return Optional.empty();
         }
-        Principal principal = platformSessionSupport.authenticate(internalToken, sessionId).orElse(null);
+        PlatformAuthenticatedPrincipal principal = platformSessionSupport.authenticate(internalToken, sessionId).orElse(null);
         if (principal != null && !claimsValidator.validate(principal, request)) {
             return Optional.empty();
         }

@@ -1,11 +1,9 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -21,10 +19,10 @@ class DefaultInternalServiceAuthenticationCapabilityTest {
         DefaultInternalServiceAuthenticationCapability capability = new DefaultInternalServiceAuthenticationCapability((accessToken, sessionId) -> {
             seenAccessToken.set(accessToken);
             seenSessionId.set(sessionId);
-            return Optional.of(new Principal("internal-service", List.of("INTERNAL"), Map.of()));
+            return Optional.of(new PlatformAuthenticatedPrincipal("internal-service", java.util.Set.of("INTERNAL"), Map.of()));
         }, (principal, request) -> true);
 
-        Optional<Principal> principal = capability.authenticate(new SecurityRequest(
+        Optional<PlatformAuthenticatedPrincipal> principal = capability.authenticate(new SecurityRequest(
                 null,
                 "127.0.0.1",
                 "/internal/sync",
@@ -46,10 +44,10 @@ class DefaultInternalServiceAuthenticationCapabilityTest {
         AtomicReference<String> seenAccessToken = new AtomicReference<>();
         DefaultInternalServiceAuthenticationCapability capability = new DefaultInternalServiceAuthenticationCapability((accessToken, sessionId) -> {
             seenAccessToken.set(accessToken);
-            return Optional.of(new Principal("internal-service", List.of("INTERNAL"), Map.of()));
+            return Optional.of(new PlatformAuthenticatedPrincipal("internal-service", java.util.Set.of("INTERNAL"), Map.of()));
         }, (principal, request) -> true);
 
-        Optional<Principal> principal = capability.authenticate(new SecurityRequest(
+        Optional<PlatformAuthenticatedPrincipal> principal = capability.authenticate(new SecurityRequest(
                 null,
                 "127.0.0.1",
                 "/internal/sync",

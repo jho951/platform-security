@@ -1,5 +1,23 @@
 # Release Notes
 
+## 2.1.0 Changes
+
+### Public contract alignment
+
+- `platform-security-auth` public contracts now use platform-owned auth types such as `PlatformAuthenticatedPrincipal` and `PlatformOAuth2UserIdentity`.
+- raw `com.auth.*` exposure is reduced from public contracts and kept behind adapter/helper boundaries where migration is still in progress.
+- exposed `com.auth.*` dependencies remain promoted to `api` until the remaining helper surface is removed.
+
+### Rate limit contract alignment
+
+- `PlatformRateLimitAdapter` now returns platform-owned request/decision types instead of exposing raw `RateLimiter`.
+- rate-limit policy and operational checks now depend on the platform adapter contract rather than raw layer1 SPI.
+
+### Auto-configuration and gateway integration
+
+- `PlatformSecurityAutoConfiguration` auth wiring now uses a platform-owned session support factory abstraction.
+- `platform-security-hybrid-web-adapter` now exposes `PlatformSecurityGatewayIntegration` as the official gateway hybrid integration surface.
+
 ## 2.0.1 Changes
 
 ### IP guard configuration

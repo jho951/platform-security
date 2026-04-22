@@ -1,6 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
 import com.auth.spi.TokenService;
 
 import java.util.Objects;
@@ -16,11 +15,12 @@ public final class TokenServicePlatformTokenIssuerPort implements PlatformTokenI
     }
 
     @Override
-    public PlatformTokenBundle issue(Principal principal) {
+    public PlatformTokenBundle issue(PlatformAuthenticatedPrincipal principal) {
         Objects.requireNonNull(principal, "principal");
+        com.auth.api.model.Principal authPrincipal = AuthPrincipalAdapters.toAuth(principal);
         return new PlatformTokenBundle(
-                tokenService.issueAccessToken(principal),
-                tokenService.issueRefreshToken(principal),
+                tokenService.issueAccessToken(authPrincipal),
+                tokenService.issueRefreshToken(authPrincipal),
                 null
         );
     }

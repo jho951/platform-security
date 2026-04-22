@@ -1,7 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.OAuth2UserIdentity;
-import com.auth.api.model.Principal;
 import com.auth.spi.OAuth2PrincipalResolver;
 
 import java.util.Objects;
@@ -25,7 +23,9 @@ public final class DefaultOAuth2PrincipalBridge implements OAuth2PrincipalBridge
     }
 
     @Override
-    public Principal resolve(OAuth2UserIdentity identity) {
-        return delegate.resolve(Objects.requireNonNull(identity, "identity"));
+    public PlatformAuthenticatedPrincipal resolve(PlatformOAuth2UserIdentity identity) {
+        return AuthPrincipalAdapters.toPlatform(
+                delegate.resolve(AuthPrincipalAdapters.toAuth(Objects.requireNonNull(identity, "identity")))
+        );
     }
 }

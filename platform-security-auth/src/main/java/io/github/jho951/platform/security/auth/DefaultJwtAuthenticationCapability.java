@@ -1,6 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
 import io.github.jho951.platform.security.api.SecurityRequest;
 
 import java.util.Map;
@@ -30,11 +29,11 @@ public final class DefaultJwtAuthenticationCapability implements AuthenticationC
     }
 
     @Override
-    public Optional<Principal> authenticate(SecurityRequest request) {
+    public Optional<PlatformAuthenticatedPrincipal> authenticate(SecurityRequest request) {
         return authenticate(request.attributes());
     }
 
-    Optional<Principal> authenticate(Map<String, String> attributes) {
+    Optional<PlatformAuthenticatedPrincipal> authenticate(Map<String, String> attributes) {
         String accessToken = trimToNull(attributes.get(PlatformAuthenticationFacade.ACCESS_TOKEN_ATTRIBUTE));
         if (accessToken == null) {
             return Optional.empty();

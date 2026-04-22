@@ -1,7 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
-
 import java.util.Optional;
 
 /**
@@ -9,13 +7,13 @@ import java.util.Optional;
  */
 public interface PlatformSessionSupport {
 
-    Optional<Principal> authenticate(String accessToken, String sessionId);
+    Optional<PlatformAuthenticatedPrincipal> authenticate(String accessToken, String sessionId);
 
-    default Optional<Principal> authenticateAccessToken(String accessToken) {
+    default Optional<PlatformAuthenticatedPrincipal> authenticateAccessToken(String accessToken) {
         return authenticate(accessToken, null);
     }
 
-    default Optional<Principal> authenticateSession(String sessionId) {
+    default Optional<PlatformAuthenticatedPrincipal> authenticateSession(String sessionId) {
         return authenticate(null, sessionId);
     }
 }

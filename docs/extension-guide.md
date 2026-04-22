@@ -8,7 +8,7 @@
 | --- | --- |
 | `SecurityContextResolver` | 현재 요청의 사용자를 서비스 방식으로 찾아야 할 때 |
 | `InternalTokenClaimsValidator` | internal token의 issuer/audience/service id를 검증해야 할 때 |
-| `RateLimiter` | 운영에서 Redis 같은 공유 저장소로 요청 횟수를 세야 할 때 |
+| `PlatformRateLimitAdapter` | 운영에서 Redis 같은 공유 저장소 기반 rate limit 판단을 platform 계약으로 연결해야 할 때 |
 | `RateLimitKeyResolver` | rate limit 기준을 IP가 아니라 user id 등으로 바꾸고 싶을 때 |
 | `ClientIpResolver` | 특수한 proxy 환경에서 client IP 계산을 바꾸고 싶을 때 |
 | `SecurityAuditPublisher` | 보안 판단 기록을 별도 저장소에 남기고 싶을 때 |
@@ -46,8 +46,10 @@ ApiKeyPrincipalResolver
 HmacSecretResolver
 HmacSignatureVerifier
 ServiceAccountVerifier
-RateLimiter
+PlatformRateLimitAdapter
 ```
+
+`TokenService`, `SessionStore`, raw auth provider 같은 외부 보안 SPI는 여전히 운영 bean으로 연결할 수 있다. 다만 `platform-security`의 공개 auth 계약은 `PlatformAuthenticatedPrincipal`, `PlatformOAuth2UserIdentity` 같은 platform-owned 타입을 사용하고, auto-configuration이 raw SPI를 platform port와 `PlatformSessionSupportFactory` 뒤로 감싼다.
 
 단, `platform-security` 내부 흐름을 직접 조립하지 않는다.
 
@@ -67,20 +69,22 @@ RateLimiter
 @Bean
 InternalTokenClaimsValidator internalTokenClaimsValidator() {
     return (principal, request) ->
-            "billing-service".equals(principal.getAttribute("aud"));
+            "billing-service".equals(principal.attributes().get("aud"));
 }
 ```
 
 ## Rate Limit
 
-운영에서는 여러 서버가 같은 횟수를 보도록 공유 `RateLimiter`를 제공한다.
+운영에서는 여러 서버가 같은 횟수를 보도록 공유 저장소 기반 구현을 `PlatformRateLimitAdapter`로 감싼다.
 
 ```java
 @Bean
-RateLimiter rateLimiter(RedisClient redisClient) {
-    return new RedisBackedRateLimiter(redisClient);
+PlatformRateLimitAdapter platformRateLimitAdapter(RedisClient redisClient) {
+    return new DefaultPlatformRateLimitAdapter(new RedisBackedRateLimiter(redisClient));
 }
 ```
+
+raw `RateLimiter`를 직접 policy로 넘기지 않는다. 필요하면 adapter 내부 구현에서만 사용하거나, 기존 `RateLimiter` bean이 있다면 auto-configuration이 `PlatformRateLimitAdapter`로 감싼다.
 
 기본 요청 제한 기준을 바꾸고 싶으면 `RateLimitKeyResolver`를 제공한다.
 
@@ -113,7 +117,20 @@ password / MFA / OAuth2 callback / 계정 상태 확인
 운영 TokenService / SessionStore 제공
 
 2계층:
-발급 흐름을 표준 기능으로 연결
+발급 흐름을 platform-owned principal/port/session-support factory 뒤로 연결
+```
+
+## Gateway Hybrid Integration
+
+gateway가 hybrid mode에서 servlet ingress를 직접 조립해야 하면 `platform-security-hybrid-web-adapter`를 붙이고 `PlatformSecurityGatewayIntegration` bean을 사용한다.
+
+```text
+PlatformSecurityGatewayIntegration
+-> SecurityIngressAdapter
+-> PlatformSecurityServletFilter
+-> gateway header filter
+-> SecurityFailureResponseWriter
+-> SecurityAuditPublisher
 ```
 
 ## Audit

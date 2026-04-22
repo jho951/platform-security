@@ -1,6 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
 import io.github.jho951.platform.security.api.SecurityRequest;
 
 import java.util.Optional;
@@ -24,5 +23,5 @@ public interface AuthenticationCapability {
      * @param request 인증 credential이 담긴 platform 요청
      * @return credential이 존재하고 유효하면 principal, 아니면 empty
      */
-    Optional<Principal> authenticate(SecurityRequest request);
+    Optional<PlatformAuthenticatedPrincipal> authenticate(SecurityRequest request);
 }

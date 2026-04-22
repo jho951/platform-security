@@ -1,6 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.policy.AuthMode;
@@ -147,11 +146,11 @@ class PlatformAuthenticationFacadeTest {
                     }
 
                     @Override
-                    public java.util.Optional<Principal> authenticate(SecurityRequest request) {
+                    public java.util.Optional<PlatformAuthenticatedPrincipal> authenticate(SecurityRequest request) {
                         selected.set("internal");
-                        return java.util.Optional.of(new Principal(
+                        return java.util.Optional.of(new PlatformAuthenticatedPrincipal(
                                 "internal-user",
-                                List.of("INTERNAL"),
+                                Set.of("INTERNAL"),
                                 Map.of("scope", "internal")
                         ));
                     }
@@ -165,11 +164,11 @@ class PlatformAuthenticationFacadeTest {
                     }
 
                     @Override
-                    public java.util.Optional<Principal> authenticate(SecurityRequest request) {
+                    public java.util.Optional<PlatformAuthenticatedPrincipal> authenticate(SecurityRequest request) {
                         selected.set("session");
-                        return java.util.Optional.of(new Principal(
+                        return java.util.Optional.of(new PlatformAuthenticatedPrincipal(
                                 "session-user",
-                                List.of("USER"),
+                                Set.of("USER"),
                                 Map.of("source", "session")
                         ));
                     }
@@ -181,11 +180,11 @@ class PlatformAuthenticationFacadeTest {
                     }
 
                     @Override
-                    public java.util.Optional<Principal> authenticate(SecurityRequest request) {
+                    public java.util.Optional<PlatformAuthenticatedPrincipal> authenticate(SecurityRequest request) {
                         selected.set("jwt");
-                        return java.util.Optional.of(new Principal(
+                        return java.util.Optional.of(new PlatformAuthenticatedPrincipal(
                                 "jwt-user",
-                                List.of("USER"),
+                                Set.of("USER"),
                                 Map.of("source", "jwt")
                         ));
                     }
@@ -197,11 +196,11 @@ class PlatformAuthenticationFacadeTest {
                     }
 
                     @Override
-                    public java.util.Optional<Principal> authenticate(SecurityRequest request) {
+                    public java.util.Optional<PlatformAuthenticatedPrincipal> authenticate(SecurityRequest request) {
                         selected.set("hybrid");
-                        return java.util.Optional.of(new Principal(
+                        return java.util.Optional.of(new PlatformAuthenticatedPrincipal(
                                 "hybrid-user",
-                                List.of("USER"),
+                                Set.of("USER"),
                                 Map.of("source", "hybrid")
                         ));
                     }
@@ -213,11 +212,11 @@ class PlatformAuthenticationFacadeTest {
                     }
 
                     @Override
-                    public java.util.Optional<Principal> authenticate(SecurityRequest request) {
+                    public java.util.Optional<PlatformAuthenticatedPrincipal> authenticate(SecurityRequest request) {
                         selected.set("api-key");
-                        return java.util.Optional.of(new Principal(
+                        return java.util.Optional.of(new PlatformAuthenticatedPrincipal(
                                 "api-key-user",
-                                List.of("API_CLIENT"),
+                                Set.of("API_CLIENT"),
                                 Map.of("source", "api-key")
                         ));
                     }
@@ -229,11 +228,11 @@ class PlatformAuthenticationFacadeTest {
                     }
 
                     @Override
-                    public java.util.Optional<Principal> authenticate(SecurityRequest request) {
+                    public java.util.Optional<PlatformAuthenticatedPrincipal> authenticate(SecurityRequest request) {
                         selected.set("hmac");
-                        return java.util.Optional.of(new Principal(
+                        return java.util.Optional.of(new PlatformAuthenticatedPrincipal(
                                 "hmac-user",
-                                List.of("API_CLIENT"),
+                                Set.of("API_CLIENT"),
                                 Map.of("source", "hmac")
                         ));
                     }
@@ -245,11 +244,11 @@ class PlatformAuthenticationFacadeTest {
                     }
 
                     @Override
-                    public java.util.Optional<Principal> authenticate(SecurityRequest request) {
+                    public java.util.Optional<PlatformAuthenticatedPrincipal> authenticate(SecurityRequest request) {
                         selected.set("oidc");
-                        return java.util.Optional.of(new Principal(
+                        return java.util.Optional.of(new PlatformAuthenticatedPrincipal(
                                 "oidc-user",
-                                List.of("USER"),
+                                Set.of("USER"),
                                 Map.of("source", "oidc")
                         ));
                     }
@@ -261,11 +260,11 @@ class PlatformAuthenticationFacadeTest {
                     }
 
                     @Override
-                    public java.util.Optional<Principal> authenticate(SecurityRequest request) {
+                    public java.util.Optional<PlatformAuthenticatedPrincipal> authenticate(SecurityRequest request) {
                         selected.set("service-account");
-                        return java.util.Optional.of(new Principal(
+                        return java.util.Optional.of(new PlatformAuthenticatedPrincipal(
                                 "service-account-user",
-                                List.of("SERVICE"),
+                                Set.of("SERVICE"),
                                 Map.of("source", "service-account")
                         ));
                     }
@@ -277,7 +276,7 @@ class PlatformAuthenticationFacadeTest {
                     }
 
                     @Override
-                    public java.util.Optional<Principal> authenticate(SecurityRequest request) {
+                    public java.util.Optional<PlatformAuthenticatedPrincipal> authenticate(SecurityRequest request) {
                         selected.set("none");
                         return java.util.Optional.empty();
                     }

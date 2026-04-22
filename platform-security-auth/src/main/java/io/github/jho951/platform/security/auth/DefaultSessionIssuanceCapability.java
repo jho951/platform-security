@@ -1,7 +1,5 @@
 package io.github.jho951.platform.security.auth;
 
-import com.auth.api.model.Principal;
-
 import java.util.Objects;
 
 /**
@@ -21,7 +19,7 @@ public final class DefaultSessionIssuanceCapability implements SessionIssuanceCa
     }
 
     @Override
-    public String issueSession(Principal principal) {
+    public String issueSession(PlatformAuthenticatedPrincipal principal) {
         Objects.requireNonNull(principal, "principal");
         return sessionIssuerPort.issueSession(principal);
     }

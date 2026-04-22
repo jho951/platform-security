@@ -2,7 +2,9 @@ dependencies {
     api project(':platform-security-api')
     api project(':platform-security-policy')
     api project(':platform-security-autoconfigure')
+    api project(':platform-security-web')
     implementation "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
+    compileOnly "jakarta.servlet:jakarta.servlet-api:${rootProject.jakartaServletVersion}"
 
     testImplementation "org.springframework.boot:spring-boot-test:${rootProject.springBootVersion}"
     testImplementation "org.springframework.boot:spring-boot-test-autoconfigure:${rootProject.springBootVersion}"

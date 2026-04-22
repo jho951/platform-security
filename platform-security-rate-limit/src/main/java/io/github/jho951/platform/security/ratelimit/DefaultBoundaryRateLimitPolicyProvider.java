@@ -46,7 +46,7 @@ public final class DefaultBoundaryRateLimitPolicyProvider implements BoundaryRat
                 boundary,
                 properties,
                 keyResolver,
-                rateLimitAdapter.rateLimiter()
+                rateLimitAdapter
         ));
     }
 
