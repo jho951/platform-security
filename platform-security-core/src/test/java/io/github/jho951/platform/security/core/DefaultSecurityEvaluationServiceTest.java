@@ -12,6 +12,7 @@ import io.github.jho951.platform.security.policy.SecurityBoundaryType;
 import io.github.jho951.platform.security.web.PathPatternSecurityBoundaryResolver;
 import io.github.jho951.platform.security.ip.DefaultBoundaryIpPolicyProvider;
 import io.github.jho951.platform.security.ratelimit.DefaultBoundaryRateLimitPolicyProvider;
+import io.github.jho951.platform.security.ratelimit.DefaultPlatformRateLimitAdapter;
 import io.github.jho951.platform.security.ratelimit.DefaultRateLimitKeyResolver;
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +45,11 @@ class DefaultSecurityEvaluationServiceTest {
                 new DefaultClientTypeResolver(),
                 new DefaultAuthenticationModeResolver(properties.getAuth()),
                 new DefaultBoundaryIpPolicyProvider(properties.getIpGuard()),
-                new DefaultBoundaryRateLimitPolicyProvider(properties.getRateLimit(), new DefaultRateLimitKeyResolver(), new InMemoryRateLimiter(Clock.systemUTC())),
+                new DefaultBoundaryRateLimitPolicyProvider(
+                        properties.getRateLimit(),
+                        new DefaultRateLimitKeyResolver(),
+                        new DefaultPlatformRateLimitAdapter(new InMemoryRateLimiter(Clock.systemUTC()))
+                ),
                 new DefaultPlatformPrincipalFactory()
         );
 
