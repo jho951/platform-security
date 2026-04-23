@@ -15,12 +15,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
-final class GatewayHeaderAuthenticationFilter extends OncePerRequestFilter {
+public final class GatewayHeaderAuthenticationFilter extends OncePerRequestFilter {
     private final PlatformSecurityProperties.GatewayHeaderProperties properties;
 
-    GatewayHeaderAuthenticationFilter(PlatformSecurityProperties.GatewayHeaderProperties properties) {
+    public GatewayHeaderAuthenticationFilter(PlatformSecurityProperties.GatewayHeaderProperties properties) {
         this.properties = properties == null
                 ? new PlatformSecurityProperties.GatewayHeaderProperties()
                 : properties;
@@ -37,16 +36,8 @@ final class GatewayHeaderAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String userIdHeader = request.getHeader(properties.getUserIdHeader());
-        if (userIdHeader == null || userIdHeader.isBlank()) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        UUID userId;
-        try {
-            userId = UUID.fromString(userIdHeader.trim());
-        } catch (IllegalArgumentException ignored) {
+        String userId = trimToNull(request.getHeader(properties.getUserIdHeader()));
+        if (userId == null) {
             filterChain.doFilter(request, response);
             return;
         }

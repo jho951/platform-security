@@ -19,14 +19,29 @@ import java.util.Objects;
 public final class SecurityIngressRequestFactory {
     private final ClientIpResolver clientIpResolver;
     private final SecurityIdentityScrubber securityIdentityScrubber;
+    private final java.util.List<SecurityRequestAttributeContributor> contributors;
 
     /**
      * @param clientIpResolver client IP resolver
      * @param securityIdentityScrubber header scrubber
      */
     public SecurityIngressRequestFactory(ClientIpResolver clientIpResolver, SecurityIdentityScrubber securityIdentityScrubber) {
+        this(clientIpResolver, securityIdentityScrubber, java.util.List.of());
+    }
+
+    /**
+     * @param clientIpResolver client IP resolver
+     * @param securityIdentityScrubber header scrubber
+     * @param contributors ingress attribute contributor 목록
+     */
+    public SecurityIngressRequestFactory(
+            ClientIpResolver clientIpResolver,
+            SecurityIdentityScrubber securityIdentityScrubber,
+            java.util.List<SecurityRequestAttributeContributor> contributors
+    ) {
         this.clientIpResolver = Objects.requireNonNull(clientIpResolver, "clientIpResolver");
         this.securityIdentityScrubber = Objects.requireNonNull(securityIdentityScrubber, "securityIdentityScrubber");
+        this.contributors = contributors == null ? java.util.List.of() : java.util.List.copyOf(contributors);
     }
 
     /**
@@ -34,12 +49,26 @@ public final class SecurityIngressRequestFactory {
      */
     public SecurityRequest fromServlet(HttpServletRequest request, Clock clock) {
         Map<String, String> headers = scrubbedHeaders(requestHeaders(request));
+        String principal = request.getUserPrincipal() == null ? null : request.getUserPrincipal().getName();
+        String clientIp = clientIpResolver.resolve(request.getRemoteAddr(), headers);
         return new SecurityRequest(
-                request.getUserPrincipal() == null ? null : request.getUserPrincipal().getName(),
-                clientIpResolver.resolve(request.getRemoteAddr(), headers),
+                principal,
+                clientIp,
                 request.getRequestURI(),
                 request.getMethod(),
-                requestAttributes(request, headers),
+                requestAttributes(
+                        headers,
+                        new SecurityIngressContext(
+                                SecurityIngressType.SERVLET,
+                                principal,
+                                clientIp,
+                                request.getRequestURI(),
+                                request.getMethod(),
+                                headers
+                        ),
+                        principal != null,
+                        principal
+                ),
                 Instant.now(clock)
         );
     }
@@ -49,36 +78,46 @@ public final class SecurityIngressRequestFactory {
      */
     public SecurityRequest fromWebFlux(ServerWebExchange exchange, String principal, Clock clock) {
         Map<String, String> headers = scrubbedHeaders(exchange.getRequest().getHeaders().toSingleValueMap());
+        String normalizedPrincipal = trimToNull(principal);
+        String clientIp = clientIpResolver.resolve(remoteAddress(exchange), headers);
+        String path = exchange.getRequest().getPath().value();
+        String action = exchange.getRequest().getMethod() == null ? "GET" : exchange.getRequest().getMethod().name();
         return new SecurityRequest(
-                trimToNull(principal),
-                clientIpResolver.resolve(remoteAddress(exchange), headers),
-                exchange.getRequest().getPath().value(),
-                exchange.getRequest().getMethod() == null ? "GET" : exchange.getRequest().getMethod().name(),
-                requestAttributes(exchange, principal, headers),
+                normalizedPrincipal,
+                clientIp,
+                path,
+                action,
+                requestAttributes(
+                        headers,
+                        new SecurityIngressContext(
+                                SecurityIngressType.REACTIVE,
+                                normalizedPrincipal,
+                                clientIp,
+                                path,
+                                action,
+                                headers
+                        ),
+                        normalizedPrincipal != null,
+                        normalizedPrincipal
+                ),
                 Instant.now(clock)
         );
     }
 
-    private Map<String, String> requestAttributes(HttpServletRequest request, Map<String, String> headers) {
+    private Map<String, String> requestAttributes(
+            Map<String, String> headers,
+            SecurityIngressContext ingressContext,
+            boolean authenticated,
+            String principal
+    ) {
         Map<String, String> attributes = new LinkedHashMap<>();
         putIfPresent(attributes, "auth.accessToken", extractBearerToken(header(headers, "Authorization")));
         putIfPresent(attributes, "auth.internalToken", header(headers, "X-Auth-Internal-Token"));
         putIfPresent(attributes, "auth.sessionId", header(headers, "X-Auth-Session-Id"));
         putCredentialAttributes(attributes, headers);
         putHmacSignedHeaders(attributes, headers);
-        attributes.put("auth.authenticated", Boolean.toString(request.getUserPrincipal() != null));
-        attributes.put("auth.principal", request.getUserPrincipal() == null ? "" : request.getUserPrincipal().getName());
-        return Map.copyOf(attributes);
-    }
-
-    private Map<String, String> requestAttributes(ServerWebExchange exchange, String principal, Map<String, String> headers) {
-        Map<String, String> attributes = new LinkedHashMap<>();
-        putIfPresent(attributes, "auth.accessToken", extractBearerToken(header(headers, "Authorization")));
-        putIfPresent(attributes, "auth.internalToken", header(headers, "X-Auth-Internal-Token"));
-        putIfPresent(attributes, "auth.sessionId", header(headers, "X-Auth-Session-Id"));
-        putCredentialAttributes(attributes, headers);
-        putHmacSignedHeaders(attributes, headers);
-        attributes.put("auth.authenticated", Boolean.toString(principal != null && !principal.isBlank()));
+        contributors.forEach(contributor -> contributor.contribute(ingressContext, attributes));
+        attributes.put("auth.authenticated", Boolean.toString(authenticated));
         attributes.put("auth.principal", principal == null ? "" : principal.trim());
         return Map.copyOf(attributes);
     }

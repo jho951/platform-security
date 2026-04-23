@@ -11,7 +11,7 @@ import java.util.Objects;
  */
 public final class SecurityDownstreamIdentityPropagator {
     /** servlet request attribute에 downstream header map을 저장할 때 쓰는 key다. */
-    public static final String ATTR_DOWNSTREAM_HEADERS = "security.downstream.headers";
+    public static final String ATTR_DOWNSTREAM_HEADERS = SecurityDownstreamAttributes.ATTR_DOWNSTREAM_HEADERS;
 
     /**
      * @param evaluationResult security 평가 결과

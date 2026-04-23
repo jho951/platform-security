@@ -1,6 +1,6 @@
 package io.github.jho951.platform.security.client;
 
-import io.github.jho951.platform.security.web.SecurityDownstreamIdentityPropagator;
+import io.github.jho951.platform.security.web.SecurityDownstreamAttributes;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.FilterConfig;
@@ -24,7 +24,7 @@ public final class SecurityOutboundServletContextFilter implements Filter {
             throws IOException, ServletException {
         try {
             SecurityOutboundContextHolder.set(SecurityOutboundContextHolder.copyOf(
-                    request.getAttribute(SecurityDownstreamIdentityPropagator.ATTR_DOWNSTREAM_HEADERS)
+                    request.getAttribute(SecurityDownstreamAttributes.ATTR_DOWNSTREAM_HEADERS)
             ));
             chain.doFilter(request, response);
         } finally {

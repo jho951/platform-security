@@ -14,7 +14,11 @@ platform-security
 ```text
 platform-security-bom
 platform-security-starter
+platform-security-auth-bridge-starter
+platform-security-ratelimit-bridge-starter
 platform-security-client
+platform-security-web-api
+platform-security-legacy-compat
 platform-security-support-local
 platform-security-test-support
 platform-security-policyconfig-bridge
@@ -36,6 +40,7 @@ platform-policy-api
 
 `platform-security-policyconfig-bridge`는 `platform-policy-api`의 `PolicyConfigSource`를 공식 타입으로 소비한다.
 `platform-security-governance-bridge`는 이 release에서 배포하지 않는다. governance audit 연동 bridge는 `platform-integrations` repository에서 배포하고, 필요한 소비 서비스가 직접 의존성으로 추가한다.
+`platform-security-auth-bridge-starter`, `platform-security-ratelimit-bridge-starter`, `platform-security-legacy-compat`는 mainline starter 밖의 optional artifact다.
 
 배포하지 않는 것:
 

@@ -1,6 +1,10 @@
 dependencies {
     implementation project(':platform-security-starter')
 
+    testImplementation project(':platform-security-auth-bridge-starter')
+    testImplementation project(':platform-security-ratelimit-bridge-starter')
+    testImplementation project(':platform-security-hybrid-web-adapter')
+    testImplementation project(':platform-security-web-api')
     testImplementation "org.springframework.boot:spring-boot-test:${rootProject.springBootVersion}"
     testImplementation "org.springframework.boot:spring-boot-test-autoconfigure:${rootProject.springBootVersion}"
     testImplementation "org.springframework:spring-web:${rootProject.springFrameworkVersion}"

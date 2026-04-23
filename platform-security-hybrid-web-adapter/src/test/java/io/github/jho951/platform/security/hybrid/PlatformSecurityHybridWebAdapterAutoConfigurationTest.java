@@ -33,12 +33,20 @@ class PlatformSecurityHybridWebAdapterAutoConfigurationTest {
         contextRunner.run(context -> {
             assertNotNull(context.getBean("securityIngressAdapter"));
             assertNotNull(context.getBean(PlatformSecurityGatewayIntegration.class));
+            assertNotNull(context.getBean(HybridSecurityRuntime.class));
+            assertNotNull(context.getBean(HybridRouteSecurityPolicy.class));
+            assertNotNull(context.getBean(HybridHeaderAuthenticationAdapter.class));
+            assertNotNull(context.getBean(HybridFailureResponseContract.class));
             assertNotNull(context.getBean("securityServletFilter"));
             assertNotNull(context.getBean("gatewayHeaderAuthenticationFilter"));
             assertFalse(context.containsBean("platformSecurityFilterChain"));
             PlatformSecurityGatewayIntegration integration = context.getBean(PlatformSecurityGatewayIntegration.class);
-            assertNotNull(integration.platformSecurityServletFilter());
-            assertNotNull(integration.securityIngressAdapter());
+            assertNotNull(integration.servletSecurityFilter());
+            assertNotNull(integration.securityRuntime());
+            assertNotNull(integration.routeSecurityPolicy());
+            assertNotNull(integration.headerAuthenticationAdapter());
+            assertTrue(integration.headerAuthenticationAdapter().servletFilter().isPresent());
+            assertNotNull(integration.failureResponseContract());
             assertTrue(integration.securityFailureResponseWriter() != null);
         });
     }
@@ -48,15 +56,23 @@ class PlatformSecurityHybridWebAdapterAutoConfigurationTest {
         reactiveContextRunner.run(context -> {
             assertNotNull(context.getBean("securityIngressAdapter"));
             assertNotNull(context.getBean(PlatformSecurityReactiveGatewayIntegration.class));
+            assertNotNull(context.getBean(HybridSecurityRuntime.class));
+            assertNotNull(context.getBean(HybridRouteSecurityPolicy.class));
+            assertNotNull(context.getBean(HybridHeaderAuthenticationAdapter.class));
+            assertNotNull(context.getBean(HybridFailureResponseContract.class));
             assertNotNull(context.getBean("securityWebFilter"));
             assertNotNull(context.getBean("reactiveGatewayHeaderAuthenticationWebFilter"));
             assertFalse(context.containsBean("platformSecurityFilterChain"));
             assertFalse(context.containsBean("securityServletFilter"));
             PlatformSecurityReactiveGatewayIntegration integration =
                     context.getBean(PlatformSecurityReactiveGatewayIntegration.class);
-            assertNotNull(integration.platformSecurityWebFilter());
+            assertNotNull(integration.reactiveSecurityFilter());
             assertNotNull(integration.gatewayHeaderAuthenticationWebFilter());
-            assertNotNull(integration.securityIngressAdapter());
+            assertNotNull(integration.securityRuntime());
+            assertNotNull(integration.routeSecurityPolicy());
+            assertNotNull(integration.headerAuthenticationAdapter());
+            assertTrue(integration.headerAuthenticationAdapter().reactiveWebFilter().isPresent());
+            assertNotNull(integration.failureResponseContract());
             assertTrue(integration.reactiveSecurityFailureResponseWriter() != null);
         });
     }

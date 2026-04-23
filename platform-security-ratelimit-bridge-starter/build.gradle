@@ -1,0 +1,4 @@
+dependencies {
+    api project(':platform-security-starter')
+    implementation project(':platform-security-adapter-ratelimiter')
+}

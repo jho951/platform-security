@@ -1,6 +1,7 @@
 dependencies {
     api project(':platform-security-api')
     api project(':platform-security-policy')
+    api project(':platform-security-web-api')
     compileOnly "jakarta.servlet:jakarta.servlet-api:${rootProject.jakartaServletVersion}"
     compileOnly "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
     compileOnly "io.projectreactor:reactor-core:3.7.11"

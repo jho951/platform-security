@@ -8,7 +8,6 @@ import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.WebFilterChain;
 
 import java.security.Principal;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,10 +21,10 @@ class ReactiveGatewayHeaderAuthenticationWebFilterTest {
         PlatformSecurityProperties.GatewayHeaderProperties properties = new PlatformSecurityProperties.GatewayHeaderProperties();
         properties.setEnabled(true);
         ReactiveGatewayHeaderAuthenticationWebFilter filter = new ReactiveGatewayHeaderAuthenticationWebFilter(properties);
-        UUID userId = UUID.randomUUID();
+        String userId = "user-123";
         MockServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/api/orders")
-                        .header(properties.getUserIdHeader(), userId.toString())
+                        .header(properties.getUserIdHeader(), userId)
                         .header(properties.getUserStatusHeader(), "A")
                         .build()
         );
@@ -49,7 +48,7 @@ class ReactiveGatewayHeaderAuthenticationWebFilterTest {
         );
         MockServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/api/orders")
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-User-Id", "user-456")
                         .build()
         );
         AtomicReference<Principal> principalSeenByChain = new AtomicReference<>();

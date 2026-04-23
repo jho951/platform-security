@@ -3,7 +3,6 @@ package io.github.jho951.platform.security.auth;
 import io.github.jho951.platform.security.api.SecurityRequest;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -15,9 +14,12 @@ import java.util.Optional;
 public final class DefaultInternalServiceAuthenticationCapability implements AuthenticationCapability {
     /** request attributes에서 internal token을 읽을 때 사용하는 key다. */
     public static final String INTERNAL_TOKEN_ATTRIBUTE = "auth.internalToken";
+    /** request attributes에서 legacy internal request secret을 읽을 때 사용하는 key다. */
+    public static final String INTERNAL_REQUEST_SECRET_ATTRIBUTE = "auth.internalRequestSecret";
 
     private final PlatformSessionSupport platformSessionSupport;
     private final InternalTokenClaimsValidator claimsValidator;
+    private final java.util.List<InternalServiceCompatibilityAuthenticationAdapter> compatibilityAdapters;
 
     /**
      * service-specific claim validator를 포함한 internal token capability를 만든다.
@@ -29,8 +31,24 @@ public final class DefaultInternalServiceAuthenticationCapability implements Aut
             PlatformSessionSupport platformSessionSupport,
             InternalTokenClaimsValidator claimsValidator
     ) {
-        this.platformSessionSupport = Objects.requireNonNull(platformSessionSupport, "platformSessionSupport");
-        this.claimsValidator = Objects.requireNonNull(claimsValidator, "claimsValidator");
+        this(platformSessionSupport, claimsValidator, java.util.List.of());
+    }
+
+    /**
+     * internal token 검증과 compatibility adapter fallback을 함께 포함한 capability를 만든다.
+     *
+     * @param platformSessionSupport token/session 검증 port, 없으면 null 허용
+     * @param claimsValidator internal token claim 추가 검증 hook, 없으면 null 허용
+     * @param compatibilityAdapters legacy compatibility fallback 목록
+     */
+    public DefaultInternalServiceAuthenticationCapability(
+            PlatformSessionSupport platformSessionSupport,
+            InternalTokenClaimsValidator claimsValidator,
+            java.util.List<InternalServiceCompatibilityAuthenticationAdapter> compatibilityAdapters
+    ) {
+        this.platformSessionSupport = platformSessionSupport;
+        this.claimsValidator = claimsValidator;
+        this.compatibilityAdapters = compatibilityAdapters == null ? java.util.List.of() : java.util.List.copyOf(compatibilityAdapters);
     }
 
     @Override
@@ -50,13 +68,36 @@ public final class DefaultInternalServiceAuthenticationCapability implements Aut
             internalToken = DefaultJwtAuthenticationCapability.trimToNull(attributes.get(PlatformAuthenticationFacade.ACCESS_TOKEN_ATTRIBUTE));
         }
         String sessionId = DefaultJwtAuthenticationCapability.trimToNull(attributes.get(PlatformAuthenticationFacade.SESSION_ID_ATTRIBUTE));
-        if (internalToken == null && sessionId == null) {
+        Optional<PlatformAuthenticatedPrincipal> tokenPrincipal = authenticateTokenOrSession(internalToken, sessionId, request);
+        if (tokenPrincipal.isPresent()) {
+            return tokenPrincipal;
+        }
+
+        for (InternalServiceCompatibilityAuthenticationAdapter compatibilityAdapter : compatibilityAdapters) {
+            Optional<PlatformAuthenticatedPrincipal> compatibilityPrincipal = compatibilityAdapter.authenticate(request);
+            if (compatibilityPrincipal.isPresent()) {
+                return compatibilityPrincipal;
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<PlatformAuthenticatedPrincipal> authenticateTokenOrSession(
+            String internalToken,
+            String sessionId,
+            SecurityRequest request
+    ) {
+        if (platformSessionSupport == null || internalToken == null && sessionId == null) {
             return Optional.empty();
         }
+
         PlatformAuthenticatedPrincipal principal = platformSessionSupport.authenticate(internalToken, sessionId).orElse(null);
-        if (principal != null && !claimsValidator.validate(principal, request)) {
+        if (principal == null) {
             return Optional.empty();
         }
-        return Optional.ofNullable(principal);
+        if (claimsValidator != null && !claimsValidator.validate(principal, request)) {
+            return Optional.empty();
+        }
+        return Optional.of(principal);
     }
 }

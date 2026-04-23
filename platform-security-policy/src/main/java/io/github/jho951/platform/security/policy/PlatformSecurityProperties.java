@@ -160,6 +160,8 @@ public class PlatformSecurityProperties {
         private String jwtRoleClaim = "role";
         private String jwtRolesClaim = "roles";
         private String jwtStatusClaim = "status";
+        private boolean runtimeResolverEnabled = false;
+        private LegacySecretProperties legacySecret = new LegacySecretProperties();
         private GatewayHeaderProperties gatewayHeader = new GatewayHeaderProperties();
         private boolean defaultModeConfigured = false;
         private boolean allowSessionForBrowserConfigured = false;
@@ -373,6 +375,22 @@ public class PlatformSecurityProperties {
             this.jwtStatusClaim = jwtStatusClaim == null || jwtStatusClaim.isBlank() ? "status" : jwtStatusClaim.trim();
         }
 
+        public boolean isRuntimeResolverEnabled() {
+            return runtimeResolverEnabled;
+        }
+
+        public void setRuntimeResolverEnabled(boolean runtimeResolverEnabled) {
+            this.runtimeResolverEnabled = runtimeResolverEnabled;
+        }
+
+        public LegacySecretProperties getLegacySecret() {
+            return legacySecret;
+        }
+
+        public void setLegacySecret(LegacySecretProperties legacySecret) {
+            this.legacySecret = legacySecret == null ? new LegacySecretProperties() : legacySecret;
+        }
+
         public GatewayHeaderProperties getGatewayHeader() {
             return gatewayHeader;
         }
@@ -419,6 +437,50 @@ public class PlatformSecurityProperties {
 
         public void setRefreshTokenTtl(Duration refreshTokenTtl) {
             this.refreshTokenTtl = refreshTokenTtl == null ? Duration.ofDays(14) : refreshTokenTtl;
+        }
+    }
+
+    /**
+     * internal service legacy secret compatibility를 platform-owned adapter로 흡수하는 설정이다.
+     */
+    public static class LegacySecretProperties {
+        private boolean enabled = false;
+        private String secret = "";
+        private String principalId = "platform-internal-compatibility";
+        private List<String> authorities = new ArrayList<>(List.of("ROLE_INTERNAL"));
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getSecret() {
+            return secret;
+        }
+
+        public void setSecret(String secret) {
+            this.secret = secret == null ? "" : secret;
+        }
+
+        public String getPrincipalId() {
+            return principalId;
+        }
+
+        public void setPrincipalId(String principalId) {
+            this.principalId = principalId == null || principalId.isBlank()
+                    ? "platform-internal-compatibility"
+                    : principalId.trim();
+        }
+
+        public List<String> getAuthorities() {
+            return authorities;
+        }
+
+        public void setAuthorities(List<String> authorities) {
+            this.authorities = authorities == null ? new ArrayList<>() : new ArrayList<>(authorities);
         }
     }
 

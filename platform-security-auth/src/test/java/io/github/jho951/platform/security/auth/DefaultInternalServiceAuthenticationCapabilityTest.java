@@ -59,4 +59,29 @@ class DefaultInternalServiceAuthenticationCapabilityTest {
         assertTrue(principal.isPresent());
         assertEquals("bearer-token", seenAccessToken.get());
     }
+
+    @Test
+    void fallsBackToCompatibilityAdapterWhenTokenAuthenticationIsUnavailable() {
+        DefaultInternalServiceAuthenticationCapability capability = new DefaultInternalServiceAuthenticationCapability(
+                null,
+                null,
+                java.util.List.of(request -> Optional.of(new PlatformAuthenticatedPrincipal(
+                        "compat-internal",
+                        java.util.Set.of("ROLE_INTERNAL"),
+                        Map.of("source", "legacy-secret")
+                )))
+        );
+
+        Optional<PlatformAuthenticatedPrincipal> principal = capability.authenticate(new SecurityRequest(
+                null,
+                "127.0.0.1",
+                "/internal/sync",
+                "POST",
+                Map.of(DefaultInternalServiceAuthenticationCapability.INTERNAL_REQUEST_SECRET_ATTRIBUTE, "debug-secret"),
+                Instant.parse("2026-01-01T00:00:00Z")
+        ));
+
+        assertTrue(principal.isPresent());
+        assertEquals("compat-internal", principal.get().userId());
+    }
 }

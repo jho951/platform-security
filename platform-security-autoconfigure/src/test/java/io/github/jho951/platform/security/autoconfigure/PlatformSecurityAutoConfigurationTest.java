@@ -3,16 +3,22 @@ package io.github.jho951.platform.security.autoconfigure;
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.GatewayUserPrincipal;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
+import io.github.jho951.platform.security.api.SecurityPolicy;
 import io.github.jho951.platform.security.api.SecurityRequest;
+import io.github.jho951.platform.security.api.SecurityVerdict;
 import io.github.jho951.platform.security.auth.autoconfigure.PlatformSecurityAuthAdapterAutoConfiguration;
 import io.github.jho951.platform.security.policy.ClientIpResolver;
 import io.github.jho951.platform.security.policy.AuthMode;
 import io.github.jho951.platform.security.policy.PlatformSecurityCustomizer;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import io.github.jho951.platform.security.policy.ServiceRolePreset;
+import io.github.jho951.platform.security.policy.SecurityAttributes;
 import io.github.jho951.platform.security.policy.SecurityBoundary;
 import io.github.jho951.platform.security.policy.SecurityBoundaryResolver;
 import io.github.jho951.platform.security.ratelimit.autoconfigure.PlatformSecurityRateLimitAdapterAutoConfiguration;
+import io.github.jho951.platform.security.web.SecurityIngressContext;
+import io.github.jho951.platform.security.web.SecurityIngressRequestFactory;
+import io.github.jho951.platform.security.web.SecurityRequestAttributeContributor;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
@@ -37,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -148,20 +155,84 @@ class PlatformSecurityAutoConfigurationTest {
             properties.setEnabled(true);
             GatewayHeaderAuthenticationFilter filter = new GatewayHeaderAuthenticationFilter(properties);
             MockHttpServletRequest request = new MockHttpServletRequest("GET", "/users/me");
-            request.addHeader("X-User-Id", "123e4567-e89b-12d3-a456-426614174000");
+            request.addHeader("X-User-Id", "user-123");
             request.addHeader("X-User-Status", "A");
 
             filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
 
             var authentication = SecurityContextHolder.getContext().getAuthentication();
             assertNotNull(authentication);
-            assertEquals("123e4567-e89b-12d3-a456-426614174000", authentication.getName());
+            assertEquals("user-123", authentication.getName());
             assertTrue(authentication.getPrincipal() instanceof GatewayUserPrincipal);
             assertTrue(authentication.getAuthorities().stream()
                     .anyMatch(authority -> "STATUS_ACTIVE".equals(authority.getAuthority())));
         } finally {
             SecurityContextHolder.clearContext();
         }
+    }
+
+    @Test
+    void includesAdditionalSecurityPolicyBeansInSelectionMode() {
+        AtomicBoolean policyInvoked = new AtomicBoolean(false);
+
+        localContextRunner
+                .withPropertyValues(
+                        "platform.security.local-support.enabled=true",
+                        "platform.security.auth.dev-fallback.enabled=true",
+                        "platform.security.boundary.protected-paths[0]=/orders"
+                )
+                .withBean(SecurityPolicy.class, () -> new SecurityPolicy() {
+                    @Override
+                    public String name() {
+                        return "service-policy";
+                    }
+
+                    @Override
+                    public SecurityVerdict evaluate(SecurityRequest request, SecurityContext context) {
+                        policyInvoked.set(true);
+                        return request.path().startsWith("/orders")
+                                ? SecurityVerdict.deny("service-policy", "blocked by service policy")
+                                : SecurityVerdict.allow("service-policy", "path allowed");
+                    }
+                })
+                .run(context -> {
+                    SecurityVerdict verdict = context.getBean(io.github.jho951.platform.security.api.SecurityPolicyService.class)
+                            .evaluate(
+                                    new SecurityRequest("user-123", "127.0.0.1", "/orders", "GET", Map.of(), Instant.now()),
+                                    new SecurityContext(true, "user-123", Set.of("ROLE_USER"), Map.of())
+                            );
+
+                    assertTrue(policyInvoked.get());
+                    assertEquals(false, verdict.allowed());
+                    assertEquals("service-policy", verdict.policy());
+                });
+    }
+
+    @Test
+    void appliesCustomSecurityRequestAttributeContributorWithoutServiceOwnedFilter() {
+        localContextRunner
+                .withPropertyValues(
+                        "platform.security.local-support.enabled=true",
+                        "platform.security.auth.dev-fallback.enabled=true"
+                )
+                .withBean(SecurityRequestAttributeContributor.class, () -> new SecurityRequestAttributeContributor() {
+                    @Override
+                    public void contribute(SecurityIngressContext context, Map<String, String> attributes) {
+                        String legacyHeader = context.headers().get("X-Legacy-Caller");
+                        if (legacyHeader != null) {
+                            attributes.put("auth.legacyCaller", legacyHeader);
+                        }
+                    }
+                })
+                .run(context -> {
+                    SecurityIngressRequestFactory requestFactory = context.getBean(SecurityIngressRequestFactory.class);
+                    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/orders");
+                    request.addHeader("X-Legacy-Caller", "bridge-caller");
+
+                    SecurityRequest resolved = requestFactory.fromServlet(request, java.time.Clock.systemUTC());
+
+                    assertEquals("bridge-caller", resolved.attributes().get("auth.legacyCaller"));
+                });
     }
 
     @Test

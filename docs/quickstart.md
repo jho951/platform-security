@@ -36,6 +36,15 @@ dependencies {
 }
 ```
 
+raw auth/rate-limit bean을 그대로 연결해야 하는 서비스만 optional bridge starter를 추가한다.
+
+```gradle
+dependencies {
+    implementation "io.github.jho951.platform:platform-security-auth-bridge-starter"
+    implementation "io.github.jho951.platform:platform-security-ratelimit-bridge-starter"
+}
+```
+
 ## Minimal Config
 
 ```yaml
@@ -128,13 +137,15 @@ repositories {
 dependencies {
     implementation "io.github.jho951.platform:platform-security-client"
     implementation "io.github.jho951.platform:platform-security-hybrid-web-adapter"
-    implementation "io.github.jho951.platform:platform-security-governance-bridge:2.0.0"
+    implementation "io.github.jho951.platform:platform-security-legacy-compat"
+    implementation "io.github.jho951.platform:platform-security-governance-bridge:3.0.0"
     implementation "io.github.jho951.platform:platform-security-policyconfig-bridge"
     testImplementation "io.github.jho951.platform:platform-security-support-local"
     testImplementation "io.github.jho951.platform:platform-security-test-support"
 }
 ```
 
+`platform-security-web` 구현 모듈을 서비스가 직접 붙이지 않는다. web 확장은 `platform-security-web-api`와 `SecurityRequestAttributeContributor` 같은 public contract로 닫는다.
 `local-support`는 local/test에서만 쓴다.
 
 ```yaml

@@ -37,13 +37,34 @@ public final class DefaultSecurityPolicyService implements SecurityPolicyService
             BoundaryRateLimitPolicyProvider boundaryRateLimitPolicyProvider,
             PlatformPrincipalFactory principalFactory
     ) {
+        this(
+                boundaryResolver,
+                clientTypeResolver,
+                authenticationModeResolver,
+                boundaryIpPolicyProvider,
+                boundaryRateLimitPolicyProvider,
+                principalFactory,
+                List.of()
+        );
+    }
+
+    public DefaultSecurityPolicyService(
+            SecurityBoundaryResolver boundaryResolver,
+            ClientTypeResolver clientTypeResolver,
+            AuthenticationModeResolver authenticationModeResolver,
+            BoundaryIpPolicyProvider boundaryIpPolicyProvider,
+            BoundaryRateLimitPolicyProvider boundaryRateLimitPolicyProvider,
+            PlatformPrincipalFactory principalFactory,
+            List<SecurityPolicy> policies
+    ) {
         this.delegate = new DefaultSecurityEvaluationService(
                 boundaryResolver,
                 clientTypeResolver,
                 authenticationModeResolver,
                 boundaryIpPolicyProvider,
                 boundaryRateLimitPolicyProvider,
-                principalFactory
+                principalFactory,
+                policies
         );
     }
 

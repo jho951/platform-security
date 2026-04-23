@@ -3,9 +3,14 @@ package io.github.jho951.platform.security.autoconfigure;
 import io.github.jho951.platform.security.api.PlatformSecurityHybridWebAdapterMarker;
 import io.github.jho951.platform.security.api.SecurityAuditPublisher;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
+import io.github.jho951.platform.security.hybrid.HybridFailureResponseContract;
+import io.github.jho951.platform.security.hybrid.HybridHeaderAuthenticationAdapter;
+import io.github.jho951.platform.security.hybrid.HybridRouteSecurityPolicy;
+import io.github.jho951.platform.security.hybrid.HybridSecurityRuntime;
 import io.github.jho951.platform.security.hybrid.PlatformSecurityGatewayIntegration;
 import io.github.jho951.platform.security.hybrid.PlatformSecurityReactiveGatewayIntegration;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
+import io.github.jho951.platform.security.policy.SecurityBoundaryResolver;
 import io.github.jho951.platform.security.web.PlatformSecurityServletFilter;
 import io.github.jho951.platform.security.web.PlatformSecurityWebFilter;
 import io.github.jho951.platform.security.web.ReactiveSecurityFailureResponseWriter;
@@ -13,14 +18,15 @@ import io.github.jho951.platform.security.web.SecurityDownstreamIdentityPropagat
 import io.github.jho951.platform.security.web.SecurityFailureResponseWriter;
 import io.github.jho951.platform.security.web.SecurityIngressAdapter;
 import io.github.jho951.platform.security.web.SecurityIngressRequestFactory;
-import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.Ordered;
 import org.springframework.web.server.WebFilter;
 
 import java.time.Clock;
@@ -30,7 +36,7 @@ import java.time.Clock;
  * 안전한 core/web 조립 bean만 남기는 hybrid adapter 모드다.
  */
 @AutoConfiguration
-@AutoConfigureBefore(name = "io.github.jho951.platform.security.autoconfigure.PlatformSecurityAutoConfiguration")
+@AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
 public class PlatformSecurityHybridWebAdapterAutoConfiguration {
 
     @Bean
@@ -105,21 +111,70 @@ public class PlatformSecurityHybridWebAdapterAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    public HybridSecurityRuntime hybridSecurityRuntime(SecurityIngressAdapter securityIngressAdapter) {
+        return new HybridSecurityRuntime(
+                securityIngressAdapter::withResolvedBoundary,
+                securityIngressAdapter::evaluate,
+                securityIngressAdapter::evaluateResult,
+                securityIngressAdapter::evaluateFailureResponse
+        );
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public HybridRouteSecurityPolicy hybridRouteSecurityPolicy(
+            SecurityIngressAdapter securityIngressAdapter,
+            SecurityBoundaryResolver securityBoundaryResolver
+    ) {
+        return new HybridRouteSecurityPolicy(securityBoundaryResolver::resolve, securityIngressAdapter::withResolvedBoundary);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public HybridFailureResponseContract hybridFailureResponseContract(
+            ObjectProvider<SecurityFailureResponseWriter> securityFailureResponseWriterProvider,
+            ObjectProvider<ReactiveSecurityFailureResponseWriter> reactiveSecurityFailureResponseWriterProvider
+    ) {
+        return new HybridFailureResponseContract(
+                securityFailureResponseWriterProvider.getIfAvailable(),
+                reactiveSecurityFailureResponseWriterProvider.getIfAvailable()
+        );
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public HybridHeaderAuthenticationAdapter hybridHeaderAuthenticationAdapter(
+            PlatformSecurityProperties properties,
+            @org.springframework.beans.factory.annotation.Qualifier("gatewayHeaderAuthenticationFilter")
+            ObjectProvider<jakarta.servlet.Filter> gatewayHeaderAuthenticationFilterProvider,
+            @org.springframework.beans.factory.annotation.Qualifier("reactiveGatewayHeaderAuthenticationWebFilter")
+            ObjectProvider<WebFilter> reactiveGatewayHeaderAuthenticationWebFilterProvider
+    ) {
+        return new HybridHeaderAuthenticationAdapter(
+                properties.getAuth().getGatewayHeader(),
+                gatewayHeaderAuthenticationFilterProvider.getIfAvailable(),
+                reactiveGatewayHeaderAuthenticationWebFilterProvider.getIfAvailable()
+        );
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
     @ConditionalOnBean(PlatformSecurityServletFilter.class)
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     public PlatformSecurityGatewayIntegration platformSecurityGatewayIntegration(
-            SecurityIngressAdapter securityIngressAdapter,
+            HybridSecurityRuntime hybridSecurityRuntime,
+            HybridRouteSecurityPolicy hybridRouteSecurityPolicy,
+            HybridHeaderAuthenticationAdapter hybridHeaderAuthenticationAdapter,
             PlatformSecurityServletFilter platformSecurityServletFilter,
-            SecurityFailureResponseWriter securityFailureResponseWriter,
-            SecurityAuditPublisher securityAuditPublisher,
-            @org.springframework.beans.factory.annotation.Qualifier("gatewayHeaderAuthenticationFilter")
-            ObjectProvider<jakarta.servlet.Filter> gatewayHeaderAuthenticationFilterProvider
+            HybridFailureResponseContract hybridFailureResponseContract,
+            SecurityAuditPublisher securityAuditPublisher
     ) {
         return new PlatformSecurityGatewayIntegration(
-                securityIngressAdapter,
+                hybridSecurityRuntime,
+                hybridRouteSecurityPolicy,
+                hybridHeaderAuthenticationAdapter,
                 platformSecurityServletFilter,
-                gatewayHeaderAuthenticationFilterProvider.getIfAvailable(),
-                securityFailureResponseWriter,
+                hybridFailureResponseContract,
                 securityAuditPublisher
         );
     }
@@ -130,18 +185,19 @@ public class PlatformSecurityHybridWebAdapterAutoConfiguration {
     @ConditionalOnClass(WebFilter.class)
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
     public PlatformSecurityReactiveGatewayIntegration platformSecurityReactiveGatewayIntegration(
-            SecurityIngressAdapter securityIngressAdapter,
+            HybridSecurityRuntime hybridSecurityRuntime,
+            HybridRouteSecurityPolicy hybridRouteSecurityPolicy,
+            HybridHeaderAuthenticationAdapter hybridHeaderAuthenticationAdapter,
             PlatformSecurityWebFilter platformSecurityWebFilter,
-            ReactiveSecurityFailureResponseWriter reactiveSecurityFailureResponseWriter,
-            SecurityAuditPublisher securityAuditPublisher,
-            @org.springframework.beans.factory.annotation.Qualifier("reactiveGatewayHeaderAuthenticationWebFilter")
-            ObjectProvider<WebFilter> gatewayHeaderAuthenticationWebFilterProvider
+            HybridFailureResponseContract hybridFailureResponseContract,
+            SecurityAuditPublisher securityAuditPublisher
     ) {
         return new PlatformSecurityReactiveGatewayIntegration(
-                securityIngressAdapter,
+                hybridSecurityRuntime,
+                hybridRouteSecurityPolicy,
+                hybridHeaderAuthenticationAdapter,
                 platformSecurityWebFilter,
-                gatewayHeaderAuthenticationWebFilterProvider.getIfAvailable(),
-                reactiveSecurityFailureResponseWriter,
+                hybridFailureResponseContract,
                 securityAuditPublisher
         );
     }

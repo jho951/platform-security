@@ -26,8 +26,12 @@ public record SecurityFailureResponse(int status, String code, String message) {
      * @return HTTP 응답 표현
      */
     public static SecurityFailureResponse from(SecurityVerdict verdict) {
-        if (verdict == null) throw new IllegalArgumentException("verdict must not be null");
-        if (verdict.decision() == SecurityDecision.ALLOW) return new SecurityFailureResponse(200, "security.allowed", verdict.reason());
+        if (verdict == null) {
+            throw new IllegalArgumentException("verdict must not be null");
+        }
+        if (verdict.decision() == SecurityDecision.ALLOW) {
+            return new SecurityFailureResponse(200, "security.allowed", verdict.reason());
+        }
         return switch (verdict.policy()) {
             case "auth" -> new SecurityFailureResponse(401, "security.auth.required", verdict.reason());
             case "ip-guard" -> new SecurityFailureResponse(403, "security.ip.denied", verdict.reason());

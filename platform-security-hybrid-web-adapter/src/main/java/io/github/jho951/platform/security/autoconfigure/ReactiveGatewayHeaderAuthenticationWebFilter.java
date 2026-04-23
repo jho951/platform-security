@@ -9,7 +9,6 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 import java.security.Principal;
-import java.util.UUID;
 
 final class ReactiveGatewayHeaderAuthenticationWebFilter implements WebFilter {
     private final PlatformSecurityProperties.GatewayHeaderProperties properties;
@@ -39,15 +38,8 @@ final class ReactiveGatewayHeaderAuthenticationWebFilter implements WebFilter {
     }
 
     private GatewayUserPrincipal resolvePrincipal(ServerWebExchange exchange) {
-        String userIdHeader = trimToNull(exchange.getRequest().getHeaders().getFirst(properties.getUserIdHeader()));
-        if (userIdHeader == null) {
-            return null;
-        }
-
-        UUID userId;
-        try {
-            userId = UUID.fromString(userIdHeader);
-        } catch (IllegalArgumentException ignored) {
+        String userId = trimToNull(exchange.getRequest().getHeaders().getFirst(properties.getUserIdHeader()));
+        if (userId == null) {
             return null;
         }
 

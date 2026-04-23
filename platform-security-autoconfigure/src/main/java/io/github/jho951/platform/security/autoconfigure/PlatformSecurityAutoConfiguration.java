@@ -1,5 +1,6 @@
 package io.github.jho951.platform.security.autoconfigure;
 
+import io.github.jho951.platform.security.api.SecurityPolicy;
 import io.github.jho951.platform.security.api.SecurityPolicyService;
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
@@ -14,6 +15,8 @@ import io.github.jho951.platform.security.auth.DefaultInternalServiceAuthenticat
 import io.github.jho951.platform.security.auth.DefaultJwtAuthenticationCapability;
 import io.github.jho951.platform.security.auth.DefaultSessionAuthenticationCapability;
 import io.github.jho951.platform.security.auth.InternalTokenClaimsValidator;
+import io.github.jho951.platform.security.auth.InternalServiceCompatibilityAuthenticationAdapter;
+import io.github.jho951.platform.security.auth.PlatformAuthenticationFacade;
 import io.github.jho951.platform.security.auth.PlatformSessionIssuerPort;
 import io.github.jho951.platform.security.auth.PlatformSessionSupport;
 import io.github.jho951.platform.security.auth.PlatformSessionSupportFactory;
@@ -41,6 +44,7 @@ import io.github.jho951.platform.security.web.DefaultClientIpResolver;
 import io.github.jho951.platform.security.web.PathPatternSecurityBoundaryResolver;
 import io.github.jho951.platform.security.web.SecurityIngressAdapter;
 import io.github.jho951.platform.security.web.SecurityIngressRequestFactory;
+import io.github.jho951.platform.security.web.SecurityRequestAttributeContributor;
 import io.github.jho951.platform.security.web.SecurityIdentityScrubber;
 import io.github.jho951.platform.security.web.SecurityDownstreamIdentityPropagator;
 import io.github.jho951.platform.security.web.SecurityFailureResponse;
@@ -138,7 +142,8 @@ public class PlatformSecurityAutoConfiguration {
             AuthenticationModeResolver authenticationModeResolver,
             BoundaryIpPolicyProvider boundaryIpPolicyProvider,
             BoundaryRateLimitPolicyProvider boundaryRateLimitPolicyProvider,
-            PlatformPrincipalFactory platformPrincipalFactory
+            PlatformPrincipalFactory platformPrincipalFactory,
+            ObjectProvider<SecurityPolicy> additionalSecurityPolicies
     ) {
         return new DefaultSecurityPolicyService(
                 boundaryResolver,
@@ -146,7 +151,8 @@ public class PlatformSecurityAutoConfiguration {
                 authenticationModeResolver,
                 boundaryIpPolicyProvider,
                 boundaryRateLimitPolicyProvider,
-                platformPrincipalFactory
+                platformPrincipalFactory,
+                additionalSecurityPolicies.orderedStream().toList()
         );
     }
 
@@ -265,9 +271,14 @@ public class PlatformSecurityAutoConfiguration {
     @ConditionalOnMissingBean
     public SecurityIngressRequestFactory securityIngressRequestFactory(
             ClientIpResolver clientIpResolver,
-            SecurityIdentityScrubber securityIdentityScrubber
+            SecurityIdentityScrubber securityIdentityScrubber,
+            ObjectProvider<SecurityRequestAttributeContributor> contributors
     ) {
-        return new SecurityIngressRequestFactory(clientIpResolver, securityIdentityScrubber);
+        return new SecurityIngressRequestFactory(
+                clientIpResolver,
+                securityIdentityScrubber,
+                contributors.orderedStream().toList()
+        );
     }
 
     @Bean
@@ -300,12 +311,16 @@ public class PlatformSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(name = "internalAuthenticationCapability")
-    @ConditionalOnBean({PlatformSessionSupport.class, InternalTokenClaimsValidator.class})
     public AuthenticationCapability internalAuthenticationCapability(
-            PlatformSessionSupport platformSessionSupport,
-            InternalTokenClaimsValidator internalTokenClaimsValidator
+            ObjectProvider<PlatformSessionSupport> platformSessionSupport,
+            ObjectProvider<InternalTokenClaimsValidator> internalTokenClaimsValidator,
+            ObjectProvider<InternalServiceCompatibilityAuthenticationAdapter> compatibilityAdapters
     ) {
-        return new DefaultInternalServiceAuthenticationCapability(platformSessionSupport, internalTokenClaimsValidator);
+        return new DefaultInternalServiceAuthenticationCapability(
+                platformSessionSupport.getIfAvailable(),
+                internalTokenClaimsValidator.getIfAvailable(),
+                compatibilityAdapters.orderedStream().toList()
+        );
     }
 
     @Bean
@@ -330,6 +345,15 @@ public class PlatformSecurityAutoConfiguration {
                 oidcAuthenticationCapability.getIfAvailable(),
                 serviceAccountAuthenticationCapability.getIfAvailable()
         );
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(SecurityContextResolver.class)
+    @ConditionalOnProperty(prefix = "platform.security.auth", name = "runtime-resolver-enabled", havingValue = "true")
+    public SecurityContextResolver platformAuthenticationFacadeSecurityContextResolver(
+            AuthenticationCapabilityResolver authenticationCapabilityResolver
+    ) {
+        return new PlatformAuthenticationFacade(authenticationCapabilityResolver);
     }
 
     @Bean

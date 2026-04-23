@@ -180,7 +180,27 @@ public class DefaultSecurityEvaluationService implements SecurityEvaluationServi
             BoundaryRateLimitPolicyProvider boundaryRateLimitPolicyProvider,
             PlatformPrincipalFactory principalFactory
     ) {
-        this.policies = List.of();
+        this(
+                boundaryResolver,
+                clientTypeResolver,
+                authenticationModeResolver,
+                boundaryIpPolicyProvider,
+                boundaryRateLimitPolicyProvider,
+                principalFactory,
+                List.of()
+        );
+    }
+
+    public DefaultSecurityEvaluationService(
+            SecurityBoundaryResolver boundaryResolver,
+            ClientTypeResolver clientTypeResolver,
+            AuthenticationModeResolver authenticationModeResolver,
+            BoundaryIpPolicyProvider boundaryIpPolicyProvider,
+            BoundaryRateLimitPolicyProvider boundaryRateLimitPolicyProvider,
+            PlatformPrincipalFactory principalFactory,
+            List<SecurityPolicy> policies
+    ) {
+        this.policies = policies == null ? List.of() : List.copyOf(policies);
         this.boundaryResolver = Objects.requireNonNull(boundaryResolver, "boundaryResolver");
         this.clientTypeResolver = Objects.requireNonNull(clientTypeResolver, "clientTypeResolver");
         this.authenticationModeResolver = Objects.requireNonNull(authenticationModeResolver, "authenticationModeResolver");

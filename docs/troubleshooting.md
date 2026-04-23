@@ -224,7 +224,8 @@ governance audit에 남기려면:
 
 ```text
 - platform-integrations repository에서 받은 platform-security-governance-bridge가 classpath에 있는지
-- AuditLogRecorder bean이 있는지
+- platform-governance-starter가 classpath에 있는지
+- governance가 platform-governance-adapter-auditlog를 통해 내부 AuditLogRecorder bean을 만들 수 있는지
 - 직접 등록한 SecurityAuditPublisher가 bridge 기본 bean을 대체하지 않았는지
 ```
 

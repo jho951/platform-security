@@ -1,0 +1,14 @@
+dependencies {
+    api project(':platform-security-api')
+    compileOnly "org.springframework:spring-core:${rootProject.springFrameworkVersion}"
+    compileOnly "jakarta.servlet:jakarta.servlet-api:${rootProject.jakartaServletVersion}"
+    compileOnly "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
+    compileOnly "io.projectreactor:reactor-core:3.7.11"
+
+    testImplementation "org.springframework:spring-core:${rootProject.springFrameworkVersion}"
+    testImplementation "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
+    testImplementation "jakarta.servlet:jakarta.servlet-api:${rootProject.jakartaServletVersion}"
+    testImplementation "io.projectreactor:reactor-core:3.7.11"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitVersion}"
+}

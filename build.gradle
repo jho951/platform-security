@@ -86,3 +86,61 @@ project(':platform-security-core') {
         testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
     }
 }
+
+def securityPomDependencies = { Project subproject ->
+    File pomFile = subproject.layout.buildDirectory.file('publications/mavenJava/pom-default.xml').get().asFile
+    if (!pomFile.exists()) {
+        throw new GradleException("Missing generated POM for ${subproject.path}: ${pomFile}")
+    }
+    def pom = new groovy.xml.XmlSlurper().parse(pomFile)
+    pom.dependencies.dependency.collect { dependency ->
+        [artifactId: dependency.artifactId.text(), scope: dependency.scope.text()]
+    }
+}
+
+def securityHasCompileScope = { Map<String, String> dependency ->
+    dependency.scope == null || dependency.scope.isBlank() || dependency.scope == 'compile'
+}
+
+tasks.register('verifyPublishedSurface') {
+    notCompatibleWithConfigurationCache("verification inspects generated POM files")
+    dependsOn project(':platform-security-starter').tasks.named('generatePomFileForMavenJavaPublication')
+
+    doLast {
+        def starterDependencies = securityPomDependencies(project(':platform-security-starter'))
+        [
+                'platform-security-client',
+                'platform-security-adapter-auth',
+                'platform-security-adapter-ratelimiter',
+                'platform-security-hybrid-web-adapter',
+                'platform-security-legacy-compat'
+        ].each { artifactId ->
+            if (starterDependencies.any { dependency -> dependency.artifactId == artifactId && securityHasCompileScope(dependency) }) {
+                throw new GradleException("platform-security-starter leaks ${artifactId} on compile scope")
+            }
+        }
+    }
+}
+
+tasks.register('verifyStarterContract') {
+    notCompatibleWithConfigurationCache("verification reads generated metadata and docs")
+    dependsOn tasks.named('verifyPublishedSurface')
+
+    doLast {
+        def starterBuild = file('platform-security-starter/build.gradle').text
+        if (starterBuild.contains("platform-security-client")) {
+            throw new GradleException("platform-security-starter must not depend on platform-security-client")
+        }
+
+        def modulesDoc = file('docs/modules.md').text
+        [
+                'platform-security-auth-bridge-starter',
+                'platform-security-ratelimit-bridge-starter',
+                'platform-security-web-api'
+        ].each { artifactId ->
+            if (!modulesDoc.contains(artifactId)) {
+                throw new GradleException("docs/modules.md must document ${artifactId}")
+            }
+        }
+    }
+}

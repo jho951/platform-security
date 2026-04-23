@@ -1,11 +1,12 @@
 dependencies {
     api project(':platform-security-api')
-    api project(':platform-security-web')
+    api project(':platform-security-web-api')
     compileOnly "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
     compileOnly "org.springframework:spring-webflux:${rootProject.springFrameworkVersion}"
     compileOnly "jakarta.servlet:jakarta.servlet-api:${rootProject.jakartaServletVersion}"
     implementation "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
 
+    testImplementation project(':platform-security-web')
     testImplementation "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
     testImplementation "org.springframework:spring-webflux:${rootProject.springFrameworkVersion}"
     testImplementation "org.springframework:spring-test:${rootProject.springFrameworkVersion}"
