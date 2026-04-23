@@ -7,6 +7,13 @@
 - `platform-security-hybrid-web-adapter` now exposes `PlatformSecurityReactiveGatewayIntegration` for WebFlux gateway assembly.
 - hybrid mode registers a reactive gateway header authentication `WebFilter` and a `PlatformSecurityWebFilter` bundle when the application is reactive.
 
+## 3.0.1 Changes
+
+- split `platform-security-web-api` out of implementation-heavy web wiring
+- add ordered `SecurityPolicy` auto-composition for sanctioned gateway extension
+- add `SecurityRequestAttributeContributor` and platform-owned legacy compat seam
+- separate bridge starters and optional add-ons from the base inbound starter
+
 ## 3.0.0 Changes
 
 ### Ports and runtime split
