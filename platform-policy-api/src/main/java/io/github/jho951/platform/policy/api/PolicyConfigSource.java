@@ -31,10 +31,4 @@ public interface PolicyConfigSource {
         throw new IllegalStateException("PolicyConfigSource does not support snapshots");
     }
 
-    /**
-     * @return 운영 검증에서 사용할 수 있는 source이면 true
-     */
-    default boolean isOperational() {
-        return false;
-    }
 }

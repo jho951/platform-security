@@ -68,7 +68,7 @@ class DefaultInternalServiceAuthenticationCapabilityTest {
                 java.util.List.of(request -> Optional.of(new PlatformAuthenticatedPrincipal(
                         "compat-internal",
                         java.util.Set.of("ROLE_INTERNAL"),
-                        Map.of("source", "legacy-secret")
+                        Map.of("source", "compat-adapter")
                 )))
         );
 

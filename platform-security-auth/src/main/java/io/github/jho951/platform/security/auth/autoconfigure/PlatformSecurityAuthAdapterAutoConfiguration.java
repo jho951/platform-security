@@ -39,7 +39,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
 /**
- * auth 1계층 bean graph를 platform-owned port/capability로 연결하는 adapter auto-configuration이다.
+ * optional bridge starter가 auth 1계층 bean graph를 platform-owned port/capability로 연결하는 adapter auto-configuration이다.
+ * base starter는 이 auto-configuration을 직접 가져오지 않는다.
  */
 @AutoConfiguration
 @ConditionalOnProperty(prefix = "platform.security", name = "enabled", havingValue = "true", matchIfMissing = true)

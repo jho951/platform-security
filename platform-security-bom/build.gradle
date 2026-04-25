@@ -26,7 +26,6 @@ dependencies {
         api project(':platform-security-autoconfigure')
         api project(':platform-security-issuer-autoconfigure')
         api project(':platform-security-internal-autoconfigure')
-        api project(':platform-security-legacy-compat')
         api project(':platform-security-policyconfig-bridge')
         api project(':platform-security-starter')
         api project(':platform-security-hybrid-web-adapter')

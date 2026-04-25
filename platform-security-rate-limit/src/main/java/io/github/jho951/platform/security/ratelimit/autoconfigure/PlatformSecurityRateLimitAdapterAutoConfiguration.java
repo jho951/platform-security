@@ -10,7 +10,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
 /**
- * rate-limiter 1계층 구현을 platform-owned adapter로 연결하는 auto-configuration이다.
+ * optional bridge starter가 raw rate-limiter 1계층 구현을 platform-owned adapter로 연결하는 auto-configuration이다.
+ * base starter는 이 auto-configuration을 직접 가져오지 않는다.
  */
 @AutoConfiguration
 @ConditionalOnProperty(prefix = "platform.security", name = "enabled", havingValue = "true", matchIfMissing = true)

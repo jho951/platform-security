@@ -41,7 +41,6 @@ local/test 전용 구현
 | `platform-security-ratelimit-bridge-starter` | raw rate limiter bean을 platform port에 연결하는 bridge starter가 필요할 때 |
 | `platform-security-hybrid-web-adapter` | gateway/edge가 hybrid mode에서 Servlet 또는 WebFlux ingress를 공식 bundle로 받아 직접 조립하고 싶을 때 |
 | `platform-security-web-api` | custom failure writer나 ingress contributor 같은 web extension contract만 직접 쓰고 싶을 때 |
-| `platform-security-legacy-compat` | 제거 예정인 legacy secret compat를 platform-owned optional seam으로 잠시 유지해야 할 때 |
 | `platform-security-support-local` | local/test에서만 기본 token/session/rate-limit 구현을 쓰고 싶을 때. 운영 `implementation` 금지 |
 | `platform-security-governance-bridge` | 보안 차단 기록을 governance audit에 같이 남기고 싶을 때. `platform-integrations` repository에서 별도 bridge artifact로 추가 |
 | `platform-security-policyconfig-bridge` | IP rule 같은 정책 읽기를 공통 policy config에서 하고 싶을 때 |
@@ -66,7 +65,8 @@ platform-policy-api
 ```
 
 `platform-security-ports`는 공개 auth/rate-limit 계약과 runtime view를 담고, `platform-security-core`는 그 port만 보고 runtime을 조립한다.
-`platform-security-client`, `platform-security-auth-bridge-starter`, `platform-security-ratelimit-bridge-starter`, `platform-security-legacy-compat`, `platform-security-hybrid-web-adapter`는 stage-5 기준의 optional add-on이다.
+`platform-security-client`, `platform-security-auth-bridge-starter`, `platform-security-ratelimit-bridge-starter`, `platform-security-hybrid-web-adapter`는 stage-5 기준의 optional add-on이다.
+`platform-security-adapter-auth`, `platform-security-adapter-ratelimiter`는 bridge starter가 내부에서 쓰는 adapter artifact다. raw auth/rate-limiter 좌표는 이 adapter 바깥 compile surface로 다시 export하지 않는다.
 
 3계층은 내부 class를 직접 import하지 않고, 공개 API, 공개 bean, `platform.security.*` 설정으로 차이를 표현한다.
 

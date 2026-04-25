@@ -19,6 +19,8 @@ dependencies {
     testImplementation "org.springframework.boot:spring-boot-starter-security:${rootProject.springBootVersion}"
     testImplementation "org.springframework.boot:spring-boot-starter-oauth2-resource-server:${rootProject.springBootVersion}"
     testImplementation project(':platform-security-adapter-auth')
+    testImplementation "io.github.jho951:auth-core:${rootProject.authVersion}"
+    testImplementation "io.github.jho951:auth-session:${rootProject.authVersion}"
     testImplementation project(':platform-security-adapter-ratelimiter')
     testImplementation project(':platform-security-support-local')
     testImplementation "org.springframework:spring-test:${rootProject.springFrameworkVersion}"

@@ -4,14 +4,14 @@ dependencies {
     api project(':platform-security-core')
     api project(':platform-security-policy')
 
-    api "io.github.jho951:auth-core:${rootProject.authVersion}"
-    api "io.github.jho951:auth-jwt:${rootProject.authVersion}"
-    api "io.github.jho951:auth-session:${rootProject.authVersion}"
-    api "io.github.jho951:auth-hybrid:${rootProject.authVersion}"
-    api "io.github.jho951:auth-apikey:${rootProject.authVersion}"
-    api "io.github.jho951:auth-hmac:${rootProject.authVersion}"
-    api "io.github.jho951:auth-oidc:${rootProject.authVersion}"
-    api "io.github.jho951:auth-service-account:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-core:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-jwt:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-session:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-hybrid:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-apikey:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-hmac:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-oidc:${rootProject.authVersion}"
+    implementation "io.github.jho951:auth-service-account:${rootProject.authVersion}"
     compileOnly "org.springframework:spring-context:${rootProject.springFrameworkVersion}"
     compileOnly "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
 

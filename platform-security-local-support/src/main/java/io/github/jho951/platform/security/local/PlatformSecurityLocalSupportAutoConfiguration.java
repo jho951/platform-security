@@ -22,7 +22,6 @@ import io.github.jho951.platform.security.ratelimit.DefaultPlatformRateLimitAdap
 import io.github.jho951.platform.security.ratelimit.InMemoryRateLimiter;
 import io.github.jho951.platform.security.ratelimit.PlatformRateLimitPort;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
-import io.github.jho951.ratelimiter.spi.RateLimiter;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -95,15 +94,9 @@ public class PlatformSecurityLocalSupportAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean(RateLimiter.class)
-    public RateLimiter platformSecurityLocalRateLimiter() {
-        return new InMemoryRateLimiter(Clock.systemUTC());
-    }
-
-    @Bean
     @ConditionalOnMissingBean(PlatformRateLimitPort.class)
-    public PlatformRateLimitPort platformSecurityLocalRateLimitAdapter(RateLimiter rateLimiter) {
-        return new DefaultPlatformRateLimitAdapter(rateLimiter);
+    public PlatformRateLimitPort platformSecurityLocalRateLimitAdapter() {
+        return new DefaultPlatformRateLimitAdapter(new InMemoryRateLimiter(Clock.systemUTC()));
     }
 
     @Bean

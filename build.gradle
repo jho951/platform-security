@@ -105,15 +105,42 @@ def securityHasCompileScope = { Map<String, String> dependency ->
 tasks.register('verifyPublishedSurface') {
     notCompatibleWithConfigurationCache("verification inspects generated POM files")
     dependsOn project(':platform-security-starter').tasks.named('generatePomFileForMavenJavaPublication')
+    dependsOn project(':platform-security-adapter-auth').tasks.named('generatePomFileForMavenJavaPublication')
+    dependsOn project(':platform-security-adapter-ratelimiter').tasks.named('generatePomFileForMavenJavaPublication')
 
     doLast {
         def starterDependencies = securityPomDependencies(project(':platform-security-starter'))
+        def adapterAuthDependencies = securityPomDependencies(project(':platform-security-adapter-auth'))
+        def adapterRateLimiterDependencies = securityPomDependencies(project(':platform-security-adapter-ratelimiter'))
+
+        [
+                'auth-core',
+                'auth-jwt',
+                'auth-session',
+                'auth-hybrid',
+                'auth-apikey',
+                'auth-hmac',
+                'auth-oidc',
+                'auth-service-account'
+        ].each { artifactId ->
+            if (adapterAuthDependencies.any { dependency -> dependency.artifactId == artifactId && securityHasCompileScope(dependency) }) {
+                throw new GradleException("platform-security-adapter-auth must not leak ${artifactId} on compile scope")
+            }
+        }
+
+        [
+                'rate-limiter-core',
+                'rate-limiter-spi'
+        ].each { artifactId ->
+            if (adapterRateLimiterDependencies.any { dependency -> dependency.artifactId == artifactId && securityHasCompileScope(dependency) }) {
+                throw new GradleException("platform-security-adapter-ratelimiter must not leak ${artifactId} on compile scope")
+            }
+        }
         [
                 'platform-security-client',
                 'platform-security-adapter-auth',
                 'platform-security-adapter-ratelimiter',
                 'platform-security-hybrid-web-adapter',
-                'platform-security-legacy-compat'
         ].each { artifactId ->
             if (starterDependencies.any { dependency -> dependency.artifactId == artifactId && securityHasCompileScope(dependency) }) {
                 throw new GradleException("platform-security-starter leaks ${artifactId} on compile scope")

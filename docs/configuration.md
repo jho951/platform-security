@@ -25,8 +25,8 @@ platform:
     service-role-preset: api-server
 ```
 
-issuer 역할의 운영 서비스는 `PlatformTokenIssuerPort`와 `PlatformSessionIssuerPort`를 제공하거나, 동일한 역할을 수행하는 adapter module을 포함해야 한다.  
-`platform-security`는 발급 흐름만 연결하고, 운영 token/session 저장소는 3계층이 소유한다. auth adapter auto-configuration을 쓰는 경우에만 raw auth bean을 내부에서 platform-owned 발급 port와 `PlatformSessionSupportFactory` 뒤로 감싼다.
+issuer 역할의 운영 서비스는 `PlatformTokenIssuerPort`와 `PlatformSessionIssuerPort`를 직접 제공하거나, `platform-security-auth-bridge-starter`로 raw auth bean을 같은 platform port 뒤로 감싸야 한다.  
+`platform-security`는 발급 흐름만 연결하고, 운영 token/session 저장소는 3계층이 소유한다. auth bridge starter를 쓸 때만 raw auth bean을 내부에서 platform-owned 발급 port와 `PlatformSessionSupportFactory` 뒤로 감싼다.
 
 ## Boundary
 
@@ -208,7 +208,7 @@ rate limit은 요청 횟수를 제한하는 기능이다.
 
 로그인처럼 public이지만 제한이 필요한 endpoint는 route limit을 추가한다.
 
-운영 확장 표면은 `PlatformRateLimitPort`다. 기존 `RateLimiter` bean이 있으면 adapter auto-configuration이 이를 `PlatformRateLimitPort` 구현으로 감싸지만, policy와 운영 안전검사는 raw limiter가 아니라 platform port bean 존재와 분산 backing 여부만 본다.
+운영 확장 표면은 `PlatformRateLimitPort`다. 기존 `RateLimiter` bean을 계속 써야 하면 `platform-security-ratelimit-bridge-starter`가 등록하는 adapter auto-configuration이 이를 `PlatformRateLimitPort` 구현으로 감싼다. policy와 운영 안전검사는 raw limiter가 아니라 platform port bean 존재와 분산 backing 여부만 본다.
 
 ```yaml
 platform:

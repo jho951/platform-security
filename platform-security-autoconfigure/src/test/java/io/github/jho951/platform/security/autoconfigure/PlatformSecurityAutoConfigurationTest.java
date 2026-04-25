@@ -6,8 +6,9 @@ import io.github.jho951.platform.security.api.SecurityContextResolver;
 import io.github.jho951.platform.security.api.SecurityPolicy;
 import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.api.SecurityVerdict;
-import io.github.jho951.platform.security.auth.autoconfigure.PlatformSecurityAuthAdapterAutoConfiguration;
 import io.github.jho951.platform.security.policy.ClientIpResolver;
+import io.github.jho951.platform.security.ratelimit.PlatformRateLimitDecision;
+import io.github.jho951.platform.security.ratelimit.PlatformRateLimitPort;
 import io.github.jho951.platform.security.policy.AuthMode;
 import io.github.jho951.platform.security.policy.PlatformSecurityCustomizer;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
@@ -15,7 +16,6 @@ import io.github.jho951.platform.security.policy.ServiceRolePreset;
 import io.github.jho951.platform.security.policy.SecurityAttributes;
 import io.github.jho951.platform.security.policy.SecurityBoundary;
 import io.github.jho951.platform.security.policy.SecurityBoundaryResolver;
-import io.github.jho951.platform.security.ratelimit.autoconfigure.PlatformSecurityRateLimitAdapterAutoConfiguration;
 import io.github.jho951.platform.security.web.SecurityIngressContext;
 import io.github.jho951.platform.security.web.SecurityIngressRequestFactory;
 import io.github.jho951.platform.security.web.SecurityRequestAttributeContributor;
@@ -28,8 +28,6 @@ import com.auth.session.SessionStore;
 import com.auth.spi.TokenService;
 import io.github.jho951.platform.security.auth.InternalTokenClaimsValidator;
 import io.github.jho951.platform.security.local.PlatformSecurityLocalSupportAutoConfiguration;
-import io.github.jho951.ratelimiter.core.RateLimitDecision;
-import io.github.jho951.ratelimiter.spi.RateLimiter;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.springframework.mock.web.MockFilterChain;
@@ -59,16 +57,12 @@ class PlatformSecurityAutoConfigurationTest {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     ConfigurationPropertiesAutoConfiguration.class,
-                    PlatformSecurityAuthAdapterAutoConfiguration.class,
-                    PlatformSecurityRateLimitAdapterAutoConfiguration.class,
                     PlatformSecurityAutoConfiguration.class
             ));
     private final ApplicationContextRunner localContextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     ConfigurationPropertiesAutoConfiguration.class,
                     PlatformSecurityLocalSupportAutoConfiguration.class,
-                    PlatformSecurityAuthAdapterAutoConfiguration.class,
-                    PlatformSecurityRateLimitAdapterAutoConfiguration.class,
                     PlatformSecurityAutoConfiguration.class
             ));
 
@@ -290,7 +284,7 @@ class PlatformSecurityAutoConfigurationTest {
     void failsFastWhenProductionIssuerDoesNotProvideTokenOrSessionStores() {
         contextRunner
                 .withBean(SecurityContextResolver.class, () -> request -> new SecurityContext(true, "issuer", Set.of("USER"), Map.of()))
-                .withBean(RateLimiter.class, () -> (key, permits, plan) -> RateLimitDecision.allow(plan.getCapacity()))
+                .withBean(PlatformRateLimitPort.class, () -> request -> PlatformRateLimitDecision.allow(request.key(), "allowed"))
                 .withBean(InternalTokenClaimsValidator.class, () -> (principal, request) -> principal != null)
                 .withPropertyValues(
                         "spring.profiles.active=prod",
@@ -327,7 +321,7 @@ class PlatformSecurityAutoConfigurationTest {
     void acceptsProductionPolicyWhenRequiredInputsAreProvided() {
         localContextRunner
                 .withBean(SecurityContextResolver.class, () -> request -> new SecurityContext(true, "prod-user", Set.of("USER"), Map.of()))
-                .withBean(RateLimiter.class, () -> (key, permits, plan) -> RateLimitDecision.allow(plan.getCapacity()))
+                .withBean(PlatformRateLimitPort.class, () -> request -> PlatformRateLimitDecision.allow(request.key(), "allowed"))
                 .withBean(SessionStore.class, InMemorySessionStore::new)
                 .withBean(InternalTokenClaimsValidator.class, () -> (principal, request) -> principal != null)
                 .withBean(TokenService.class, () -> new TokenService() {

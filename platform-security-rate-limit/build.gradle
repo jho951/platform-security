@@ -1,8 +1,8 @@
 dependencies {
     api project(':platform-security-ports')
     api project(':platform-security-policy')
-    api "io.github.jho951:rate-limiter-core:${rootProject.rateLimiterVersion}"
-    api "io.github.jho951:rate-limiter-spi:${rootProject.rateLimiterVersion}"
+    implementation "io.github.jho951:rate-limiter-core:${rootProject.rateLimiterVersion}"
+    implementation "io.github.jho951:rate-limiter-spi:${rootProject.rateLimiterVersion}"
     compileOnly "org.springframework:spring-context:${rootProject.springFrameworkVersion}"
     compileOnly "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
 

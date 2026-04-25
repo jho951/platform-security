@@ -1,7 +1,8 @@
 /**
  * platform-security의 boundary-aware rate limit 구현을 담는다.
  *
- * <p>운영에서는 이 모듈의 policy가 공유 {@code RateLimiter} bean을 사용하도록
- * auto-configuration이 연결한다.</p>
+ * <p>기본 starter는 public contract인 {@code PlatformRateLimitPort}만 본다.
+ * raw {@code RateLimiter} 연결 auto-configuration은 optional
+ * {@code platform-security-ratelimit-bridge-starter}가 등록한다.</p>
  */
 package io.github.jho951.platform.security.ratelimit;
