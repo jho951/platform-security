@@ -9,6 +9,8 @@ dependencies {
     testImplementation project(':platform-security-core')
     testImplementation project(':platform-security-ip')
     testImplementation project(':platform-security-adapter-ratelimiter')
+    testImplementation "io.github.jho951:rate-limiter-core:${rootProject.rateLimiterVersion}"
+    testImplementation "io.github.jho951:rate-limiter-spi:${rootProject.rateLimiterVersion}"
     testImplementation "org.springframework:spring-context:${rootProject.springFrameworkVersion}"
     testImplementation "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
     testImplementation "org.springframework:spring-test:${rootProject.springFrameworkVersion}"
