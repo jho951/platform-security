@@ -3,10 +3,12 @@ dependencies {
     api project(':platform-security-policy')
     implementation "io.github.jho951:rate-limiter-core:${rootProject.rateLimiterVersion}"
     implementation "io.github.jho951:rate-limiter-spi:${rootProject.rateLimiterVersion}"
+    compileOnly "org.springframework.data:spring-data-redis:3.5.4"
     compileOnly "org.springframework:spring-context:${rootProject.springFrameworkVersion}"
     compileOnly "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
 
     testImplementation project(':platform-security-core')
+    testImplementation "org.springframework.data:spring-data-redis:3.5.4"
     testImplementation "org.springframework:spring-context:${rootProject.springFrameworkVersion}"
     testImplementation "org.springframework.boot:spring-boot-autoconfigure:${rootProject.springBootVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitVersion}"

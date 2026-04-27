@@ -12,3 +12,7 @@
 | 서비스별로 바꿔 끼우는 bean 확인                      | [extension-guide.md](./extension-guide.md)                     |
 | private publish와 소비 설정                     | [private-publish.md](./private-publish.md)                     |
 | 장애 대응                                      | [troubleshooting.md](./troubleshooting.md)                     |
+| stage-5 ownership과 2계층/3계층 경계 확인             | [ownership.md](./ownership.md)                                 |
+| 기본 CI gate와 stage-5 contract 확인                    | [quality-gates.md](./quality-gates.md)                         |
+| 공식 sample consumer conformance 기준 확인                 | [consumer-conformance.md](./consumer-conformance.md)             |
+| release/version support 기준 확인                          | [support-policy.md](./support-policy.md)                       |

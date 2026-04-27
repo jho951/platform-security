@@ -31,7 +31,7 @@ export GITHUB_TOKEN=<read:packages 권한이 있는 PAT>
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:4.0.0")
+    implementation platform("io.github.jho951.platform:platform-security-bom:5.0.0")
     implementation "io.github.jho951.platform:platform-security-starter"
 }
 ```
@@ -106,8 +106,10 @@ SecurityContextResolver securityContextResolver(CurrentUserResolver currentUserR
 
 ```java
 @Bean
-PlatformRateLimitPort platformRateLimitPort(RedisClient redisClient) {
-    return new DefaultPlatformRateLimitAdapter(new RedisBackedRateLimiter(redisClient));
+PlatformRateLimitPort platformRateLimitPort(StringRedisTemplate redisTemplate) {
+    return new DefaultPlatformRateLimitAdapter(
+        new RedisFixedWindowRateLimiter(redisTemplate, "platform-security:rate-limit:", Clock.systemUTC())
+    );
 }
 ```
 
@@ -137,7 +139,7 @@ repositories {
 dependencies {
     implementation "io.github.jho951.platform:platform-security-client"
     implementation "io.github.jho951.platform:platform-security-hybrid-web-adapter"
-    implementation "io.github.jho951.platform:platform-security-governance-bridge:4.0.0"
+    implementation "io.github.jho951.platform:platform-security-governance-bridge:5.0.0"
     implementation "io.github.jho951.platform:platform-security-policyconfig-bridge"
     testImplementation "io.github.jho951.platform:platform-security-support-local"
     testImplementation "io.github.jho951.platform:platform-security-test-support"

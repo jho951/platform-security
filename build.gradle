@@ -1,3 +1,7 @@
+plugins {
+    id 'base'
+}
+
 ext {
     springFrameworkVersion = findProperty('springFramework_version')
     springBootVersion = findProperty('springBoot_version')
@@ -107,11 +111,13 @@ tasks.register('verifyPublishedSurface') {
     dependsOn project(':platform-security-starter').tasks.named('generatePomFileForMavenJavaPublication')
     dependsOn project(':platform-security-adapter-auth').tasks.named('generatePomFileForMavenJavaPublication')
     dependsOn project(':platform-security-adapter-ratelimiter').tasks.named('generatePomFileForMavenJavaPublication')
+    dependsOn project(':platform-security-test-support').tasks.named('generatePomFileForMavenJavaPublication')
 
     doLast {
         def starterDependencies = securityPomDependencies(project(':platform-security-starter'))
         def adapterAuthDependencies = securityPomDependencies(project(':platform-security-adapter-auth'))
         def adapterRateLimiterDependencies = securityPomDependencies(project(':platform-security-adapter-ratelimiter'))
+        def testSupportDependencies = securityPomDependencies(project(':platform-security-test-support'))
 
         [
                 'auth-core',
@@ -146,6 +152,18 @@ tasks.register('verifyPublishedSurface') {
                 throw new GradleException("platform-security-starter leaks ${artifactId} on compile scope")
             }
         }
+
+        [
+                'platform-security-adapter-auth',
+                'platform-security-adapter-ratelimiter',
+                'platform-security-ip',
+                'platform-security-client',
+                'platform-security-hybrid-web-adapter'
+        ].each { artifactId ->
+            if (testSupportDependencies.any { dependency -> dependency.artifactId == artifactId && securityHasCompileScope(dependency) }) {
+                throw new GradleException("platform-security-test-support leaks ${artifactId} on compile scope")
+            }
+        }
     }
 }
 
@@ -169,5 +187,57 @@ tasks.register('verifyStarterContract') {
                 throw new GradleException("docs/modules.md must document ${artifactId}")
             }
         }
+
+        def docsIndex = file('docs/README.md').text
+        ['ownership.md', 'quality-gates.md', 'consumer-conformance.md', 'support-policy.md'].each { docName ->
+            if (!docsIndex.contains(docName)) {
+                throw new GradleException("docs/README.md must document ${docName}")
+            }
+        }
+
+        def ownershipDoc = file('docs/ownership.md').text
+        ['PlatformRateLimitPort', 'service-owned security filter graph', 'domain authorization'].each { token ->
+            if (!ownershipDoc.contains(token)) {
+                throw new GradleException("docs/ownership.md must mention ${token}")
+            }
+        }
+
+        def qualityGatesDoc = file('docs/quality-gates.md').text
+        ['verifyPublishedSurface', 'verifyStarterContract', 'verifyStage5Contract'].each { token ->
+            if (!qualityGatesDoc.contains(token)) {
+                throw new GradleException("docs/quality-gates.md must mention ${token}")
+            }
+        }
+
+        def supportPolicyDoc = file('docs/support-policy.md').text
+        ['release_version', './gradlew clean check', 'official test-support artifact'].each { token ->
+            if (!supportPolicyDoc.contains(token)) {
+                throw new GradleException("docs/support-policy.md must mention ${token}")
+            }
+        }
+
+        def consumerConformanceDoc = file('docs/consumer-conformance.md').text
+        ['platform-security-sample-consumer', 'domain authorization', 'bridge starter', 'service-owned glue', 'platform-security-test-support'].each { token ->
+            if (!consumerConformanceDoc.contains(token)) {
+                throw new GradleException("docs/consumer-conformance.md must mention ${token}")
+            }
+        }
     }
+}
+
+tasks.register('verifyConsumerConformance') {
+    group = 'verification'
+    description = 'Runs the official platform-security sample consumer conformance test'
+    dependsOn project(':platform-security-sample-consumer').tasks.named('test')
+}
+
+tasks.register('verifyStage5Contract') {
+    group = 'verification'
+    description = 'Runs published-surface checks and the official sample consumer conformance test'
+    dependsOn tasks.named('verifyStarterContract')
+    dependsOn tasks.named('verifyConsumerConformance')
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('verifyStage5Contract')
 }

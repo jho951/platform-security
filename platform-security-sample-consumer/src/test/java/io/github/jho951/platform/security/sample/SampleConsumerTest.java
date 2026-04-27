@@ -1,5 +1,6 @@
 package io.github.jho951.platform.security.sample;
 
+import io.github.jho951.platform.security.testsupport.PlatformSecurityFixtures;
 import io.github.jho951.platform.security.api.SecurityContext;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
 import io.github.jho951.platform.security.api.SecurityPolicy;
@@ -228,7 +229,7 @@ class SampleConsumerTest {
     }
 
     private SecurityContext authenticatedUser() {
-        return new SecurityContext(true, "user-1", Set.of("USER"), Map.of());
+        return PlatformSecurityFixtures.authenticatedContext();
     }
 
     private record Document(String id, String ownerId) { }

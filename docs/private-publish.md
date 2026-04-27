@@ -53,15 +53,15 @@ platform-security-sample-consumer
 tag를 push하면 publish workflow가 돈다.
 
 ```bash
-git tag v4.0.0
-git push origin v4.0.0
+git tag v5.0.0
+git push origin v5.0.0
 ```
 
 version은 tag에서 계산한다.
 
 ```text
-v4.0.0
--> release_version=4.0.0
+v5.0.0
+-> release_version=5.0.0
 ```
 
 workflow 권한:
@@ -91,7 +91,7 @@ export GITHUB_ACTOR=jho951
 export GITHUB_TOKEN=<write:packages 권한이 있는 PAT>
 
 ./gradlew clean test publish \
-  -Prelease_version=4.0.0 \
+  -Prelease_version=5.0.0 \
   -PgithubPackagesUrl=https://maven.pkg.github.com/jho951/platform-security \
   -PgithubPackagesUsername="$GITHUB_ACTOR" \
   -PgithubPackagesToken="$GITHUB_TOKEN"
@@ -126,7 +126,7 @@ dependency:
 
 ```gradle
 dependencies {
-    implementation platform("io.github.jho951.platform:platform-security-bom:4.0.0")
+    implementation platform("io.github.jho951.platform:platform-security-bom:5.0.0")
     implementation "io.github.jho951.platform:platform-security-starter"
 }
 ```

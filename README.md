@@ -15,5 +15,7 @@ selection mode 기본 조립은 ordered `SecurityPolicy` bean을 additive하게 
 ## Verification
 
 ```bash
-./gradlew test
+./gradlew check
 ```
+
+`check`는 starter surface 검증과 sample consumer smoke test까지 함께 실행한다.

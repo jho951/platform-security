@@ -81,8 +81,10 @@ InternalTokenClaimsValidator internalTokenClaimsValidator() {
 
 ```java
 @Bean
-PlatformRateLimitPort platformRateLimitPort(RedisClient redisClient) {
-    return new DefaultPlatformRateLimitAdapter(new RedisBackedRateLimiter(redisClient));
+PlatformRateLimitPort platformRateLimitPort(StringRedisTemplate redisTemplate) {
+    return new DefaultPlatformRateLimitAdapter(
+        new RedisFixedWindowRateLimiter(redisTemplate, "platform-security:rate-limit:", Clock.systemUTC())
+    );
 }
 ```
 
