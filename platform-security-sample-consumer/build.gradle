@@ -2,6 +2,7 @@ dependencies {
     implementation project(':platform-security-starter')
 
     testImplementation project(':platform-security-auth-bridge-starter')
+    testImplementation project(':platform-security-client')
     testImplementation project(':platform-security-ratelimit-bridge-starter')
     testImplementation project(':platform-security-hybrid-web-adapter')
     testImplementation project(':platform-security-test-support')
@@ -9,6 +10,7 @@ dependencies {
     testImplementation "org.springframework.boot:spring-boot-test:${rootProject.springBootVersion}"
     testImplementation "org.springframework.boot:spring-boot-test-autoconfigure:${rootProject.springBootVersion}"
     testImplementation "org.springframework:spring-web:${rootProject.springFrameworkVersion}"
+    testImplementation "org.springframework:spring-test:${rootProject.springFrameworkVersion}"
     testImplementation "io.projectreactor:reactor-core:3.7.11"
     testImplementation "jakarta.servlet:jakarta.servlet-api:${rootProject.jakartaServletVersion}"
     testImplementation "org.assertj:assertj-core:3.27.7"

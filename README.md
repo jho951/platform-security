@@ -8,6 +8,8 @@ gateway 통합이 필요한 경우 `platform-security-hybrid-web-adapter`가 Ser
 
 selection mode 기본 조립은 ordered `SecurityPolicy` bean을 additive하게 수집하므로, 서비스가 policy 하나를 더 붙이기 위해 `SecurityPolicyService` 전체를 service-owned 구현으로 다시 만들 필요가 없다. internal 경계는 dedicated internal token/JWT path로 닫고, 서비스 filter나 secret header shim 같은 legacy compat 경로는 두지 않는다.
 
+다른 서비스 호출에 security header propagation이 필요하면 `platform-security-client`를 공식 add-on으로 사용한다. 3계층은 header 이름이나 interceptor/filter를 직접 다시 만들지 않고, `platform-security-client`가 제공하는 outbound propagation surface만 소비하는 것을 기본으로 한다.
+
 ## Documentation
 
 - [문서 인덱스](docs/README.md)

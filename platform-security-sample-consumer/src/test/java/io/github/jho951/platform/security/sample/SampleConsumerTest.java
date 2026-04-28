@@ -9,6 +9,7 @@ import io.github.jho951.platform.security.api.SecurityRequest;
 import io.github.jho951.platform.security.api.SecurityVerdict;
 import io.github.jho951.platform.security.auth.PlatformSessionIssuerPort;
 import io.github.jho951.platform.security.auth.PlatformTokenIssuerPort;
+import io.github.jho951.platform.security.client.SecurityOutboundContextHolder;
 import io.github.jho951.platform.security.hybrid.PlatformSecurityGatewayIntegration;
 import io.github.jho951.platform.security.policy.AuthMode;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
@@ -23,6 +24,11 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.mock.http.client.MockClientHttpRequest;
+import org.springframework.mock.http.client.MockClientHttpResponse;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -140,6 +146,30 @@ class SampleConsumerTest {
                     assertNull(context.getStartupFailure());
                     assertTrue(context.containsBean("platformRateLimitPort"));
                     assertTrue(context.getBean(PlatformRateLimitPort.class) != null);
+                });
+    }
+
+    @Test
+    void clientAddonPropagatesStandardHeadersWithoutManualInterceptorGlue() {
+        new ApplicationContextRunner()
+                .withConfiguration(autoConfigurations(
+                        ConfigurationPropertiesAutoConfiguration.class,
+                        "io.github.jho951.platform.security.client.PlatformSecurityClientAutoConfiguration"
+                ))
+                .run(context -> {
+                    assertNull(context.getStartupFailure());
+                    ClientHttpRequestInterceptor interceptor = context.getBean(ClientHttpRequestInterceptor.class);
+                    MockClientHttpRequest request = new MockClientHttpRequest(HttpMethod.GET, "/downstream");
+
+                    SecurityOutboundContextHolder.set(Map.of("X-Platform-Principal", "user-1"));
+                    try {
+                        interceptor.intercept(request, new byte[0], (httpRequest, body) -> {
+                            assertEquals("user-1", httpRequest.getHeaders().getFirst("X-Platform-Principal"));
+                            return new MockClientHttpResponse(new byte[0], HttpStatus.OK);
+                        });
+                    } finally {
+                        SecurityOutboundContextHolder.clear();
+                    }
                 });
     }
 

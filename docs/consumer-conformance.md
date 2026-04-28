@@ -7,6 +7,7 @@
 - 서비스는 `platform-security-starter`만으로 기본 runtime을 부팅할 수 있어야 한다.
 - domain authorization은 3계층 책임으로 남고, platform은 boundary/auth/rate-limit만 판정해야 한다.
 - raw auth bean과 raw rate limiter를 연결해야 할 때만 공식 bridge starter를 추가한다.
+- outbound propagation이 필요할 때는 `platform-security-client`만 추가해 표준 header를 붙일 수 있어야 한다.
 - custom policy bean은 `SecurityPolicyService` 전체 교체 없이 additive하게 합성되어야 한다.
 - custom ingress attribute contributor와 failure writer는 공식 surface로만 확장되어야 한다.
 - service-owned glue filter 없이 sample consumer가 현재 public contract만으로 동작해야 한다.
